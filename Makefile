@@ -3,7 +3,7 @@
 all: build
 
 alex:
-	alex Tokens.x -o lib/Tokens.hs
+	alex lib/Move/Lexer.x -o lib/Move/Lexer.hs
 
 build:
 	stack build
