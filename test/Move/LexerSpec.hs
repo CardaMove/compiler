@@ -57,7 +57,7 @@ testScanIdentifier = describe "Scan identifiers" $ do
   testScan "answer" [TokenIdentifier "answer"]
   testScan "camelCase" [TokenIdentifier "camelCase"]
   testScan "PascalCase" [TokenIdentifier "PascalCase"]
-  -- TODO: Incomplete string definition
+  -- TODO: Incomplete identifier definition
   -- testScan "snake_case" [TokenIdentifier "snake_case"]
   testScan "myAnswer0" [TokenIdentifier "myAnswer0"]
   testScan "letIdentifier" [TokenIdentifier "letIdentifier"]
