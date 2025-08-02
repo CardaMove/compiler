@@ -77,7 +77,8 @@ tokens :-
   \.                            { \_ _ -> TokenOperatorDot                  }
   \@                            { \_ _ -> TokenOperatorAt                   }
   -- Identifiers
-  $alpha($alpha | $digit)*      { \_ s -> TokenIdentifier s                 }
+  -- Generic identifier syntax for variable, module and structs names
+  (_ | $alpha)(_ | $alpha | $digit)*      { \_ s -> TokenIdentifier s                 }
 
 {
 scan :: String -> [Token]
