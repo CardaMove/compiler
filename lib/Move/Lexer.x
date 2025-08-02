@@ -75,11 +75,15 @@ tokens :-
   \|\|                          { \_ _ -> TokenOperatorOr                   }
   \!                            { \_ _ -> TokenOperatorNot                  }
   \=                            { \_ _ -> TokenOperatorAssign               }
-  \&                            { \_ _ -> TokenOperatorRef                  }
-  \&mut                         { \_ _ -> TokenOperatorRefMut               }
+  \&                            { \_ _ -> TokenOperatorAmp                  }
+  \|                            { \_ _ -> TokenOperatorBitwiseOr            }
+  \^                            { \_ _ -> TokenOperatorBitwiseXor           }
+  \&mut                         { \_ _ -> TokenOperatorAmpMut               }
   \.                            { \_ _ -> TokenOperatorDot                  }
   \.\.                          { \_ _ -> TokenOperatorDoubleDot            }
   \@                            { \_ _ -> TokenOperatorAt                   }
+  \<\<                          { \_ _ -> TokenOperatorShiftLeft            }
+  \>\>                          { \_ _ -> TokenOperatorShiftRight            }
   -- Identifiers
   -- Generic identifier syntax for variable, module and structs names
   (_ | $alpha)(_ | $alpha | $digit)*      { \_ s -> TokenIdentifier s                 }

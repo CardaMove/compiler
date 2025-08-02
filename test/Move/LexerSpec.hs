@@ -71,7 +71,9 @@ testScanIdentifier = describe "Scan identifiers" $ do
 
 testScanOperators :: Spec
 testScanOperators = describe "Scan operators" $ do
-  testScan "&mut" [TokenOperatorRefMut]
+  testScan "&mut" [TokenOperatorAmpMut]
+  testScan ">" [TokenOperatorGt]
+  testScan ">>" [TokenOperatorShiftRight]
 
 spec :: Spec
 spec = do

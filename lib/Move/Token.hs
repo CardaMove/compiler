@@ -55,11 +55,15 @@ data Token
   | TokenOperatorOr
   | TokenOperatorNot
   | TokenOperatorAssign
-  | TokenOperatorRef
-  | TokenOperatorRefMut
+  | TokenOperatorAmp
+  | TokenOperatorBitwiseOr
+  | TokenOperatorBitwiseXor
+  | TokenOperatorAmpMut
   | TokenOperatorDot
   | TokenOperatorDoubleDot
   | TokenOperatorAt
+  | TokenOperatorShiftLeft
+  | TokenOperatorShiftRight
   | -- Identifiers
     TokenIdentifier String
   deriving (Eq, Show)
