@@ -2,6 +2,15 @@
 
 Simple POC for a transpiler from [Move](https://move-language.github.io/move/) to [Aiken](https://aiken-lang.org/).
 
+## Stack commands
+
+```shell
+$ stack build # Also builds Alex and Happy
+$ stack test
+$ stack run
+
+```
+
 ## Notes
 
 ### Move function bodies
