@@ -100,6 +100,7 @@ tokens :-
   \<\<                          { \_ _ -> TokenOperatorShiftLeft            }
   \>\>                          { \_ _ -> TokenOperatorShiftRight           }
   -- TODO: Compound assignments
+  -- TODO: vector<u8> literarls with b"" and x""
   -- Identifiers
   -- Generic identifier syntax for variable, module and structs names
   (_ | $alpha)(_ | $alpha | $digit)*      { \_ s -> TokenIdentifier s                 }
