@@ -12,6 +12,7 @@ $alpha                          = [a-zA-Z]
 $hex                            = [0-9a-fA-F]
 $graphic                        = $printable # $white
 @string                         = \" ($graphic # \")* \"
+@literalIntType                 = u8 | u16 | u32 | u64 | u128 | u256    -- Type suffix for integer literals
 
 -- Rules
 tokens :-
@@ -28,8 +29,9 @@ tokens :-
   \;                            { \_ _ -> TokenSeparatorSemiColon           }
   \:\:                          { \_ _ -> TokenSeparatorDoubleColon         }
   -- Literals
-  $digit+                       { \_ s -> TokenLiteralIntDec (read s)       }
-  0x$hex+                       { \_ s -> TokenLiteralIntHex s              }
+  -- Integers (both digits and hex literals) can have underscores and suffix, that need to be ignored
+  $digit($digit | _)*(@literalIntType)?                     { \_ s -> TokenLiteralIntDec $ read $ parseLiteralInteger s       }
+  0x$hex($hex | _)*(@literalIntType)?                       { \_ s -> TokenLiteralIntHex $ parseLiteralInteger s              }
   @string                       { \_ s -> TokenLiteralString s              }
   true                          { \_ _ -> TokenLiteralBool True             } 
   false                         { \_ _ -> TokenLiteralBool False            }
@@ -85,4 +87,8 @@ tokens :-
 {
 scan :: String -> [Token]
 scan = alexScanTokens
+
+-- | Removes underscores and suffix from an integer literal
+parseLiteralInteger :: String -> String
+parseLiteralInteger = filter (/= '_') . takeWhile (/= 'u')
 }

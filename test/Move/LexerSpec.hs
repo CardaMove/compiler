@@ -28,6 +28,9 @@ testScanDecimal = describe "Scan decimals" $ do
   testScan "0" [TokenLiteralIntDec 0]
   testScan "1" [TokenLiteralIntDec 1]
   testScan "123" [TokenLiteralIntDec 123]
+  testScan "123_456u64" [TokenLiteralIntDec 123456]
+  testScan "123_456_789_u256" [TokenLiteralIntDec 123456789]
+  testScan "123_456_789_" [TokenLiteralIntDec 123456789]
 
 testScanHex :: Spec
 testScanHex = describe "Scan hexadecimals" $ do
@@ -35,6 +38,9 @@ testScanHex = describe "Scan hexadecimals" $ do
   testScan "0x1" [TokenLiteralIntHex "0x1"]
   testScan "0x123" [TokenLiteralIntHex "0x123"]
   testScan "0xFF2E" [TokenLiteralIntHex "0xFF2E"]
+  testScan "0xFF_2Eu256" [TokenLiteralIntHex "0xFF2E"]
+  testScan "0xFF_2E_u256" [TokenLiteralIntHex "0xFF2E"]
+  testScan "0xFF_2E_" [TokenLiteralIntHex "0xFF2E"]
 
 testScanString :: Spec
 testScanString = describe "Scan strings" $ do
