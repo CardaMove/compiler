@@ -47,8 +47,11 @@ data Token
   | TokenKeywordContinue
   | TokenKeywordReturn
   | TokenKeywordAbort
-  | -- Keywords: Let binding
+  | -- Other keywords
     TokenKeywordLet
+  | TokenKeywordPhantom
+  | TokenKeywordAs
+  | TokenKeywordMove
   -- | TokenKeywordIn
   | -- Operators
     TokenOperatorPlus

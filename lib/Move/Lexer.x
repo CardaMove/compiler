@@ -68,8 +68,11 @@ tokens :-
   continue                      { \_ _ -> TokenKeywordContinue              }
   return                        { \_ _ -> TokenKeywordReturn                }
   abort                         { \_ _ -> TokenKeywordAbort                 }
-  -- Keywords: Let binding
+  -- Other keywords
   let                           { \_ _ -> TokenKeywordLet                   }
+  phantom                       { \_ _ -> TokenKeywordPhantom               }
+  as                            { \_ _ -> TokenKeywordAs                    }
+  move                          { \_ _ -> TokenKeywordMove                  }
   -- in                            { \_ _ -> TokenKeywordIn                    }
   -- Operators
   \+                            { \_ _ -> TokenOperatorPlus                 }
@@ -96,6 +99,7 @@ tokens :-
   \@                            { \_ _ -> TokenOperatorAt                   }
   \<\<                          { \_ _ -> TokenOperatorShiftLeft            }
   \>\>                          { \_ _ -> TokenOperatorShiftRight           }
+  -- TODO: Compound assignments
   -- Identifiers
   -- Generic identifier syntax for variable, module and structs names
   (_ | $alpha)(_ | $alpha | $digit)*      { \_ s -> TokenIdentifier s                 }

@@ -68,6 +68,7 @@ testScanIdentifier = describe "Scan identifiers" $ do
   testScan "letIdentifier" [TokenIdentifier "letIdentifier"]
   testScan "trueVariable" [TokenIdentifier "trueVariable"]
   testScan "_myVaria_ble" [TokenIdentifier "_myVaria_ble"]
+  testScan "_" [TokenIdentifier "_"]
 
 testScanOperators :: Spec
 testScanOperators = describe "Scan operators" $ do
