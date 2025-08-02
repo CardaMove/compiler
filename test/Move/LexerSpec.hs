@@ -20,8 +20,8 @@ testScanModule = describe "Scan module" $ do
   testScan "module " [TokenKeywordModule]
   testScan "module {" [TokenKeywordModule, TokenSeparatorLBrace]
   testScan "module CAFFE {}" [TokenKeywordModule, TokenIdentifier "CAFFE", TokenSeparatorLBrace, TokenSeparatorRBrace]
-  testScan "module abc::def {}" [TokenKeywordModule, TokenIdentifier "abc", TokenSeparatorDColon, TokenIdentifier "def", TokenSeparatorLBrace, TokenSeparatorRBrace]
-  testScan "module 0xABCD::CAFFE {}" [TokenKeywordModule, TokenLiteralIntHex "0xABCD", TokenSeparatorDColon, TokenIdentifier "CAFFE", TokenSeparatorLBrace, TokenSeparatorRBrace]
+  testScan "module abc::def {}" [TokenKeywordModule, TokenIdentifier "abc", TokenSeparatorDoubleColon, TokenIdentifier "def", TokenSeparatorLBrace, TokenSeparatorRBrace]
+  testScan "module 0xABCD::CAFFE {}" [TokenKeywordModule, TokenLiteralIntHex "0xABCD", TokenSeparatorDoubleColon, TokenIdentifier "CAFFE", TokenSeparatorLBrace, TokenSeparatorRBrace]
 
 testScanDecimal :: Spec
 testScanDecimal = describe "Scan decimals" $ do

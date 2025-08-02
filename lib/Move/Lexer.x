@@ -26,7 +26,7 @@ tokens :-
   \,                            { \_ _ -> TokenSeparatorComma               }
   \:                            { \_ _ -> TokenSeparatorColon               }
   \;                            { \_ _ -> TokenSeparatorSemiColon           }
-  \:\:                          { \_ _ -> TokenSeparatorDColon              }
+  \:\:                          { \_ _ -> TokenSeparatorDoubleColon         }
   -- Literals
   $digit+                       { \_ s -> TokenLiteralIntDec (read s)       }
   0x$hex+                       { \_ s -> TokenLiteralIntHex s              }
@@ -74,8 +74,9 @@ tokens :-
   \!                            { \_ _ -> TokenOperatorNot                  }
   \=                            { \_ _ -> TokenOperatorAssign               }
   \&                            { \_ _ -> TokenOperatorRef                  }
-  \&mut                         { \_ _ -> TokenOperatorRefMut                  }
+  \&mut                         { \_ _ -> TokenOperatorRefMut               }
   \.                            { \_ _ -> TokenOperatorDot                  }
+  \.\.                          { \_ _ -> TokenOperatorDoubleDot            }
   \@                            { \_ _ -> TokenOperatorAt                   }
   -- Identifiers
   -- Generic identifier syntax for variable, module and structs names

@@ -9,7 +9,7 @@ data Token
   | TokenSeparatorSemiColon
   | TokenSeparatorComma
   | TokenSeparatorColon
-  | TokenSeparatorDColon
+  | TokenSeparatorDoubleColon
   | -- Literals
     TokenLiteralIntDec Int
   | TokenLiteralIntHex String
@@ -58,6 +58,7 @@ data Token
   | TokenOperatorRef
   | TokenOperatorRefMut
   | TokenOperatorDot
+  | TokenOperatorDoubleDot
   | TokenOperatorAt
   | -- Identifiers
     TokenIdentifier String

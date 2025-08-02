@@ -19,7 +19,7 @@ import Move.Token
   ','       { TokenSeparatorComma       }
   ':'       { TokenSeparatorColon       }
   ';'       { TokenSeparatorSemiColon   }
-  '::'      { TokenSeparatorDColon      }
+  '::'      { TokenSeparatorDoubleColon      }
   -- Literals
   int       { TokenLiteralIntDec $$     }
   hex       { TokenLiteralIntHex $$     }
