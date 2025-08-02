@@ -22,7 +22,7 @@ data Token
   | TokenKeywordThen
   | TokenKeywordElse
   | TokenKeywordLet
-  | TokenKeywordIn
+  -- | TokenKeywordIn
   | -- Operators
     TokenOperatorPlus
   | TokenOperatorMinus

@@ -38,7 +38,7 @@ data Token
   | TokenKeywordContinue
   | -- Keywords: Let binding
     TokenKeywordLet
-  | TokenKeywordIn
+  -- | TokenKeywordIn
   | -- Operators
     TokenOperatorPlus
   | TokenOperatorMinus

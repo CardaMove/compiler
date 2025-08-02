@@ -6,10 +6,14 @@ import Move.Token
 
 %wrapper "posn"
 
-$digit = [0-9]
-$alpha = [a-zA-Z]
-$hex = [0-9a-fA-F]
+-- Macros
+$digit                          = [0-9]
+$alpha                          = [a-zA-Z]
+$hex                            = [0-9a-fA-F]
+$graphic                        = $printable # $white
+@string                         = \" ($graphic # \")* \"
 
+-- Rules
 tokens :-
   -- Ignored tokens
   $white+                       ; -- skip white space
@@ -26,7 +30,7 @@ tokens :-
   -- Literals
   $digit+                       { \_ s -> TokenLiteralIntDec (read s)       }
   0x$hex+                       { \_ s -> TokenLiteralIntHex s              }
-  \"($digit|$alpha)*\"          { \_ s -> TokenLiteralString s              }
+  @string                       { \_ s -> TokenLiteralString s              }
   true                          { \_ _ -> TokenLiteralBool True             } 
   false                         { \_ _ -> TokenLiteralBool False            }
   -- Keywords: Module, Script
@@ -52,7 +56,7 @@ tokens :-
   continue                      { \_ _ -> TokenKeywordContinue              }
   -- Keywords: Let binding
   let                           { \_ _ -> TokenKeywordLet                   }
-  in                            { \_ _ -> TokenKeywordIn                    }
+  -- in                            { \_ _ -> TokenKeywordIn                    }
   -- Operators
   \+                            { \_ _ -> TokenOperatorPlus                 }
   \-                            { \_ _ -> TokenOperatorMinus                }

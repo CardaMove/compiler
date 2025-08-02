@@ -40,8 +40,8 @@ testScanString :: Spec
 testScanString = describe "Scan strings" $ do
   testScan "\"\"" [TokenLiteralString "\"\""]
   testScan "\"hello\"" [TokenLiteralString "\"hello\""]
-  -- TODO: Incomplete string definition (see snake_case)
-  -- testScan "\"123_string0xABC\"" [TokenLiteralString "\"123_string0xABC\""]
+  -- Strings can have special characters
+  testScan "\"123_string0xABC#?\\+\"" [TokenLiteralString "\"123_string0xABC#?\\+\""]
 
 testScanBool :: Spec
 testScanBool = describe "Scan booleans" $ do

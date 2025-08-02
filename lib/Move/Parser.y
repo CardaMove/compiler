@@ -49,7 +49,7 @@ import Move.Token
   continue  { TokenKeywordContinue      }
   -- Keywords: Let binding
   let       { TokenKeywordLet           }
-  in        { TokenKeywordIn            }
+  -- in        { TokenKeywordIn            }
   -- Operators
   '+'       { TokenOperatorPlus         }
   '-'       { TokenOperatorMinus        }
