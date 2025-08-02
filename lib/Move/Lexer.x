@@ -74,6 +74,7 @@ tokens :-
   \!                            { \_ _ -> TokenOperatorNot                  }
   \=                            { \_ _ -> TokenOperatorAssign               }
   \&                            { \_ _ -> TokenOperatorRef                  }
+  \&mut                         { \_ _ -> TokenOperatorRefMut                  }
   \.                            { \_ _ -> TokenOperatorDot                  }
   \@                            { \_ _ -> TokenOperatorAt                   }
   -- Identifiers

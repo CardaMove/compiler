@@ -63,6 +63,10 @@ testScanIdentifier = describe "Scan identifiers" $ do
   testScan "trueVariable" [TokenIdentifier "trueVariable"]
   testScan "_myVaria_ble" [TokenIdentifier "_myVaria_ble"]
 
+testScanOperators :: Spec
+testScanOperators = describe "Scan operators" $ do
+  testScan "&mut" [TokenOperatorRefMut]
+
 spec :: Spec
 spec = do
   testScanBraces
@@ -73,3 +77,4 @@ spec = do
   testScanBool
   testScanBinding
   testScanIdentifier
+  testScanOperators

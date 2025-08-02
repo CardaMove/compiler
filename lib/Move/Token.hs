@@ -56,6 +56,7 @@ data Token
   | TokenOperatorNot
   | TokenOperatorAssign
   | TokenOperatorRef
+  | TokenOperatorRefMut
   | TokenOperatorDot
   | TokenOperatorAt
   | -- Identifiers
