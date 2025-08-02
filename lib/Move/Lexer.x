@@ -24,6 +24,8 @@ tokens :-
   \)                            { \_ _ -> TokenSeparatorRParen              }
   \{                            { \_ _ -> TokenSeparatorLBrace              }
   \}                            { \_ _ -> TokenSeparatorRBrace              }
+  \[                            { \_ _ -> TokenSeparatorLSquareBracket      }
+  \]                            { \_ _ -> TokenSeparatorRSquareBracket      }
   \,                            { \_ _ -> TokenSeparatorComma               }
   \:                            { \_ _ -> TokenSeparatorColon               }
   \;                            { \_ _ -> TokenSeparatorSemiColon           }
@@ -42,6 +44,13 @@ tokens :-
   module                        { \_ _ -> TokenKeywordModule                }
   script                        { \_ _ -> TokenKeywordScript                }
   use                           { \_ _ -> TokenKeywordUse                   }
+  -- Keywords: Functions
+  public                        { \_ _ -> TokenKeywordPublic                }
+  package                       { \_ _ -> TokenKeywordPackage               }
+  entry                         { \_ _ -> TokenKeywordEntry                 }
+  acquires                      { \_ _ -> TokenKeywordAcquires              }
+  native                        { \_ _ -> TokenKeywordNative                }
+  -- TODO: Inline functions and lambdas
   -- Keywords: Structs
   struct                        { \_ _ -> TokenKeywordStruct                }
   has                           { \_ _ -> TokenKeywordHas                   }
@@ -53,9 +62,12 @@ tokens :-
   if                            { \_ _ -> TokenKeywordIf                    }
   else                          { \_ _ -> TokenKeywordElse                  }
   while                         { \_ _ -> TokenKeywordWhile                 }
+  for                           { \_ _ -> TokenKeywordFor                   }
   loop                          { \_ _ -> TokenKeywordLoop                  }
   break                         { \_ _ -> TokenKeywordBreak                 }
   continue                      { \_ _ -> TokenKeywordContinue              }
+  return                        { \_ _ -> TokenKeywordReturn                }
+  abort                         { \_ _ -> TokenKeywordAbort                 }
   -- Keywords: Let binding
   let                           { \_ _ -> TokenKeywordLet                   }
   -- in                            { \_ _ -> TokenKeywordIn                    }
@@ -83,7 +95,7 @@ tokens :-
   \.\.                          { \_ _ -> TokenOperatorDoubleDot            }
   \@                            { \_ _ -> TokenOperatorAt                   }
   \<\<                          { \_ _ -> TokenOperatorShiftLeft            }
-  \>\>                          { \_ _ -> TokenOperatorShiftRight            }
+  \>\>                          { \_ _ -> TokenOperatorShiftRight           }
   -- Identifiers
   -- Generic identifier syntax for variable, module and structs names
   (_ | $alpha)(_ | $alpha | $digit)*      { \_ s -> TokenIdentifier s                 }

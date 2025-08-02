@@ -6,6 +6,8 @@ data Token
   | TokenSeparatorRParen
   | TokenSeparatorLBrace
   | TokenSeparatorRBrace
+  | TokenSeparatorLSquareBracket
+  | TokenSeparatorRSquareBracket
   | TokenSeparatorSemiColon
   | TokenSeparatorComma
   | TokenSeparatorColon
@@ -22,6 +24,12 @@ data Token
   | TokenKeywordModule
   | TokenKeywordScript
   | TokenKeywordUse
+  | -- Keywords: Functions
+    TokenKeywordPublic
+  | TokenKeywordPackage
+  | TokenKeywordEntry
+  | TokenKeywordAcquires
+  | TokenKeywordNative
   | -- Keywords: Structs
     TokenKeywordStruct
   | TokenKeywordHas
@@ -33,9 +41,12 @@ data Token
     TokenKeywordIf
   | TokenKeywordElse
   | TokenKeywordWhile
+  | TokenKeywordFor
   | TokenKeywordLoop
   | TokenKeywordBreak
   | TokenKeywordContinue
+  | TokenKeywordReturn
+  | TokenKeywordAbort
   | -- Keywords: Let binding
     TokenKeywordLet
   -- | TokenKeywordIn
