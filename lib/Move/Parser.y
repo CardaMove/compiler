@@ -125,7 +125,8 @@ TopLevels_ :: { [TopLevel] }
 TopLevel :: { TopLevel }
   : Use                 { TopLevelUse $1 }
   | Friend              { TopLevelFriend $1 }
-  | Struct              { TopLevelStruct $1 }
+  | NamedStruct              { TopLevelNamedStruct $1 }
+  | PositionalStruct              { TopLevelPositionalStruct $1 }
 
 
 -- Use TODO: importing members and aliasing them
@@ -162,13 +163,31 @@ Friend :: { Friend }
   }
 
 
--- Struct
-Struct :: { Struct }
-  : struct Identifier HasAbilities '{' NamedFields '}'  {
+-- Named struct
+NamedStruct :: { NamedStruct }
+  : struct Identifier HasAbilities '{' NamedFields '}'  { -- named structs do not end with ;
       NamedStruct {
-        structIdentifier = $2,
-        structAbilities = $3,
-        structFields = $5
+        namedStructIdentifier = $2,
+        namedStructAbilities = $3,
+        namedStructFields = $5
+      }
+    }
+
+
+-- Positional struct
+PositionalStruct :: { PositionalStruct }
+  : struct Identifier HasAbilities ';' { -- positional structs must end with ;
+    PositionalStruct {
+        positionalStructIdentifier = $2,
+        positionalStructAbilities = $3,
+        positionalStructFields = []
+      }
+  }
+  | struct Identifier '(' PositionalFields ')' HasAbilities ';' {
+      PositionalStruct {
+        positionalStructIdentifier = $2,
+        positionalStructAbilities = $6,
+        positionalStructFields = $4
       }
     }
 
@@ -208,6 +227,16 @@ NamedField ::  { NamedField }
         fieldType = TypeName $3
       }
     }
+
+
+-- Positional fields of a struct
+PositionalFields :: { [PositionalField] }
+  : PositionalFields_          { reverse $1 } -- Reverse the left-recursive rule
+
+PositionalFields_ :: { [PositionalField] }
+  : {- empty -}       { [] }
+  | identifier             { [PositionalField $ TypeName $1] }
+  | PositionalFields_ ',' identifier  { (PositionalField $ TypeName $3) : $1 }
 
 
 {-

@@ -81,15 +81,15 @@ testParseNamedStruct = describe "Parse module with named structs" $ do
       { moduleAddress = NamedAddress (Identifier "foo"),
         moduleIdentifier = Identifier "baz",
         moduleTopLevels =
-          [ TopLevelStruct (NamedStruct {
-              structIdentifier = Identifier "A",
-              structAbilities = [Copy],
-              structFields = []
+          [ TopLevelNamedStruct (NamedStruct {
+              namedStructIdentifier = Identifier "A",
+              namedStructAbilities = [Copy],
+              namedStructFields = []
             }),
-            TopLevelStruct (NamedStruct {
-              structIdentifier = Identifier "B",
-              structAbilities = [],
-              structFields = [
+            TopLevelNamedStruct (NamedStruct {
+              namedStructIdentifier = Identifier "B",
+              namedStructAbilities = [],
+              namedStructFields = [
                 NamedField {
                   fieldIdentifier = Identifier "x",
                   fieldType = TypeName "u64"
@@ -98,6 +98,29 @@ testParseNamedStruct = describe "Parse module with named structs" $ do
                   fieldIdentifier = Identifier "y",
                   fieldType = TypeName "bool"
               }]
+            })
+          ]
+      }
+
+testParsePositionalStruct :: Spec
+testParsePositionalStruct = describe "Parse module with positional structs" $ do
+  testScan "module foo::baz { struct A has copy; struct B(A, bool) has copy, drop; } " $
+    Module
+      { moduleAddress = NamedAddress (Identifier "foo"),
+        moduleIdentifier = Identifier "baz",
+        moduleTopLevels =
+          [ TopLevelPositionalStruct (PositionalStruct {
+              positionalStructIdentifier = Identifier "A",
+              positionalStructAbilities = [Copy],
+              positionalStructFields = []
+            }),
+            TopLevelPositionalStruct (PositionalStruct {
+              positionalStructIdentifier = Identifier "B",
+              positionalStructAbilities = [Copy, Drop],
+              positionalStructFields = [
+                PositionalField $ TypeName "A",
+                PositionalField $ TypeName "bool"
+              ]
             })
           ]
       }
@@ -124,4 +147,5 @@ spec = do
   testParseModuleUse
   testParseModuleFriend
   testParseNamedStruct
+  testParsePositionalStruct
   -- testParseModuleKeyAbility

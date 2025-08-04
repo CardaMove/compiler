@@ -31,7 +31,8 @@ data Numerical
 data TopLevel
   = TopLevelUse Use
   | TopLevelFriend Friend
-  | TopLevelStruct Struct
+  | TopLevelNamedStruct NamedStruct
+  | TopLevelPositionalStruct PositionalStruct
   deriving (Eq, Show)
 
 -- | Using another module
@@ -52,11 +53,19 @@ data Friend
   deriving (Eq, Show)
 
 -- | Definition of a struct type
-data Struct
+data NamedStruct
   = NamedStruct {
-    structIdentifier :: Identifier,
-    structAbilities :: [Ability],
-    structFields :: [NamedField]
+    namedStructIdentifier :: Identifier,
+    namedStructAbilities :: [Ability],
+    namedStructFields :: [NamedField]
+  }
+  deriving (Eq, Show)
+
+data PositionalStruct
+  = PositionalStruct {
+    positionalStructIdentifier :: Identifier,
+    positionalStructAbilities :: [Ability],
+    positionalStructFields :: [PositionalField]
   }
   deriving (Eq, Show)
 
@@ -74,6 +83,10 @@ data NamedField
     fieldIdentifier :: Identifier,
     fieldType :: TypeName
   }
+  deriving (Eq, Show)
+
+-- | Positional fields are field definitions inside a positional struct
+newtype PositionalField = PositionalField TypeName
   deriving (Eq, Show)
 
 -- | Represents a type
