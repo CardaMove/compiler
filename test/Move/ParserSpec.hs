@@ -74,23 +74,35 @@ testParseModuleFriend = describe "Parse a module with friends" $ do
       ]
     }
 
-{- testParseModuleOneEmptyStruct :: Spec
-testParseModuleOneEmptyStruct = describe "Parse module with one empty struct" $ do
-  testScan "module foo::baz { struct A {} } " $
+testParseNamedStruct :: Spec
+testParseNamedStruct = describe "Parse module with named structs" $ do
+  testScan "module foo::baz { struct A has copy {} struct B{x: u64, y: bool} } " $
     Module
-      { moduleAddress = "foo",
-        moduleIdentifier = "baz",
+      { moduleAddress = NamedAddress (Identifier "foo"),
+        moduleIdentifier = Identifier "baz",
         moduleTopLevels =
-          [ TopLevelStruct $
-              Struct
-                { structIdentifier = "A",
-                  structFields = [],
-                  structAbilities = []
-                }
+          [ TopLevelStruct (NamedStruct {
+              structIdentifier = Identifier "A",
+              structAbilities = [Copy],
+              structFields = []
+            }),
+            TopLevelStruct (NamedStruct {
+              structIdentifier = Identifier "B",
+              structAbilities = [],
+              structFields = [
+                NamedField {
+                  fieldIdentifier = Identifier "x",
+                  fieldType = TypeName "u64"
+                },
+                NamedField {
+                  fieldIdentifier = Identifier "y",
+                  fieldType = TypeName "bool"
+              }]
+            })
           ]
       }
 
-testParseModuleKeyAbility :: Spec
+{- testParseModuleKeyAbility :: Spec
 testParseModuleKeyAbility = describe "Parse module with one empty struct with key ability" $ do
   testScan "module foo::baz { struct K has key {} }" $
     Module
@@ -111,5 +123,5 @@ spec = do
   testParseEmptyModule
   testParseModuleUse
   testParseModuleFriend
-  -- testParseModuleOneEmptyStruct
+  testParseNamedStruct
   -- testParseModuleKeyAbility

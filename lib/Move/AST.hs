@@ -31,6 +31,7 @@ data Numerical
 data TopLevel
   = TopLevelUse Use
   | TopLevelFriend Friend
+  | TopLevelStruct Struct
   deriving (Eq, Show)
 
 -- | Using another module
@@ -50,15 +51,16 @@ data Friend
   }
   deriving (Eq, Show)
 
-{-
+-- | Definition of a struct type
 data Struct
-  = Struct
-  { structIdentifier :: Identifier,
+  = NamedStruct {
+    structIdentifier :: Identifier,
     structAbilities :: [Ability],
-    structFields :: [Field]
+    structFields :: [NamedField]
   }
   deriving (Eq, Show)
 
+-- | Abilities of a struct
 data Ability
   = Copy
   | Drop
@@ -66,18 +68,20 @@ data Ability
   | Store
   deriving (Eq, Show)
 
-data Field
-  = Field
-  { fieldIdentifier :: Identifier,
+-- | Named fields are field definitions inside a "normal" (named) struct
+data NamedField
+  = NamedField {
+    fieldIdentifier :: Identifier,
     fieldType :: TypeName
   }
   deriving (Eq, Show)
 
+-- | Represents a type
 newtype TypeName
   = TypeName String
   deriving (Eq, Show)
 
- -}
+
 {-
 data Use = Use
   { useAddress :: String,

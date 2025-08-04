@@ -125,6 +125,7 @@ TopLevels_ :: { [TopLevel] }
 TopLevel :: { TopLevel }
   : Use                 { TopLevelUse $1 }
   | Friend              { TopLevelFriend $1 }
+  | Struct              { TopLevelStruct $1 }
 
 
 -- Use TODO: importing members and aliasing them
@@ -160,25 +161,29 @@ Friend :: { Friend }
     }
   }
 
-{-
--- Struct
 
+-- Struct
 Struct :: { Struct }
-  : struct Identifier HasAbilities '{' Fields '}'  {
-      Struct {
+  : struct Identifier HasAbilities '{' NamedFields '}'  {
+      NamedStruct {
         structIdentifier = $2,
         structAbilities = $3,
         structFields = $5
       }
     }
 
+
+-- Abilities of a struct
 HasAbilities :: { [Ability] }
   : {- empty -}   { [] }
   | has Abilities { $2 }
 
-Abilities ::  { [Ability] }
+Abilities :: { [Ability] }
+  : Abilities_          { reverse $1 } -- Reverse the left-recursive rule
+
+Abilities_ ::  { [Ability] }
   : Ability               { [$1] }
-  | Abilities ',' Ability { $3 : $1 }
+  | Abilities_ ',' Ability { $3 : $1 }
 
 Ability ::  { Ability }
   : copy  { Copy }
@@ -186,19 +191,25 @@ Ability ::  { Ability }
   | key   { Key }
   | store { Store }
 
-Fields :: { [Field] }
-  : {- empty -}       { [] }
-  | Field             { [$1] }
-  | Fields ',' Field  { $3 : $1 }
 
-Field ::  { Field }
+-- Named fields of a struct
+NamedFields :: { [NamedField] }
+  : NamedFields_          { reverse $1 } -- Reverse the left-recursive rule
+
+NamedFields_ :: { [NamedField] }
+  : {- empty -}       { [] }
+  | NamedField             { [$1] }
+  | NamedFields_ ',' NamedField  { $3 : $1 }
+
+NamedField ::  { NamedField }
   : Identifier ':' identifier {
-      Field {
+      NamedField {
         fieldIdentifier = $1,
         fieldType = TypeName $3
       }
     }
- -}
+
+
 {-
 Uses :: { [Use] }
   : Use { [$1] }
