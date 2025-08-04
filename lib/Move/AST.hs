@@ -38,7 +38,7 @@ data Use
   = Use {
     useAddress :: Address,
     useName :: Identifier,
-    useAlias :: Maybe Identifier
+    useAlias :: Maybe Identifier -- Alias is optional
   }
   deriving (Eq, Show)
 
