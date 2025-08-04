@@ -1,22 +1,12 @@
-module Move.AST
-  ( -- Ability (..),
-    -- Field (..),
-    Module (..),
-    -- Struct (..),
-    -- TopLevel (..),
-    Address (..),
-    Identifier(..),
-    Numerical(..),
-    -- TypeName(..)
-  )
-where
+module Move.AST where
 
 -- | A module consists in an address, identifier and top level elements
 data Module
   = Module
   { moduleAddress :: Address,
-    moduleIdentifier :: Identifier -- ,
-    -- moduleTopLevels :: [TopLevel]
+    moduleIdentifier :: Identifier,
+    -- Top levels are ordered from top to bottom
+    moduleTopLevels :: [TopLevel]
   }
   deriving (Eq, Show)
 
@@ -38,10 +28,19 @@ data Numerical
   deriving (Eq, Show)
 
 
-{- newtype TopLevel
-  = TopLevelStruct Struct
+data TopLevel
+  = TopLevelUse Use
   deriving (Eq, Show)
 
+
+data Use
+  = Use {
+    useAddress :: Address,
+    useName :: Identifier,
+    useAlias :: Identifier
+  }
+  deriving (Eq, Show)
+{-
 data Struct
   = Struct
   { structIdentifier :: Identifier,

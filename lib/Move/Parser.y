@@ -96,11 +96,11 @@ import Move.Token
 
 -- Module
 Module :: { Module }
-  : module Address '::' Identifier '{' '}' { -- TODO: top levels
+  : module Address '::' Identifier '{' TopLevels '}' {
       Module {
         moduleAddress = $2,
-        moduleIdentifier = $4 -- ,
-        -- moduleTopLevels = $6
+        moduleIdentifier = $4,
+        moduleTopLevels = $6
       }
     }
 
@@ -114,14 +114,36 @@ Address :: { Address }
   | int                 { NumericalAddress (LiteralIntDec $1) }
   | hex                 { NumericalAddress (LiteralIntHex $1) }
 
-{- TopLevels :: { [TopLevel] }
+-- Module top levels
+TopLevels :: { [TopLevel] }
+  : TopLevels_          { reverse $1 } -- Reverse the left-recursive rule
+
+TopLevels_ :: { [TopLevel] }
   : {- empty -}         { [] }
-  | TopLevel            { [$1] }
-  | TopLevels TopLevel  { $2 : $1 }
+  | TopLevels_ TopLevel  { $2 : $1 } -- Note: Left-recursive rule
 
 TopLevel :: { TopLevel }
-  : Struct  { TopLevelStruct $1 }
+  : Use                 { TopLevelUse $1 }
 
+
+-- Use TODO: importing members and aliasing them
+Use :: { Use }
+  : use Address '::' Identifier ';' {
+    Use {
+      useAddress = $2,
+      useName = $4,
+      useAlias = $4 -- `use std::vector;` is equivalent to `use std::vector as vector;`
+    }
+  }
+  | use Address '::' Identifier as Identifier ';' {
+    Use {
+      useAddress = $2,
+      useName = $4,
+      useAlias = $6
+    }
+  }
+
+{-
 -- Struct
 
 Struct :: { Struct }

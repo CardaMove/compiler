@@ -16,25 +16,45 @@ testParseEmptyModule = describe "Parse an empty module" $ do
   testScan "module foo::bar {}" $
     Module
       { moduleAddress = NamedAddress (Identifier "foo"),
-        moduleIdentifier = Identifier "bar" --,
-        -- moduleTopLevels = []
+        moduleIdentifier = Identifier "bar",
+        moduleTopLevels = []
       }
-      
+
   -- Numerical address hex
   testScan "module 0xCAFFE::fizzbuzz {}" $
     Module
       { moduleAddress = NumericalAddress (LiteralIntHex "0xCAFFE"),
-        moduleIdentifier = Identifier "fizzbuzz" --,
-        -- moduleTopLevels = []
+        moduleIdentifier = Identifier "fizzbuzz",
+        moduleTopLevels = []
       }
 
   -- Numerical address decimal with separators
   testScan "module 123_456u64::fizzbuzz {}" $
     Module
       { moduleAddress = NumericalAddress (LiteralIntDec 123456),
-        moduleIdentifier = Identifier "fizzbuzz" --,
-        -- moduleTopLevels = []
+        moduleIdentifier = Identifier "fizzbuzz",
+        moduleTopLevels = []
       }
+
+testParseModuleUse :: Spec
+testParseModuleUse = describe "Parse a module with use keywords" $ do
+  testScan "module 0x42::answer { use std::vector; use 0x42::my_module as my_alias; }" $
+    Module {
+      moduleAddress = NumericalAddress (LiteralIntHex "0x42"),
+      moduleIdentifier = Identifier "answer",
+      moduleTopLevels = [
+        TopLevelUse (Use {
+          useAddress = NamedAddress (Identifier "std"),
+          useName = Identifier "vector",
+          useAlias = Identifier "vector"
+        }),
+        TopLevelUse (Use {
+          useAddress = NumericalAddress (LiteralIntHex "0x42"),
+          useName = Identifier "my_module",
+          useAlias = Identifier "my_alias"
+        })
+      ]
+    }
 
 {- testParseModuleOneEmptyStruct :: Spec
 testParseModuleOneEmptyStruct = describe "Parse module with one empty struct" $ do
@@ -71,5 +91,6 @@ testParseModuleKeyAbility = describe "Parse module with one empty struct with ke
 spec :: Spec
 spec = do
   testParseEmptyModule
+  testParseModuleUse
   -- testParseModuleOneEmptyStruct
   -- testParseModuleKeyAbility
