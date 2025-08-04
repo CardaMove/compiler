@@ -92,11 +92,11 @@ testParseNamedStruct = describe "Parse module with named structs" $ do
               namedStructFields = [
                 NamedField {
                   fieldIdentifier = Identifier "x",
-                  fieldType = TypeName "u64"
+                  fieldType = Type (Identifier "u64") []
                 },
                 NamedField {
                   fieldIdentifier = Identifier "y",
-                  fieldType = TypeName "bool"
+                  fieldType = Type (Identifier "bool") []
               }]
             }
           ]
@@ -118,8 +118,8 @@ testParsePositionalStruct = describe "Parse module with positional structs" $ do
               positionalStructIdentifier = Identifier "B",
               positionalStructAbilities = [Copy, Drop],
               positionalStructFields = [
-                PositionalField $ TypeName "A",
-                PositionalField $ TypeName "bool"
+                PositionalField $ Type (Identifier "A") [],
+                PositionalField $ Type (Identifier "bool") []
               ]
             }
           ]

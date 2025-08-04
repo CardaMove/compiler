@@ -33,6 +33,7 @@ data TopLevel
   | TopLevelFriend Friend
   | TopLevelNamedStruct NamedStruct
   | TopLevelPositionalStruct PositionalStruct
+  -- | TopLevelFunction Function
   deriving (Eq, Show)
 
 -- | Using another module
@@ -52,7 +53,7 @@ data Friend
   }
   deriving (Eq, Show)
 
--- | Definition of a struct type
+-- | Definition of a struct type TODO: generic structs
 data NamedStruct
   = NamedStruct {
     namedStructIdentifier :: Identifier,
@@ -61,6 +62,7 @@ data NamedStruct
   }
   deriving (Eq, Show)
 
+-- | Positional struct TODO: generic structs
 data PositionalStruct
   = PositionalStruct {
     positionalStructIdentifier :: Identifier,
@@ -81,21 +83,31 @@ data Ability
 data NamedField
   = NamedField {
     fieldIdentifier :: Identifier,
-    fieldType :: TypeName
+    fieldType :: Type
   }
   deriving (Eq, Show)
 
 -- | Positional fields are field definitions inside a positional struct
-newtype PositionalField = PositionalField TypeName
+newtype PositionalField = PositionalField Type
   deriving (Eq, Show)
 
--- | Represents a type
-newtype TypeName
-  = TypeName String
+-- | Represents a type, optionally with type parameters
+data Type
+  = Type Identifier [Type]
   deriving (Eq, Show)
 
 
-
+-- | A function declaration
+{- data Function
+  = Function {
+    functionName :: Identifier,
+    functionTypeParameters :: [TypeParameter],
+    functionParameters :: [Parameter],
+    functionReturnType :: Maybe Type,
+    functionAcquires :: [Type],
+    functionBody :: _
+  }
+  deriving (Eq, Show) -}
 
 {-
 data Function = Function

@@ -220,11 +220,11 @@ NamedFields_ :: { [NamedField] }
   | NamedField             { [$1] }
   | NamedFields_ ',' NamedField  { $3 : $1 }
 
-NamedField ::  { NamedField }
-  : Identifier ':' identifier {
+NamedField ::  { NamedField } -- TODO: Parse type parameters
+  : Identifier ':' Identifier {
       NamedField {
         fieldIdentifier = $1,
-        fieldType = TypeName $3
+        fieldType = Type $3 []
       }
     }
 
@@ -233,10 +233,10 @@ NamedField ::  { NamedField }
 PositionalFields :: { [PositionalField] }
   : PositionalFields_          { reverse $1 } -- Reverse the left-recursive rule
 
-PositionalFields_ :: { [PositionalField] }
+PositionalFields_ :: { [PositionalField] } -- TODO: Parse type parameters
   : {- empty -}       { [] }
-  | identifier             { [PositionalField $ TypeName $1] }
-  | PositionalFields_ ',' identifier  { (PositionalField $ TypeName $3) : $1 }
+  | Identifier             { [PositionalField $ Type $1 []] }
+  | PositionalFields_ ',' Identifier  { (PositionalField $ Type $3 []) : $1 }
 
 
 {-
