@@ -95,19 +95,7 @@ newtype TypeName
   deriving (Eq, Show)
 
 
-{-
-data Use = Use
-  { useAddress :: String,
-    useIdentifier :: String
-  }
-  deriving (Eq, Show)
 
-data Friend = Friend
-  { friendAddress :: String,
-    friendModule :: String
-  }
-  deriving (Eq, Show)
--}
 
 {-
 data Function = Function

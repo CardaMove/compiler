@@ -240,13 +240,6 @@ PositionalFields_ :: { [PositionalField] }
 
 
 {-
-Uses :: { [Use] }
-  : Use { [$1] }
-  | Uses Use { $2 : $1 }
-
-Use :: { Use }
-  : use identifier '::' identifier { Use (AddressNamed $2) (Identifier $4) }
-
 Constants :: { [Constant] }
   : Constant { [$1] }
   | Constants Constant { $2 : $1 }
