@@ -15,7 +15,7 @@ testParseEmptyModule = describe "Parse an empty module" $ do
   -- Named address
   testScan "module foo::bar {}" $
     Module
-      { moduleAddress = NamedAddress (Identifier "foo"),
+      { moduleAddress = NamedAddress $ Identifier "foo",
         moduleIdentifier = Identifier "bar",
         moduleTopLevels = []
       }
@@ -23,7 +23,7 @@ testParseEmptyModule = describe "Parse an empty module" $ do
   -- Numerical address hex
   testScan "module 0xCAFFE::fizzbuzz {}" $
     Module
-      { moduleAddress = NumericalAddress (LiteralIntHex "0xCAFFE"),
+      { moduleAddress = NumericalAddress $ LiteralIntHex "0xCAFFE",
         moduleIdentifier = Identifier "fizzbuzz",
         moduleTopLevels = []
       }
@@ -31,7 +31,7 @@ testParseEmptyModule = describe "Parse an empty module" $ do
   -- Numerical address decimal with separators
   testScan "module 123_456u64::fizzbuzz {}" $
     Module
-      { moduleAddress = NumericalAddress (LiteralIntDec 123456),
+      { moduleAddress = NumericalAddress $ LiteralIntDec 123456,
         moduleIdentifier = Identifier "fizzbuzz",
         moduleTopLevels = []
       }
@@ -40,18 +40,18 @@ testParseModuleUse :: Spec
 testParseModuleUse = describe "Parse a module with use keywords" $ do
   testScan "module 0x42::answer { use std::vector; use 0x42::my_module as my_alias; }" $
     Module {
-      moduleAddress = NumericalAddress (LiteralIntHex "0x42"),
+      moduleAddress = NumericalAddress $ LiteralIntHex "0x42",
       moduleIdentifier = Identifier "answer",
       moduleTopLevels = [
         TopLevelUse (Use {
-          useAddress = NamedAddress (Identifier "std"),
+          useAddress = NamedAddress $ Identifier "std",
           useName = Identifier "vector",
           useAlias = Nothing
         }),
         TopLevelUse (Use {
-          useAddress = NumericalAddress (LiteralIntHex "0x42"),
+          useAddress = NumericalAddress $ LiteralIntHex "0x42",
           useName = Identifier "my_module",
-          useAlias = Just (Identifier "my_alias")
+          useAlias = Just $ Identifier "my_alias"
         })
       ]
     }
@@ -60,17 +60,17 @@ testParseModuleFriend :: Spec
 testParseModuleFriend = describe "Parse a module with friends" $ do
   testScan "module 0x42::answer { friend 0x42::b; friend aliased_friend; }" $
     Module {
-      moduleAddress = NumericalAddress (LiteralIntHex "0x42"),
+      moduleAddress = NumericalAddress $ LiteralIntHex "0x42",
       moduleIdentifier = Identifier "answer",
       moduleTopLevels = [
-        TopLevelFriend (Friend {
-          friendAddress = Just (NumericalAddress (LiteralIntHex "0x42")),
+        TopLevelFriend $ Friend {
+          friendAddress = Just (NumericalAddress $ LiteralIntHex "0x42"),
           friendName = Identifier "b"
-        }),
-        TopLevelFriend (Friend {
+        },
+        TopLevelFriend $ Friend {
           friendAddress = Nothing,
           friendName = Identifier "aliased_friend"
-        })
+        }
       ]
     }
 
@@ -78,15 +78,15 @@ testParseNamedStruct :: Spec
 testParseNamedStruct = describe "Parse module with named structs" $ do
   testScan "module foo::baz { struct A has copy {} struct B{x: u64, y: bool} } " $
     Module
-      { moduleAddress = NamedAddress (Identifier "foo"),
+      { moduleAddress = NamedAddress $ Identifier "foo",
         moduleIdentifier = Identifier "baz",
         moduleTopLevels =
-          [ TopLevelNamedStruct (NamedStruct {
+          [ TopLevelNamedStruct $ NamedStruct {
               namedStructIdentifier = Identifier "A",
               namedStructAbilities = [Copy],
               namedStructFields = []
-            }),
-            TopLevelNamedStruct (NamedStruct {
+            },
+            TopLevelNamedStruct $ NamedStruct {
               namedStructIdentifier = Identifier "B",
               namedStructAbilities = [],
               namedStructFields = [
@@ -98,7 +98,7 @@ testParseNamedStruct = describe "Parse module with named structs" $ do
                   fieldIdentifier = Identifier "y",
                   fieldType = TypeName "bool"
               }]
-            })
+            }
           ]
       }
 
@@ -106,22 +106,22 @@ testParsePositionalStruct :: Spec
 testParsePositionalStruct = describe "Parse module with positional structs" $ do
   testScan "module foo::baz { struct A has copy; struct B(A, bool) has copy, drop; } " $
     Module
-      { moduleAddress = NamedAddress (Identifier "foo"),
+      { moduleAddress = NamedAddress $ Identifier "foo",
         moduleIdentifier = Identifier "baz",
         moduleTopLevels =
-          [ TopLevelPositionalStruct (PositionalStruct {
+          [ TopLevelPositionalStruct $ PositionalStruct {
               positionalStructIdentifier = Identifier "A",
               positionalStructAbilities = [Copy],
               positionalStructFields = []
-            }),
-            TopLevelPositionalStruct (PositionalStruct {
+            },
+            TopLevelPositionalStruct $ PositionalStruct {
               positionalStructIdentifier = Identifier "B",
               positionalStructAbilities = [Copy, Drop],
               positionalStructFields = [
                 PositionalField $ TypeName "A",
                 PositionalField $ TypeName "bool"
               ]
-            })
+            }
           ]
       }
 
