@@ -2,8 +2,8 @@ module Move.AST where
 
 -- | A module consists in an address, identifier and top level elements
 data Module
-  = Module
-  { moduleAddress :: Address,
+  = Module {
+    moduleAddress :: Address,
     moduleIdentifier :: Identifier,
     -- Top levels are ordered from top to bottom
     moduleTopLevels :: [TopLevel]
@@ -27,19 +27,29 @@ data Numerical
   | LiteralIntHex String
   deriving (Eq, Show)
 
-
+-- | Represents any top level construct
 data TopLevel
   = TopLevelUse Use
+  | TopLevelFriend Friend
   deriving (Eq, Show)
 
-
+-- | Using another module
 data Use
   = Use {
     useAddress :: Address,
     useName :: Identifier,
-    useAlias :: Identifier
+    useAlias :: Maybe Identifier
   }
   deriving (Eq, Show)
+
+-- | Friend with another module
+data Friend
+  = Friend {
+    friendAddress :: Maybe Address, -- Address might be Nothing if the friend is aliased
+    friendName :: Identifier
+  }
+  deriving (Eq, Show)
+
 {-
 data Struct
   = Struct

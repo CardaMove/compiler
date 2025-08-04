@@ -124,6 +124,7 @@ TopLevels_ :: { [TopLevel] }
 
 TopLevel :: { TopLevel }
   : Use                 { TopLevelUse $1 }
+  | Friend              { TopLevelFriend $1 }
 
 
 -- Use TODO: importing members and aliasing them
@@ -132,14 +133,30 @@ Use :: { Use }
     Use {
       useAddress = $2,
       useName = $4,
-      useAlias = $4 -- `use std::vector;` is equivalent to `use std::vector as vector;`
+      useAlias = Nothing
     }
   }
   | use Address '::' Identifier as Identifier ';' {
     Use {
       useAddress = $2,
       useName = $4,
-      useAlias = $6
+      useAlias = Just $6
+    }
+  }
+
+
+-- Friend
+Friend :: { Friend }
+  : friend Address '::' Identifier ';' {
+    Friend {
+      friendAddress = Just $2,
+      friendName = $4
+    }
+  }
+  | friend Identifier ';' {
+    Friend {
+      friendAddress = Nothing,
+      friendName = $2
     }
   }
 

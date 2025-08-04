@@ -46,12 +46,30 @@ testParseModuleUse = describe "Parse a module with use keywords" $ do
         TopLevelUse (Use {
           useAddress = NamedAddress (Identifier "std"),
           useName = Identifier "vector",
-          useAlias = Identifier "vector"
+          useAlias = Nothing
         }),
         TopLevelUse (Use {
           useAddress = NumericalAddress (LiteralIntHex "0x42"),
           useName = Identifier "my_module",
-          useAlias = Identifier "my_alias"
+          useAlias = Just (Identifier "my_alias")
+        })
+      ]
+    }
+
+testParseModuleFriend :: Spec
+testParseModuleFriend = describe "Parse a module with friends" $ do
+  testScan "module 0x42::answer { friend 0x42::b; friend aliased_friend; }" $
+    Module {
+      moduleAddress = NumericalAddress (LiteralIntHex "0x42"),
+      moduleIdentifier = Identifier "answer",
+      moduleTopLevels = [
+        TopLevelFriend (Friend {
+          friendAddress = Just (NumericalAddress (LiteralIntHex "0x42")),
+          friendName = Identifier "b"
+        }),
+        TopLevelFriend (Friend {
+          friendAddress = Nothing,
+          friendName = Identifier "aliased_friend"
         })
       ]
     }
@@ -92,5 +110,6 @@ spec :: Spec
 spec = do
   testParseEmptyModule
   testParseModuleUse
+  testParseModuleFriend
   -- testParseModuleOneEmptyStruct
   -- testParseModuleKeyAbility
