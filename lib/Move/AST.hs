@@ -1,27 +1,50 @@
 module Move.AST
-  ( Ability (..),
-    Field (..),
+  ( -- Ability (..),
+    -- Field (..),
     Module (..),
-    Struct (..),
-    TopLevel (..),
+    -- Struct (..),
+    -- TopLevel (..),
+    Address (..),
+    Identifier(..),
+    Numerical(..),
+    -- TypeName(..)
   )
 where
 
+-- | A module consists in an address, identifier and top level elements
 data Module
   = Module
-  { moduleAddress :: String,
-    moduleIdentifier :: String,
-    moduleTopLevels :: [TopLevel]
+  { moduleAddress :: Address,
+    moduleIdentifier :: Identifier -- ,
+    -- moduleTopLevels :: [TopLevel]
   }
   deriving (Eq, Show)
 
-newtype TopLevel
+-- | An address can either be named (string name) or numerical
+data Address
+  = NamedAddress Identifier
+  | NumericalAddress Numerical
+  deriving (Eq, Show)
+
+-- | An identifier is a name of a variable or module
+newtype Identifier
+  = Identifier String
+  deriving (Eq, Show)
+
+-- | A integer value
+data Numerical
+  = LiteralIntDec Int
+  | LiteralIntHex String
+  deriving (Eq, Show)
+
+
+{- newtype TopLevel
   = TopLevelStruct Struct
   deriving (Eq, Show)
 
 data Struct
   = Struct
-  { structIdentifier :: String,
+  { structIdentifier :: Identifier,
     structAbilities :: [Ability],
     structFields :: [Field]
   }
@@ -36,11 +59,16 @@ data Ability
 
 data Field
   = Field
-  { fieldIdentifier :: String,
-    fieldType :: String
+  { fieldIdentifier :: Identifier,
+    fieldType :: TypeName
   }
   deriving (Eq, Show)
 
+newtype TypeName
+  = TypeName String
+  deriving (Eq, Show)
+
+ -}
 {-
 data Use = Use
   { useAddress :: String,

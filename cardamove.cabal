@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.36.0.
+-- This file has been generated from package.yaml by hpack version 0.37.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -28,7 +28,6 @@ library
       Move.Lexer
       Move.Parser
       Move.Token
-      Translator
   other-modules:
       Paths_cardamove
   hs-source-dirs:
@@ -78,7 +77,6 @@ test-suite cardamove-test
       Aiken.UnLexerSpec
       Move.LexerSpec
       Move.ParserSpec
-      TranslatorSpec
       Paths_cardamove
   hs-source-dirs:
       test

@@ -9,7 +9,7 @@ import Move.Parser
 import Move.AST
 import Aiken.AST
 -- import Options.Applicative
-import Translator (translate)
+-- import Translator (translate)
 
 {- data Sample = Sample
   { hello :: String,
@@ -56,6 +56,8 @@ greet _ = return () -}
 
 main :: IO ()
 main = do
+  putStrLn "Hello world"
+{- main = do
   let source = "module foo::bar { struct Baz has key { a: bool, b: u8 } }"
   let scanned = scan source
   let mov = parse scanned
@@ -79,4 +81,4 @@ main = do
   putStrLn ""
 
   putStrLn "Aiken source code:"
-  print src
+  print src -}

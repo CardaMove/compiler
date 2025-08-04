@@ -16,6 +16,8 @@ import Move.Token
   ')'       { TokenSeparatorRParen      }
   '{'       { TokenSeparatorLBrace      }
   '}'       { TokenSeparatorRBrace      }
+  '['       { TokenSeparatorLSquareBracket }
+  ']'       { TokenSeparatorRSquareBracket }
   ','       { TokenSeparatorComma       }
   ':'       { TokenSeparatorColon       }
   ';'       { TokenSeparatorSemiColon   }
@@ -33,6 +35,12 @@ import Move.Token
   module    { TokenKeywordModule        }
   script    { TokenKeywordScript        }
   use       { TokenKeywordUse           }
+  -- Keywords: Functions
+  public    { TokenKeywordPublic        }
+  package   { TokenKeywordPackage       }
+  entry     { TokenKeywordEntry         }
+  acquires  { TokenKeywordAcquires      }
+  native    { TokenKeywordNative        }
   -- Keywords: Structs
   struct    { TokenKeywordStruct        }
   has       { TokenKeywordHas           }
@@ -44,34 +52,69 @@ import Move.Token
   if        { TokenKeywordIf            }
   else      { TokenKeywordElse          }
   while     { TokenKeywordWhile         }
+  for       { TokenKeywordFor           }
   loop      { TokenKeywordLoop          }
   break     { TokenKeywordBreak         }
   continue  { TokenKeywordContinue      }
-  -- Keywords: Let binding
+  return    { TokenKeywordReturn        }
+  abort     { TokenKeywordAbort         }
+  -- Other keywords
   let       { TokenKeywordLet           }
-  -- in        { TokenKeywordIn            }
+  phantom   { TokenKeywordPhantom       }
+  as        { TokenKeywordAs            }
+  move      { TokenKeywordMove          }
   -- Operators
   '+'       { TokenOperatorPlus         }
   '-'       { TokenOperatorMinus        }
+  '*'       { TokenOperatorTimes        }
+  '/'       { TokenOperatorDiv          }
+  '%'       { TokenOperatorMod          }
+  '=='      { TokenOperatorEq           }
+  '!='      { TokenOperatorNeq          }
+  '<'       { TokenOperatorLt           }
+  '<='      { TokenOperatorLeq          }
+  '>'       { TokenOperatorGt           }
+  '>='      { TokenOperatorGeq          }
+  '&&'      { TokenOperatorAnd          }
+  '||'      { TokenOperatorOr           }
+  '!'       { TokenOperatorNot          }
+  '='       { TokenOperatorAssign       }
+  '&'       { TokenOperatorAmp          }
+  '|'       { TokenOperatorBitwiseOr    }
+  '^'       { TokenOperatorBitwiseXor   }
+  '&mut'    { TokenOperatorAmpMut       }
+  '.'       { TokenOperatorDot          }
+  '..'      { TokenOperatorDoubleDot    }
+  '@'       { TokenOperatorAt           }
+  '<<'      { TokenOperatorShiftLeft    }
+  '>>'      { TokenOperatorShiftRight   }
   -- Identifiers
-  symbol    { TokenIdentifier $$        }
+  identifier{ TokenIdentifier $$        }
 
-%right in
 
 %%
 
 -- Module
-
 Module :: { Module }
-  : module symbol '::' symbol '{' TopLevels '}' { 
+  : module Address '::' Identifier '{' '}' { -- TODO: top levels
       Module {
         moduleAddress = $2,
-        moduleIdentifier = $4,
-        moduleTopLevels = $6
+        moduleIdentifier = $4 -- ,
+        -- moduleTopLevels = $6
       }
     }
 
-TopLevels :: { [TopLevel] }
+-- Wrapper for an identifier
+Identifier :: { Identifier }
+  : identifier { Identifier $1 }
+
+-- Address
+Address :: { Address }
+  : Identifier          { NamedAddress $1 }
+  | int                 { NumericalAddress (LiteralIntDec $1) }
+  | hex                 { NumericalAddress (LiteralIntHex $1) }
+
+{- TopLevels :: { [TopLevel] }
   : {- empty -}         { [] }
   | TopLevel            { [$1] }
   | TopLevels TopLevel  { $2 : $1 }
@@ -82,11 +125,11 @@ TopLevel :: { TopLevel }
 -- Struct
 
 Struct :: { Struct }
-  : struct symbol HasAbilities '{' Fields '}'  {
+  : struct Identifier HasAbilities '{' Fields '}'  {
       Struct {
         structIdentifier = $2,
-        structFields = $5,
-        structAbilities = $3
+        structAbilities = $3,
+        structFields = $5
       }
     }
 
@@ -110,38 +153,38 @@ Fields :: { [Field] }
   | Fields ',' Field  { $3 : $1 }
 
 Field ::  { Field }
-  : symbol ':' symbol {
+  : Identifier ':' identifier {
       Field {
         fieldIdentifier = $1,
-        fieldType = $3
+        fieldType = TypeName $3
       }
     }
-
+ -}
 {-
 Uses :: { [Use] }
   : Use { [$1] }
   | Uses Use { $2 : $1 }
 
 Use :: { Use }
-  : use symbol '::' symbol { Use (AddressNamed $2) (Identifier $4) }
+  : use identifier '::' identifier { Use (AddressNamed $2) (Identifier $4) }
 
 Constants :: { [Constant] }
   : Constant { [$1] }
   | Constants Constant { $2 : $1 }
 
 Constant :: { Constant }
-  : const symbol ':' symbol '=' Expr { Constant (Identifier $2) (Type $4) $6 }
+  : const identifier ':' identifier '=' Expr { Constant (Identifier $2) (Type $4) $6 }
 
 Expr :: { Expr }
-  : symbol { Var (Identifier $1) }
-  | let symbol '=' Expr in Expr { Let (Identifier $2) $4 $6 }
+  : identifier { Var (Identifier $1) }
+  | let identifier '=' Expr in Expr { Let (Identifier $2) $4 $6 }
 
 Stmts :: { [Stmt] }
   : Expr { [Stmt $1] }
   | Stmts ';' Expr { (Stmt $3) : $1 }
 
 Function :: { Function }
-  : fun symbol '(' Args ')' ':' symbol '{' Stmts '}' { Function (Identifier $2) $4 (Type $7) $9 }
+  : fun identifier '(' Args ')' ':' identifier '{' Stmts '}' { Function (Identifier $2) $4 (Type $7) $9 }
 
 Args :: { [(Identifier, Type)] }
   : {- empty -} { [] }
@@ -149,7 +192,7 @@ Args :: { [(Identifier, Type)] }
   | Args ',' Arg { $3 : $1 }
 
 Arg :: { (Identifier, Type) }
-  : symbol ':' symbol { (Identifier $1, Type $3) }
+  : identifier ':' identifier { (Identifier $1, Type $3) }
 -}
 
 {
