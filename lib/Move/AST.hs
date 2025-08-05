@@ -266,7 +266,6 @@ data Term
   | CommaExpr [Expr]
   | TypedExprTerm TypedExpr
   | CastingTerm Casting
-  | IfThenTerm IfThen
   | IfThenElseTerm IfThenElse
   | WhileTerm While
   | LoopTerm Loop
@@ -299,15 +298,7 @@ data IfThenElse
   = IfThenElse {
     ifThenElseCondition :: Expr,
     ifThenElseIfBranch :: Expr,
-    ifThenElseElseBranch :: Expr
-  }
-  deriving (Eq, Show)
-
-
-data IfThen
-  = IfThen {
-    ifThenCondition :: Expr,
-    ifThenBranch :: Expr
+    ifThenElseElseBranch :: Maybe Expr
   }
   deriving (Eq, Show)
 

@@ -437,10 +437,10 @@ Term :: { Term }
   | '(' Expr as Type ')'                                 { CastingTerm $ Casting { castingExpr = $2, castingType = $4 } }
   -- TODO: sequence
   -- if then else
-  | if '(' Expr ')' Expr                                 { IfThenTerm $ If { ifThenCondition = $3, ifThenBranch = $5 } }
-  | if '(' Expr ')' Expr else Expr                       { IfThenElseTerm $ If { ifThenElseCondition = $3, ifThenElseIfBranch = $5, ifThenElseElseBranch = $7 } }
-  | if '(' Expr ')' '{' Expr '}'                         { IfThenTerm $ If { ifThenCondition = $3, ifThenBranch = $6 } }
-  | if '(' Expr ')' '{' Expr '}' else '{' Expr '}'       { IfThenElseTerm $ If { ifThenElseCondition = $3, ifThenElseIfBranch = $6, ifThenElseElseBranch = $10 } }
+  | if '(' Expr ')' Expr                                 { IfThenElseTerm $ If { ifThenElseCondition = $3, ifThenElseIfBranch = $5, ifThenElseElseBranch = Nothing } }
+  | if '(' Expr ')' Expr else Expr                       { IfThenElseTerm $ If { ifThenElseCondition = $3, ifThenElseIfBranch = $5, ifThenElseElseBranch = Just $7 } }
+  | if '(' Expr ')' '{' Expr '}'                         { IfThenElseTerm $ If { ifThenElseCondition = $3, ifThenElseIfBranch = $6, ifThenElseElseBranch = Mothing } }
+  | if '(' Expr ')' '{' Expr '}' else '{' Expr '}'       { IfThenElseTerm $ If { ifThenElseCondition = $3, ifThenElseIfBranch = $6, ifThenElseElseBranch = Just $10 } }
   -- while
   | while '(' Expr ')' Expr                              { WhileTerm $ While { whileCondition = $3, whileExpr = $5 }}
   | while '(' Expr ')' '{' Expr '}'                      { WhileTerm $ While { whileCondition = $3, whileExpr = $6 }}
@@ -459,7 +459,7 @@ Term :: { Term }
 
 CommaExpr :: { [Expr] }
   : {- empty -}               { [] }
-  : CommaExpr ',' Expr        { $3 : $1 }
+  | CommaExpr ',' Expr        { $3 : $1 }
 
 
 Value :: { Value }
