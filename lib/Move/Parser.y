@@ -123,10 +123,11 @@ TopLevels_ :: { [TopLevel] }
   | TopLevels_ TopLevel  { $2 : $1 } -- Note: Left-recursive rule
 
 TopLevel :: { TopLevel }
-  : Use                 { TopLevelUse $1 }
-  | Friend              { TopLevelFriend $1 }
+  : Use                      { TopLevelUse $1 }
+  | Friend                   { TopLevelFriend $1 }
   | NamedStruct              { TopLevelNamedStruct $1 }
-  | PositionalStruct              { TopLevelPositionalStruct $1 }
+  | PositionalStruct         { TopLevelPositionalStruct $1 }
+  | Function                 { TopLevelFunction $1 }
 
 
 -- Use TODO: importing members and aliasing them
@@ -176,6 +177,7 @@ NamedStruct :: { NamedStruct }
 
 -- Positional struct
 PositionalStruct :: { PositionalStruct }
+  -- struct Foo has copy, drop;
   : struct Identifier HasAbilities ';' { -- positional structs must end with ;
     PositionalStruct {
         positionalStructIdentifier = $2,
@@ -183,6 +185,7 @@ PositionalStruct :: { PositionalStruct }
         positionalStructFields = []
       }
   }
+  -- struct Foo(A, B) has copy, drop;
   | struct Identifier '(' PositionalFields ')' HasAbilities ';' {
       PositionalStruct {
         positionalStructIdentifier = $2,
@@ -221,10 +224,11 @@ NamedFields_ :: { [NamedField] }
   | NamedFields_ ',' NamedField  { $3 : $1 }
 
 NamedField ::  { NamedField } -- TODO: Parse type parameters
+  -- TODO: rule for Type
   : Identifier ':' Identifier {
       NamedField {
         fieldIdentifier = $1,
-        fieldType = Type $3 []
+        fieldType = Type $3 []  
       }
     }
 
@@ -235,9 +239,86 @@ PositionalFields :: { [PositionalField] }
 
 PositionalFields_ :: { [PositionalField] } -- TODO: Parse type parameters
   : {- empty -}       { [] }
-  | Identifier             { [PositionalField $ Type $1 []] }
+  -- TODO: rule for Type
+  | Identifier             { [PositionalField $ Type $1 []] } 
+  -- TODO: rule for Type
   | PositionalFields_ ',' Identifier  { (PositionalField $ Type $3 []) : $1 }
 
+
+-- Function declaration
+Function :: { Function }
+  : fun Identifier AngleBracketTypeParameters '(' FunctionParameters ')' FunctionReturnType FunctionAcquires '{' FunctionBody '}' {
+    Function {
+      functionName = $2,
+      functionTypeParameters = $3,
+      functionParameters = $5,
+      functionReturnType = $7,
+      functionAcquires = $8,
+      functionBody = $10
+    }
+  }
+
+
+-- Type params
+AngleBracketTypeParameters :: {  [TypeParameter] }
+  : {- empty -}             { [] }
+  | '<' TypeParameters '>'  { $2 }
+
+TypeParameters :: { [TypeParameter] }
+  : TypeParameters_       { reverse $1 } -- Reverse left-recursive rule
+
+TypeParameters_ :: { [TypeParameter] }
+  : TypeParameter                          { [$1] }
+  | TypeParameters_ ',' TypeParameter      { $3 : $1 }
+
+TypeParameter :: { TypeParameter }
+  -- TODO: constraints
+  : Identifier          { TypeParameter {typeIdentifier = $1, typeConstraints = ()} } 
+
+
+-- Function parameters
+FunctionParameters :: {[Parameter]}
+  : {- empty -}             { [] }
+  | FunctionParameters_     { reverse $1 }  -- Reverse left-recursive rule
+
+FunctionParameters_ :: { [Parameter] }
+  : FunctionParameter                             { [$1] }
+  | FunctionParameters_ ',' FunctionParameter     { $3 : $1 }
+
+FunctionParameter :: { Parameter }
+  -- TODO: rule for Type
+  : Identifier ':' Identifier             {
+    Parameter {
+      parameterIdentifier = $1,
+      parameterType = Type $3 []       
+    }
+  }
+
+
+-- Function return type
+FunctionReturnType :: { Maybe Type }
+  : {- empty -}           { Nothing }
+  -- TODO: rule for type
+  | ':' Identifier        { Just $ Type $2 [] }    
+
+
+-- Acquires
+FunctionAcquires :: { [Type] }
+  : {- empty -}                       { [] }
+  | acquires FunctionAcquires_        { reverse $2 }      -- Reverse left-recursive rule
+
+FunctionAcquires_ :: { [Type] }
+  : FunctionAcquire                           { [$1] }
+  | FunctionAcquires_ ',' FunctionAcquire     { $3 : $1 }
+
+FunctionAcquire :: { Type }
+  -- TODO: rule for type
+  : Identifier            { Type $1 [] }     
+
+
+-- Function body
+FunctionBody :: { () }
+  : {- empty -}       { () }
 
 {-
 Constants :: { [Constant] }

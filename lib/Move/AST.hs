@@ -33,7 +33,7 @@ data TopLevel
   | TopLevelFriend Friend
   | TopLevelNamedStruct NamedStruct
   | TopLevelPositionalStruct PositionalStruct
-  -- | TopLevelFunction Function
+  | TopLevelFunction Function
   deriving (Eq, Show)
 
 -- | Using another module
@@ -53,7 +53,7 @@ data Friend
   }
   deriving (Eq, Show)
 
--- | Definition of a struct type TODO: generic structs
+-- | Definition of a struct type TODO: generic structs (with TypeParameter?)
 data NamedStruct
   = NamedStruct {
     namedStructIdentifier :: Identifier,
@@ -62,7 +62,7 @@ data NamedStruct
   }
   deriving (Eq, Show)
 
--- | Positional struct TODO: generic structs
+-- | Positional struct TODO: generic structs (with TypeParameter?)
 data PositionalStruct
   = PositionalStruct {
     positionalStructIdentifier :: Identifier,
@@ -98,16 +98,31 @@ data Type
 
 
 -- | A function declaration
-{- data Function
+data Function
   = Function {
     functionName :: Identifier,
     functionTypeParameters :: [TypeParameter],
     functionParameters :: [Parameter],
     functionReturnType :: Maybe Type,
     functionAcquires :: [Type],
-    functionBody :: _
+    functionBody :: ()
   }
-  deriving (Eq, Show) -}
+  deriving (Eq, Show)
+
+
+data TypeParameter
+  = TypeParameter {
+    typeIdentifier :: Identifier, -- Do not use Type since here we have just an indentifier
+    typeConstraints :: () -- TODO:
+  }
+  deriving (Eq, Show)
+
+data Parameter
+  = Parameter {
+    parameterIdentifier :: Identifier,
+    parameterType :: Type
+  }
+  deriving (Eq, Show)
 
 {-
 data Function = Function

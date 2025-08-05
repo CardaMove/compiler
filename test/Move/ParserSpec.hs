@@ -125,6 +125,34 @@ testParsePositionalStruct = describe "Parse module with positional structs" $ do
           ]
       }
 
+testParseFunction :: Spec
+testParseFunction = describe "Parse module with function declaration" $ do
+  -- FIXME: cannot return generic
+  testScan "module foo::baz { fun my_func<A, B>(a: A, b: B, c: u64): u64 acquires MyResource {} }" $
+    Module
+      { moduleAddress = NamedAddress $ Identifier "foo",
+        moduleIdentifier = Identifier "baz",
+        moduleTopLevels = [
+          TopLevelFunction $ Function {
+            functionName = Identifier "my_func",
+            functionTypeParameters = [
+              TypeParameter { typeIdentifier = Identifier "A", typeConstraints = () },
+              TypeParameter { typeIdentifier = Identifier "B", typeConstraints = () }
+            ],
+            functionParameters = [
+              Parameter { parameterIdentifier = Identifier "a", parameterType = Type (Identifier "A") [] },
+              Parameter { parameterIdentifier = Identifier "b", parameterType = Type (Identifier "B") [] },
+              Parameter { parameterIdentifier = Identifier "c", parameterType = Type (Identifier "u64") [] }
+            ],
+            functionReturnType = Just $ Type (Identifier "u64") [],
+            functionAcquires = [
+              Type (Identifier "MyResource") []
+            ],
+            functionBody = ()
+          }
+        ]
+      }
+
 {- testParseModuleKeyAbility :: Spec
 testParseModuleKeyAbility = describe "Parse module with one empty struct with key ability" $ do
   testScan "module foo::baz { struct K has key {} }" $
@@ -148,4 +176,5 @@ spec = do
   testParseModuleFriend
   testParseNamedStruct
   testParsePositionalStruct
+  testParseFunction
   -- testParseModuleKeyAbility
