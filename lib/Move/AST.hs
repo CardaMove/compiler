@@ -53,19 +53,21 @@ data Friend
   }
   deriving (Eq, Show)
 
--- | Definition of a struct type TODO: generic structs (with TypeParameter?)
+-- | Definition of a struct type
 data NamedStruct
   = NamedStruct {
     namedStructIdentifier :: Identifier,
+    namedStructTypeParameters :: [TypeParameter],
     namedStructAbilities :: [Ability],
     namedStructFields :: [NamedField]
   }
   deriving (Eq, Show)
 
--- | Positional struct TODO: generic structs (with TypeParameter?)
+-- | Positional struct
 data PositionalStruct
   = PositionalStruct {
     positionalStructIdentifier :: Identifier,
+    positionalStructTypeParameters :: [TypeParameter],
     positionalStructAbilities :: [Ability],
     positionalStructFields :: [PositionalField]
   }

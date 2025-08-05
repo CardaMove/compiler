@@ -76,18 +76,20 @@ testParseModuleFriend = describe "Parse a module with friends" $ do
 
 testParseNamedStruct :: Spec
 testParseNamedStruct = describe "Parse module with named structs" $ do
-  testScan "module foo::baz { struct A has copy {} struct B{x: u64, y: bool} } " $
+  testScan "module foo::baz { struct A has copy {} struct B<TypeParam>{x: u64, y: bool, c: TypeParam} } " $
     Module
       { moduleAddress = NamedAddress $ Identifier "foo",
         moduleIdentifier = Identifier "baz",
         moduleTopLevels =
           [ TopLevelNamedStruct $ NamedStruct {
               namedStructIdentifier = Identifier "A",
+              namedStructTypeParameters = [],
               namedStructAbilities = [Copy],
               namedStructFields = []
             },
             TopLevelNamedStruct $ NamedStruct {
               namedStructIdentifier = Identifier "B",
+              namedStructTypeParameters = [TypeParameter {typeIdentifier = Identifier "TypeParam", typeConstraints = ()}],
               namedStructAbilities = [],
               namedStructFields = [
                 NamedField {
@@ -97,32 +99,39 @@ testParseNamedStruct = describe "Parse module with named structs" $ do
                 NamedField {
                   fieldIdentifier = Identifier "y",
                   fieldType = Type (Identifier "bool") []
-              }]
+                },
+                NamedField {
+                  fieldIdentifier = Identifier "c",
+                  fieldType = Type (Identifier "TypeParam") []
+                }
+              ]
             }
           ]
       }
 
 testParsePositionalStruct :: Spec
 testParsePositionalStruct = describe "Parse module with positional structs" $ do
-  testScan "module foo::baz { struct A has copy; struct B(A, bool) has copy, drop; } " $
+  testScan "module foo::baz { struct A<TypeParam> has copy; struct B(A, bool) has copy, drop; } " $
     Module
       { moduleAddress = NamedAddress $ Identifier "foo",
         moduleIdentifier = Identifier "baz",
-        moduleTopLevels =
-          [ TopLevelPositionalStruct $ PositionalStruct {
-              positionalStructIdentifier = Identifier "A",
-              positionalStructAbilities = [Copy],
-              positionalStructFields = []
-            },
-            TopLevelPositionalStruct $ PositionalStruct {
-              positionalStructIdentifier = Identifier "B",
-              positionalStructAbilities = [Copy, Drop],
-              positionalStructFields = [
-                PositionalField $ Type (Identifier "A") [],
-                PositionalField $ Type (Identifier "bool") []
-              ]
-            }
-          ]
+        moduleTopLevels = [
+          TopLevelPositionalStruct $ PositionalStruct {
+            positionalStructIdentifier = Identifier "A",
+            positionalStructTypeParameters = [TypeParameter {typeIdentifier = Identifier "TypeParam", typeConstraints = ()}],
+            positionalStructAbilities = [Copy],
+            positionalStructFields = []
+          },
+          TopLevelPositionalStruct $ PositionalStruct {
+            positionalStructIdentifier = Identifier "B",
+            positionalStructTypeParameters = [],
+            positionalStructAbilities = [Copy, Drop],
+            positionalStructFields = [
+              PositionalField $ Type (Identifier "A") [],
+              PositionalField $ Type (Identifier "bool") []
+            ]
+          }
+        ]
       }
 
 testParseFunction :: Spec

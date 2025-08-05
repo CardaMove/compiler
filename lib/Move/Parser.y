@@ -166,11 +166,12 @@ Friend :: { Friend }
 
 -- Named struct
 NamedStruct :: { NamedStruct }
-  : struct Identifier HasAbilities '{' NamedFields '}'  { -- named structs do not end with ;
+  : struct Identifier AngleBracketTypeParameters HasAbilities '{' NamedFields '}'  { -- named structs do not end with ;
       NamedStruct {
         namedStructIdentifier = $2,
-        namedStructAbilities = $3,
-        namedStructFields = $5
+        namedStructTypeParameters = $3,
+        namedStructAbilities = $4,
+        namedStructFields = $6
       }
     }
 
@@ -178,19 +179,21 @@ NamedStruct :: { NamedStruct }
 -- Positional struct
 PositionalStruct :: { PositionalStruct }
   -- struct Foo has copy, drop;
-  : struct Identifier HasAbilities ';' { -- positional structs must end with ;
+  : struct Identifier AngleBracketTypeParameters HasAbilities ';' { -- positional structs must end with ;
     PositionalStruct {
         positionalStructIdentifier = $2,
-        positionalStructAbilities = $3,
+        positionalStructTypeParameters = $3,
+        positionalStructAbilities = $4,
         positionalStructFields = []
       }
   }
   -- struct Foo(A, B) has copy, drop;
-  | struct Identifier '(' PositionalFields ')' HasAbilities ';' {
+  | struct Identifier AngleBracketTypeParameters '(' PositionalFields ')' HasAbilities ';' {
       PositionalStruct {
         positionalStructIdentifier = $2,
-        positionalStructAbilities = $6,
-        positionalStructFields = $4
+        positionalStructTypeParameters = $3,
+        positionalStructAbilities = $7,
+        positionalStructFields = $5
       }
     }
 
@@ -296,7 +299,7 @@ EntryModifier :: { Bool }
   : {- empty -}         { False }
   | entry               { True }
 
--- Type params
+-- Type params (both for functions and structs)
 AngleBracketTypeParameters :: {  [TypeParameter] }
   : {- empty -}             { [] }
   | '<' TypeParameters '>'  { $2 }
