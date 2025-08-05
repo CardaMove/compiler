@@ -223,26 +223,32 @@ NamedFields_ :: { [NamedField] }
   | NamedField             { [$1] }
   | NamedFields_ ',' NamedField  { $3 : $1 }
 
-NamedField ::  { NamedField } -- TODO: Parse type parameters
-  -- TODO: rule for Type
-  : Identifier ':' Identifier {
+NamedField ::  { NamedField }
+  : Identifier ':' Type {
       NamedField {
         fieldIdentifier = $1,
-        fieldType = Type $3 []  
+        fieldType = $3  
       }
     }
 
+
+-- Type with optional type parameters
+Type :: { Type }
+  : Identifier                         { Type $1 [] }
+  | Identifier '<' TypeArgs '>'        { Type $1 $ reverse $3 }
+
+TypeArgs :: { [Type] }
+  : Type                      { [$1] }
+  | TypeArgs ',' Type         { $3 : $1 }
 
 -- Positional fields of a struct
 PositionalFields :: { [PositionalField] }
   : PositionalFields_          { reverse $1 } -- Reverse the left-recursive rule
 
-PositionalFields_ :: { [PositionalField] } -- TODO: Parse type parameters
-  : {- empty -}       { [] }
-  -- TODO: rule for Type
-  | Identifier             { [PositionalField $ Type $1 []] } 
-  -- TODO: rule for Type
-  | PositionalFields_ ',' Identifier  { (PositionalField $ Type $3 []) : $1 }
+PositionalFields_ :: { [PositionalField] }
+  : {- empty -}                         { [] }
+  | Type                                { [PositionalField $1] } 
+  | PositionalFields_ ',' Type          { (PositionalField $3) : $1 }
 
 
 -- Function declaration
@@ -286,11 +292,10 @@ FunctionParameters_ :: { [Parameter] }
   | FunctionParameters_ ',' FunctionParameter     { $3 : $1 }
 
 FunctionParameter :: { Parameter }
-  -- TODO: rule for Type
-  : Identifier ':' Identifier             {
+  : Identifier ':' Type             {
     Parameter {
       parameterIdentifier = $1,
-      parameterType = Type $3 []       
+      parameterType = $3      
     }
   }
 
@@ -298,8 +303,7 @@ FunctionParameter :: { Parameter }
 -- Function return type
 FunctionReturnType :: { Maybe Type }
   : {- empty -}           { Nothing }
-  -- TODO: rule for type
-  | ':' Identifier        { Just $ Type $2 [] }    
+  | ':' Type              { Just $2 }    
 
 
 -- Acquires
@@ -308,12 +312,8 @@ FunctionAcquires :: { [Type] }
   | acquires FunctionAcquires_        { reverse $2 }      -- Reverse left-recursive rule
 
 FunctionAcquires_ :: { [Type] }
-  : FunctionAcquire                           { [$1] }
-  | FunctionAcquires_ ',' FunctionAcquire     { $3 : $1 }
-
-FunctionAcquire :: { Type }
-  -- TODO: rule for type
-  : Identifier            { Type $1 [] }     
+  : Type                           { [$1] }
+  | FunctionAcquires_ ',' Type     { $3 : $1 }  
 
 
 -- Function body

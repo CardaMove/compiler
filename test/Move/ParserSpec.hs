@@ -128,7 +128,7 @@ testParsePositionalStruct = describe "Parse module with positional structs" $ do
 testParseFunction :: Spec
 testParseFunction = describe "Parse module with function declaration" $ do
   -- FIXME: cannot return generic
-  testScan "module foo::baz { fun my_func<A, B>(a: A, b: B, c: u64): u64 acquires MyResource {} }" $
+  testScan "module foo::baz { fun my_func<A, B>(a: A, b: B, c: u64): u64 acquires MyResource<A, u64> {} }" $
     Module
       { moduleAddress = NamedAddress $ Identifier "foo",
         moduleIdentifier = Identifier "baz",
@@ -146,7 +146,7 @@ testParseFunction = describe "Parse module with function declaration" $ do
             ],
             functionReturnType = Just $ Type (Identifier "u64") [],
             functionAcquires = [
-              Type (Identifier "MyResource") []
+              Type (Identifier "MyResource") [Type (Identifier "A") [], Type (Identifier "u64") []]
             ],
             functionBody = ()
           }
