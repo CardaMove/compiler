@@ -127,13 +127,19 @@ testParsePositionalStruct = describe "Parse module with positional structs" $ do
 
 testParseFunction :: Spec
 testParseFunction = describe "Parse module with function declaration" $ do
-  -- FIXME: cannot return generic
-  testScan "module foo::baz { fun my_func<A, B>(a: A, b: B, c: u64): u64 acquires MyResource<A, u64> {} }" $
+  testScan $ "module foo::baz { " ++
+    "public(friend) entry fun my_func<A, B>(a: A, b: B, c: u64): u64 acquires MyResource<A, u64> {}" ++
+    "native public fun empty<Element>(): vector<Element>;" ++
+    " }"
+  $
     Module
       { moduleAddress = NamedAddress $ Identifier "foo",
         moduleIdentifier = Identifier "baz",
         moduleTopLevels = [
           TopLevelFunction $ Function {
+            functionHasNativeModifier = False,
+            functionVisibilityModifier = Just VisibilityModifierFriend,
+            functionHasEntryModifier = True,
             functionName = Identifier "my_func",
             functionTypeParameters = [
               TypeParameter { typeIdentifier = Identifier "A", typeConstraints = () },
@@ -148,6 +154,18 @@ testParseFunction = describe "Parse module with function declaration" $ do
             functionAcquires = [
               Type (Identifier "MyResource") [Type (Identifier "A") [], Type (Identifier "u64") []]
             ],
+            functionBody = ()
+          },
+          -- Native function
+          TopLevelFunction $ Function {
+            functionHasNativeModifier = True,
+            functionVisibilityModifier = Just VisibilityModifierPublic,
+            functionHasEntryModifier = False,
+            functionName = Identifier "empty",
+            functionTypeParameters = [TypeParameter {typeIdentifier = Identifier "Element", typeConstraints = ()}],
+            functionParameters = [],
+            functionReturnType = Just $ Type (Identifier "vector") [Type (Identifier "Element") []],
+            functionAcquires = [],
             functionBody = ()
           }
         ]

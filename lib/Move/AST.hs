@@ -100,6 +100,9 @@ data Type
 -- | A function declaration
 data Function
   = Function {
+    functionHasNativeModifier :: Bool,
+    functionVisibilityModifier :: Maybe VisibilityModifier,
+    functionHasEntryModifier :: Bool,
     functionName :: Identifier,
     functionTypeParameters :: [TypeParameter],
     functionParameters :: [Parameter],
@@ -109,6 +112,11 @@ data Function
   }
   deriving (Eq, Show)
 
+data VisibilityModifier
+  = VisibilityModifierPublic
+  | VisibilityModifierPackage
+  | VisibilityModifierFriend
+  deriving (Eq, Show)
 
 data TypeParameter
   = TypeParameter {

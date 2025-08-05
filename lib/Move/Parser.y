@@ -253,17 +253,48 @@ PositionalFields_ :: { [PositionalField] }
 
 -- Function declaration
 Function :: { Function }
-  : fun Identifier AngleBracketTypeParameters '(' FunctionParameters ')' FunctionReturnType FunctionAcquires '{' FunctionBody '}' {
+  -- native function (no body, must end with ;)
+  : native VisibilityModifier EntryModifier fun Identifier AngleBracketTypeParameters '(' FunctionParameters ')' FunctionReturnType FunctionAcquires ';' {
     Function {
-      functionName = $2,
-      functionTypeParameters = $3,
-      functionParameters = $5,
-      functionReturnType = $7,
-      functionAcquires = $8,
-      functionBody = $10
+      functionHasNativeModifier = True,
+      functionVisibilityModifier = $2,
+      functionHasEntryModifier = $3,
+      functionName = $5,
+      functionTypeParameters = $6,
+      functionParameters = $8,
+      functionReturnType = $10,
+      functionAcquires = $11,
+      functionBody = ()
+    }
+  }
+  -- non-native function
+  | VisibilityModifier EntryModifier fun Identifier AngleBracketTypeParameters '(' FunctionParameters ')' FunctionReturnType FunctionAcquires '{' FunctionBody '}' {
+    Function {
+      functionHasNativeModifier = False,
+      functionVisibilityModifier = $1,
+      functionHasEntryModifier = $2,
+      functionName = $4,
+      functionTypeParameters = $5,
+      functionParameters = $7,
+      functionReturnType = $9,
+      functionAcquires = $10,
+      functionBody = $12
     }
   }
 
+
+VisibilityModifier :: { Maybe VisibilityModifier }
+  : {- empty -}                     { Nothing }
+  | public                          { Just VisibilityModifierPublic }
+  | package                         { Just VisibilityModifierPackage }
+  -- Old and new notations for friend visibility
+  | public '(' friend ')'           { Just VisibilityModifierFriend }
+  | friend                          { Just VisibilityModifierFriend }
+
+
+EntryModifier :: { Bool }
+  : {- empty -}         { False }
+  | entry               { True }
 
 -- Type params
 AngleBracketTypeParameters :: {  [TypeParameter] }
