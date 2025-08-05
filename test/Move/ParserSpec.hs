@@ -89,7 +89,7 @@ testParseNamedStruct = describe "Parse module with named structs" $ do
             },
             TopLevelNamedStruct $ NamedStruct {
               namedStructIdentifier = Identifier "B",
-              namedStructTypeParameters = [TypeParameter {typeIdentifier = Identifier "TypeParam", typeConstraints = ()}],
+              namedStructTypeParameters = [TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "TypeParam", typeConstraints = ()}],
               namedStructAbilities = [],
               namedStructFields = [
                 NamedField {
@@ -111,14 +111,17 @@ testParseNamedStruct = describe "Parse module with named structs" $ do
 
 testParsePositionalStruct :: Spec
 testParsePositionalStruct = describe "Parse module with positional structs" $ do
-  testScan "module foo::baz { struct A<TypeParam> has copy; struct B(A, bool) has copy, drop; } " $
+  testScan "module foo::baz { struct A<phantom TypeParam, TypeParam2> has copy; struct B(A, bool) has copy, drop; } " $
     Module
       { moduleAddress = NamedAddress $ Identifier "foo",
         moduleIdentifier = Identifier "baz",
         moduleTopLevels = [
           TopLevelPositionalStruct $ PositionalStruct {
             positionalStructIdentifier = Identifier "A",
-            positionalStructTypeParameters = [TypeParameter {typeIdentifier = Identifier "TypeParam", typeConstraints = ()}],
+            positionalStructTypeParameters = [
+              TypeParameter {typeParameterIsPhantom = True, typeIdentifier = Identifier "TypeParam", typeConstraints = ()},
+              TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "TypeParam2", typeConstraints = ()}
+            ],
             positionalStructAbilities = [Copy],
             positionalStructFields = []
           },
@@ -151,8 +154,8 @@ testParseFunction = describe "Parse module with function declaration" $ do
             functionHasEntryModifier = True,
             functionName = Identifier "my_func",
             functionTypeParameters = [
-              TypeParameter { typeIdentifier = Identifier "A", typeConstraints = () },
-              TypeParameter { typeIdentifier = Identifier "B", typeConstraints = () }
+              TypeParameter { typeParameterIsPhantom = False, typeIdentifier = Identifier "A", typeConstraints = () },
+              TypeParameter { typeParameterIsPhantom = False, typeIdentifier = Identifier "B", typeConstraints = () }
             ],
             functionParameters = [
               Parameter { parameterIdentifier = Identifier "a", parameterType = Type (Identifier "A") [] },
@@ -171,7 +174,7 @@ testParseFunction = describe "Parse module with function declaration" $ do
             functionVisibilityModifier = Just VisibilityModifierPublic,
             functionHasEntryModifier = False,
             functionName = Identifier "empty",
-            functionTypeParameters = [TypeParameter {typeIdentifier = Identifier "Element", typeConstraints = ()}],
+            functionTypeParameters = [TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "Element", typeConstraints = ()}],
             functionParameters = [],
             functionReturnType = Just $ Type (Identifier "vector") [Type (Identifier "Element") []],
             functionAcquires = [],

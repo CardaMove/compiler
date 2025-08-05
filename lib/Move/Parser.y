@@ -313,7 +313,18 @@ TypeParameters_ :: { [TypeParameter] }
 
 TypeParameter :: { TypeParameter }
   -- TODO: constraints
-  : Identifier          { TypeParameter {typeIdentifier = $1, typeConstraints = ()} } 
+  : TypeParameterPhantom Identifier          {
+      TypeParameter {
+        typeParameterIsPhantom = $1,
+        typeIdentifier = $2,
+        typeConstraints = ()
+      }
+    } 
+
+
+TypeParameterPhantom :: { Bool }
+  : {- empty -}         { False }
+  | phantom             { True }
 
 
 -- Function parameters

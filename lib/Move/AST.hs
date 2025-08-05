@@ -122,7 +122,8 @@ data VisibilityModifier
 
 data TypeParameter
   = TypeParameter {
-    typeIdentifier :: Identifier, -- Do not use Type since here we have just an indentifier
+    typeParameterIsPhantom :: Bool,
+    typeIdentifier :: Identifier, -- Not using Type since here we have just an indentifier
     typeConstraints :: () -- TODO:
   }
   deriving (Eq, Show)
