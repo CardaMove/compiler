@@ -312,12 +312,11 @@ TypeParameters_ :: { [TypeParameter] }
   | TypeParameters_ ',' TypeParameter      { $3 : $1 }
 
 TypeParameter :: { TypeParameter }
-  -- TODO: constraints
-  : TypeParameterPhantom Identifier          {
+  : TypeParameterPhantom Identifier TypeParameterConstraints         {
       TypeParameter {
         typeParameterIsPhantom = $1,
         typeIdentifier = $2,
-        typeConstraints = ()
+        typeConstraints = $3
       }
     } 
 
@@ -325,6 +324,15 @@ TypeParameter :: { TypeParameter }
 TypeParameterPhantom :: { Bool }
   : {- empty -}         { False }
   | phantom             { True }
+
+
+TypeParameterConstraints :: { [Ability] }
+  : {- empty -}   { [] }
+  | ':' TypeParameterAbilities { reverse $2 }    -- Reverse the left-recursive rule
+
+TypeParameterAbilities ::  { [Ability] }
+  : Ability               { [$1] }
+  | TypeParameterAbilities '+' Ability { $3 : $1 }   -- Similar to structs abilities but with + separator
 
 
 -- Function parameters

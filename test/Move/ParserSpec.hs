@@ -89,7 +89,7 @@ testParseNamedStruct = describe "Parse module with named structs" $ do
             },
             TopLevelNamedStruct $ NamedStruct {
               namedStructIdentifier = Identifier "B",
-              namedStructTypeParameters = [TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "TypeParam", typeConstraints = ()}],
+              namedStructTypeParameters = [TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "TypeParam", typeConstraints = []}],
               namedStructAbilities = [],
               namedStructFields = [
                 NamedField {
@@ -119,8 +119,8 @@ testParsePositionalStruct = describe "Parse module with positional structs" $ do
           TopLevelPositionalStruct $ PositionalStruct {
             positionalStructIdentifier = Identifier "A",
             positionalStructTypeParameters = [
-              TypeParameter {typeParameterIsPhantom = True, typeIdentifier = Identifier "TypeParam", typeConstraints = ()},
-              TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "TypeParam2", typeConstraints = ()}
+              TypeParameter {typeParameterIsPhantom = True, typeIdentifier = Identifier "TypeParam", typeConstraints = []},
+              TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "TypeParam2", typeConstraints = []}
             ],
             positionalStructAbilities = [Copy],
             positionalStructFields = []
@@ -154,8 +154,8 @@ testParseFunction = describe "Parse module with function declaration" $ do
             functionHasEntryModifier = True,
             functionName = Identifier "my_func",
             functionTypeParameters = [
-              TypeParameter { typeParameterIsPhantom = False, typeIdentifier = Identifier "A", typeConstraints = () },
-              TypeParameter { typeParameterIsPhantom = False, typeIdentifier = Identifier "B", typeConstraints = () }
+              TypeParameter { typeParameterIsPhantom = False, typeIdentifier = Identifier "A", typeConstraints = [] },
+              TypeParameter { typeParameterIsPhantom = False, typeIdentifier = Identifier "B", typeConstraints = [] }
             ],
             functionParameters = [
               Parameter { parameterIdentifier = Identifier "a", parameterType = Type (Identifier "A") [] },
@@ -174,7 +174,7 @@ testParseFunction = describe "Parse module with function declaration" $ do
             functionVisibilityModifier = Just VisibilityModifierPublic,
             functionHasEntryModifier = False,
             functionName = Identifier "empty",
-            functionTypeParameters = [TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "Element", typeConstraints = ()}],
+            functionTypeParameters = [TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "Element", typeConstraints = []}],
             functionParameters = [],
             functionReturnType = Just $ Type (Identifier "vector") [Type (Identifier "Element") []],
             functionAcquires = [],
@@ -183,21 +183,32 @@ testParseFunction = describe "Parse module with function declaration" $ do
         ]
       }
 
-{- testParseModuleKeyAbility :: Spec
-testParseModuleKeyAbility = describe "Parse module with one empty struct with key ability" $ do
-  testScan "module foo::baz { struct K has key {} }" $
+testParseAbilities :: Spec
+testParseAbilities = describe "Parse structs with abilities and constraints" $ do
+  testScan "module foo::baz { struct K<phantom T1: copy + drop, T2> has key {} }" $
     Module
-      { moduleAddress = "foo",
-        moduleIdentifier = "baz",
+      { moduleAddress = NamedAddress $ Identifier "foo",
+        moduleIdentifier = Identifier "baz",
         moduleTopLevels =
-          [ TopLevelStruct $
-              Struct
-                { structIdentifier = "K",
-                  structFields = [],
-                  structAbilities = [Key]
+          [ TopLevelNamedStruct $ NamedStruct {
+              namedStructIdentifier = Identifier "K",
+              namedStructTypeParameters = [
+                TypeParameter {
+                  typeParameterIsPhantom = True,
+                  typeIdentifier = Identifier "T1",
+                  typeConstraints = [Copy, Drop]
+                },
+                TypeParameter {
+                  typeParameterIsPhantom = False,
+                  typeIdentifier = Identifier "T2",
+                  typeConstraints = []
                 }
+              ],
+              namedStructAbilities = [Key],
+              namedStructFields = []
+            }
           ]
-      } -}
+      }
 
 spec :: Spec
 spec = do
@@ -207,4 +218,4 @@ spec = do
   testParseNamedStruct
   testParsePositionalStruct
   testParseFunction
-  -- testParseModuleKeyAbility
+  testParseAbilities

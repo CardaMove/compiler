@@ -124,7 +124,7 @@ data TypeParameter
   = TypeParameter {
     typeParameterIsPhantom :: Bool,
     typeIdentifier :: Identifier, -- Not using Type since here we have just an indentifier
-    typeConstraints :: () -- TODO:
+    typeConstraints :: [Ability]
   }
   deriving (Eq, Show)
 
