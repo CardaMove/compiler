@@ -10,22 +10,12 @@ data Module
   }
   deriving (Eq, Show)
 
--- | An address can either be named (string name) or numerical
-data Address
-  = NamedAddress Identifier
-  | NumericalAddress Numerical
-  deriving (Eq, Show)
 
 -- | An identifier is a name of a variable or module
 newtype Identifier
   = Identifier String
   deriving (Eq, Show)
 
--- | A integer value
-data Numerical
-  = LiteralIntDec Int
-  | LiteralIntHex String
-  deriving (Eq, Show)
 
 -- | Represents any top level construct
 data TopLevel
@@ -34,6 +24,7 @@ data TopLevel
   | TopLevelNamedStruct NamedStruct
   | TopLevelPositionalStruct PositionalStruct
   | TopLevelFunction Function
+  | TopLevelConstant Constant
   deriving (Eq, Show)
 
 -- | Using another module
@@ -110,7 +101,7 @@ data Function
     functionParameters :: [Parameter],
     functionReturnType :: Maybe Type,
     functionAcquires :: [Type],
-    functionBody :: ()
+    functionBody :: () -- TODO: function body
   }
   deriving (Eq, Show)
 
@@ -135,61 +126,224 @@ data Parameter
   }
   deriving (Eq, Show)
 
-{-
-data Function = Function
-  { functionName :: String,
-    functionParameters :: [(String, String)],
-    functionReturnType :: String,
-    functionBody :: [Stmt]
-  }
-  deriving (Eq, Show)
--}
-
-{-
-data Constant = Constant
-  { constantIdentifier :: String,
-    constantType :: String,
-    constantExpr :: Expr
-  }
-  deriving (Eq, Show)
--}
-
-{-
-newtype Identifier = Identifier String
-  deriving (Eq, Show)
-
-newtype Type = Type String
-  deriving (Eq, Show)
-
-data Use
-  = Use Address Identifier
-  deriving (Eq, Show)
 
 data Constant
-  = Constant Identifier Type Expr
+  = Constant {
+    constantIdentifier :: Identifier,
+    constantType :: Type,
+    constantExpression :: Expr
+  }
   deriving (Eq, Show)
 
-data Function
-  = Function Identifier [(Identifier, Type)] Type [Stmt]
+
+--      Exp =
+--            <LambdaBindList> <Exp>        spec only
+--          | <Quantifier>                  spec only
+--          | <BinOpExp>
+--          | <UnaryExp> "=" <Exp>
+
+
+--      BinOpExp =
+--          <BinOpExp> <BinOp> <BinOpExp>
+--          | <UnaryExp>
+--      BinOp = (listed from lowest to highest precedence)
+--          "==>"                                       spec only
+--          | "||"
+--          | "&&"
+--          | "==" | "!=" | '<' | ">" | "<=" | ">="
+--          | ".."                                      spec only
+--          | "|"
+--          | "^"
+--          | "&"
+--          | "<<" | ">>"
+--          | "+" | "-"
+--          | "*" | "/" | "%"
+
+
+--      UnaryExp =
+--          "!" <UnaryExp>
+--          | "&mut" <UnaryExp>
+--          | "&" <UnaryExp>
+--          | "*" <UnaryExp>
+--          | "move" <Var>
+--          | "copy" <Var>
+--          | <DotOrIndexChain>
+
+
+--      DotOrIndexChain =
+--          <DotOrIndexChain> "." <Identifier>
+--          | <DotOrIndexChain> "[" <Exp> "]"                      spec only
+--          | <Term>
+
+
+--      Term =
+--          "break"
+--          | "continue"
+--          | "vector" ('<' Comma<Type> ">")? "[" Comma<Exp> "]"
+--          | <Value>
+--          | "(" Comma<Exp> ")"
+--          | "(" <Exp> ":" <Type> ")"
+--          | "(" <Exp> "as" <Type> ")"
+--          | "{" <Sequence>
+--          | "if" "(" <Exp> ")" <Exp> "else" "{" <Exp> "}"
+--          | "if" "(" <Exp> ")" "{" <Exp> "}"
+--          | "if" "(" <Exp> ")" <Exp> ("else" <Exp>)?
+--          | "while" "(" <Exp> ")" "{" <Exp> "}"
+--          | "while" "(" <Exp> ")" <Exp> (SpecBlock)?
+--          | "loop" <Exp>
+--          | "loop" "{" <Exp> "}"
+--          | "return" "{" <Exp> "}"
+--          | "return" <Exp>?
+--          | "abort" "{" <Exp> "}"
+--          | "abort" <Exp>
+
+
+--      Value =
+--          "@" <LeadingAccessName>
+--          | "true"
+--          | "false"
+--          | <Number>
+--          | <NumberTyped>
+--          | <ByteString>
+
+
+-- | Represents any expression
+newtype Expr = BinaryOpExprExpr BinaryOpExpr
   deriving (Eq, Show)
 
-data Expr
-  = Var Identifier
-  | Let Identifier Expr Expr
+data BinaryOpExpr
+  = Or BinaryOpExpr BinaryOpExpr
+  | And BinaryOpExpr BinaryOpExpr
+  | Eq BinaryOpExpr BinaryOpExpr
+  | Neq BinaryOpExpr BinaryOpExpr
+  | Lt BinaryOpExpr BinaryOpExpr
+  | Gt BinaryOpExpr BinaryOpExpr
+  | Leq BinaryOpExpr BinaryOpExpr
+  | Geq BinaryOpExpr BinaryOpExpr
+  | BitwiseOr BinaryOpExpr BinaryOpExpr
+  | BitwiseXor BinaryOpExpr BinaryOpExpr
+  | BitwiseAnd BinaryOpExpr BinaryOpExpr
+  | ShiftLeft BinaryOpExpr BinaryOpExpr
+  | ShiftRight BinaryOpExpr BinaryOpExpr
+  | Add BinaryOpExpr BinaryOpExpr
+  | Sub BinaryOpExpr BinaryOpExpr
+  | Mult BinaryOpExpr BinaryOpExpr
+  | Div BinaryOpExpr BinaryOpExpr
+  | Mod BinaryOpExpr BinaryOpExpr
+  | UnaryOpExpr UnaryExpr
   deriving (Eq, Show)
 
-newtype Stmt = Stmt Expr
+
+data UnaryExpr
+  = Negation UnaryExpr
+  | MutableReference UnaryExpr
+  | ImmutableReference UnaryExpr
+  | Dereference UnaryExpr
+  | MoveExpr UnaryExpr
+  | CopyExpr UnaryExpr
+  | DotOrIndexChainExpr DotOrIndexChain
   deriving (Eq, Show)
 
--- | friend <address>::<module>
-data Friend
-  = Friend String String
+
+data DotOrIndexChain
+  = DotAccessChain DotAccess
+  | TermChain Term
   deriving (Eq, Show)
 
--- | drop, copy, store, key
 
--- | struct <name> { <record: type>* } has <ability>
-data Struct
-  = Struct String [(String, String)] [Ability]
+data DotAccess
+  = DotAccess {
+    dotAccessLeft :: DotOrIndexChain,
+    dotAccessRight :: Identifier
+  }
   deriving (Eq, Show)
--}
+
+
+data Term
+  = Break
+  | Continue
+  | Value Value
+  | CommaExpr [Expr]
+  | TypedExprTerm TypedExpr
+  | CastingTerm Casting
+  | IfThenTerm IfThen
+  | IfThenElseTerm IfThenElse
+  | WhileTerm While
+  | LoopTerm Loop
+  | ReturnTerm Return
+  | AbortTerm Abort
+  deriving (Eq, Show)
+
+
+newtype Abort = Abort Expr
+  deriving (Eq, Show)
+
+
+newtype Return = Maybe Expr
+  deriving (Eq, Show)
+
+
+newtype Loop = Loop Expr
+  deriving (Eq, Show)
+
+
+data While
+  = While {
+    whileCondition :: Expr,
+    whileExpr :: Expr
+  }
+  deriving (Eq, Show)
+
+
+data IfThenElse
+  = IfThenElse {
+    ifThenElseCondition :: Expr,
+    ifThenElseIfBranch :: Expr,
+    ifThenElseElseBranch :: Expr
+  }
+  deriving (Eq, Show)
+
+
+data IfThen
+  = IfThen {
+    ifThenCondition :: Expr,
+    ifThenBranch :: Expr
+  }
+  deriving (Eq, Show)
+
+
+data Casting
+  = Casting {
+    castingExpr :: Expr,
+    castingType :: Type
+  }
+  deriving (Eq, Show)
+
+
+data TypedExpr
+  = TypedExpr {
+    typedExpr :: Expr,
+    typedExprType :: Type
+  }
+  deriving (Eq, Show)
+
+
+data Value
+  = Address Address
+  | Boolean Bool
+  | Numerical Numerical
+  deriving (Eq, Show)
+
+
+-- | An address can either be named (string name) or numerical
+data Address
+  = NamedAddress Identifier
+  | NumericalAddress Numerical
+  deriving (Eq, Show)
+
+
+-- | A integer value
+data Numerical
+  = LiteralIntDec Int
+  | LiteralIntHex String
+  deriving (Eq, Show)

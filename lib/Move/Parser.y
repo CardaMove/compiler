@@ -108,12 +108,6 @@ Module :: { Module }
 Identifier :: { Identifier }
   : identifier { Identifier $1 }
 
--- Address
-Address :: { Address }
-  : Identifier          { NamedAddress $1 }
-  | int                 { NumericalAddress (LiteralIntDec $1) }
-  | hex                 { NumericalAddress (LiteralIntHex $1) }
-
 -- Module top levels
 TopLevels :: { [TopLevel] }
   : TopLevels_          { reverse $1 } -- Reverse the left-recursive rule
@@ -128,6 +122,7 @@ TopLevel :: { TopLevel }
   | NamedStruct              { TopLevelNamedStruct $1 }
   | PositionalStruct         { TopLevelPositionalStruct $1 }
   | Function                 { TopLevelFunction $1 }
+  | Constant                 { TopLevelConstant $1 }
 
 
 -- Use TODO: importing members and aliasing them
@@ -373,33 +368,121 @@ FunctionAcquires_ :: { [Type] }
 FunctionBody :: { () }
   : {- empty -}       { () }
 
-{-
-Constants :: { [Constant] }
-  : Constant { [$1] }
-  | Constants Constant { $2 : $1 }
 
+-- Constants
 Constant :: { Constant }
-  : const identifier ':' identifier '=' Expr { Constant (Identifier $2) (Type $4) $6 }
+  : const Identifier ':' Type '=' Expr          {
+    Constant {
+      constantIdentifier = $2,
+      constantType = $4,
+      constantExpression = $6
+    }
+  }
 
+
+-- Expressions
 Expr :: { Expr }
-  : identifier { Var (Identifier $1) }
-  | let identifier '=' Expr in Expr { Let (Identifier $2) $4 $6 }
+  : BinaryOpExpr        { BinaryOpExprExpr $1 }
 
-Stmts :: { [Stmt] }
-  : Expr { [Stmt $1] }
-  | Stmts ';' Expr { (Stmt $3) : $1 }
 
-Function :: { Function }
-  : fun identifier '(' Args ')' ':' identifier '{' Stmts '}' { Function (Identifier $2) $4 (Type $7) $9 }
+-- Binary operations (listed from lowest to highest precedence)
+BinaryOpExpr :: { BinaryOpExpr }
+  : BinaryOpExpr '||' BinaryOpExpr                       { Or $1 $ 3 }
+  | BinaryOpExpr '&&' BinaryOpExpr                       { And $1 $ 3 }
+  | BinaryOpExpr '==' BinaryOpExpr                       { Eq $1 $ 3 }
+  | BinaryOpExpr '!=' BinaryOpExpr                       { Neq $1 $ 3 }
+  | BinaryOpExpr '<' BinaryOpExpr                        { Lt $1 $ 3 }
+  | BinaryOpExpr '>' BinaryOpExpr                        { Gt $1 $ 3 }
+  | BinaryOpExpr '<=' BinaryOpExpr                       { Leq $1 $ 3 }
+  | BinaryOpExpr '>=' BinaryOpExpr                       { Geq $1 $ 3 }
+  | BinaryOpExpr '|' BinaryOpExpr                        { BitwiseOr $1 $ 3 }
+  | BinaryOpExpr '^' BinaryOpExpr                        { BitwiseXor $1 $ 3 }
+  | BinaryOpExpr '&' BinaryOpExpr                        { BitwiseAnd $1 $ 3 }
+  | BinaryOpExpr '<<' BinaryOpExpr                       { ShiftLeft $1 $ 3 }
+  | BinaryOpExpr '>>' BinaryOpExpr                       { ShiftRight $1 $ 3 }
+  | BinaryOpExpr '+' BinaryOpExpr                        { Add $1 $ 3 }
+  | BinaryOpExpr '-' BinaryOpExpr                        { Sub $1 $ 3 }
+  | BinaryOpExpr '*' BinaryOpExpr                        { Mult $1 $ 3 }
+  | BinaryOpExpr '/' BinaryOpExpr                        { Div $1 $ 3 }
+  | BinaryOpExpr '%' BinaryOpExpr                        { Mod $1 $ 3 }
+  | UnaryExpr                                            { UnaryOpExpr $1 }
 
-Args :: { [(Identifier, Type)] }
-  : {- empty -} { [] }
-  | Arg { [$1] }
-  | Args ',' Arg { $3 : $1 }
 
-Arg :: { (Identifier, Type) }
-  : identifier ':' identifier { (Identifier $1, Type $3) }
--}
+UnaryExpr :: { UnaryExpr }
+  : '!' UnaryExpr                                        { Negation $2 }
+  | '&mut' UnaryExpr                                     { MutableReference $2 }
+  | '&' UnaryExpr                                        { ImmutableReference $2 }
+  -- Dereference
+  | '*' UnaryExpr                                        { Dereference $2 }
+  | move UnaryExpr                                       { MoveExpr $2 }
+  | copy UnaryExpr                                       { CopyExpr $2 }
+  | DotOrIndexChain                                      { DotOrIndexChainExpr $1 }
+
+
+DotOrIndexChain :: { DotOrIndexChain }
+  : DotOrIndexChain '.' Identifier                       { DotAccessChain $ DotAccess { dotAccessLeft = $1, dotAccessRight = $3 } }
+  | Term                                                 { TermChain $1 }
+
+
+Term :: { Term }
+  : break                                                { Break }
+  | continue                                             { Continue }
+  -- TODO: vector
+  | Value                                                { Value $1}
+  -- Function invocation FIXME: (Might also be a tuple value). Also unsure if should have type [Expr]
+  | '(' CommaExpr ')'                                    { CommaExpr $1 }
+  -- Explicit typing 
+  | '(' Expr ':' Type ')'                                { TypedExprTerm $ TypedExpr { typedExpr = $2, typedExprType = $4 } }
+  -- Casting
+  | '(' Expr as Type ')'                                 { CastingTerm $ Casting { castingExpr = $2, castingType = $4 } }
+  -- TODO: sequence
+  -- if then else
+  | if '(' Expr ')' Expr                                 { IfThenTerm $ If { ifThenCondition = $3, ifThenBranch = $5 } }
+  | if '(' Expr ')' Expr else Expr                       { IfThenElseTerm $ If { ifThenElseCondition = $3, ifThenElseIfBranch = $5, ifThenElseElseBranch = $7 } }
+  | if '(' Expr ')' '{' Expr '}'                         { IfThenTerm $ If { ifThenCondition = $3, ifThenBranch = $6 } }
+  | if '(' Expr ')' '{' Expr '}' else '{' Expr '}'       { IfThenElseTerm $ If { ifThenElseCondition = $3, ifThenElseIfBranch = $6, ifThenElseElseBranch = $10 } }
+  -- while
+  | while '(' Expr ')' Expr                              { WhileTerm $ While { whileCondition = $3, whileExpr = $5 }}
+  | while '(' Expr ')' '{' Expr '}'                      { WhileTerm $ While { whileCondition = $3, whileExpr = $6 }}
+  -- loop
+  | loop Expr                                            { LoopTerm $ Loop $2 }
+  | loop '{' Expr '}'                                    { LoopTerm $ Loop $3 }
+  -- FIXME: where is for?
+  -- return
+  | return Expr                                          { ReturnTerm $ Return $ Just $2 }
+  | return '{' Expr '}'                                  { ReturnTerm $ Return $ Just $3 }
+  | return                                               { ReturnTerm $ Return Nothing }
+  -- abort
+  | abort Expr                                           { AbortTerm $ Abort $2 }
+  | abort '{' Expr '}'                                   { AbortTerm $ Abort $3 }
+
+
+CommaExpr :: { [Expr] }
+  : {- empty -}               { [] }
+  : CommaExpr ',' Expr        { $3 : $1 }
+
+
+Value :: { Value }
+  : '@' Address           { Address $2 }
+  | false                 { Boolean $1 }
+  | true                  { Boolean $1 }
+  | Numerical             { Numerical $1 }
+  -- TODO: number typed?
+  -- TODO: Byte strings and hex strings
+
+
+
+-- Address values
+Address :: { Address }
+  : Identifier            { NamedAddress $1 }
+  | Numerical             { NumericalAddress $1 }
+
+
+-- Numerical values
+Numerical :: { Numerical }
+  : int                   { LiteralIntDec $1 }
+  | hex                   { LiteralIntHex $1 }
+
 
 {
 onError :: [Token] -> e
