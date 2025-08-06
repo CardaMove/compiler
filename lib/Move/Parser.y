@@ -91,6 +91,11 @@ import Move.Token
   -- Identifiers
   identifier{ TokenIdentifier $$        }
 
+-- Fixes DotOrIndexChain precedence:
+--    UnaryExpr -> DotOrIndexChain .                      (rule 101)
+--    DotOrIndexChain -> DotOrIndexChain . '.' Identifier    (rule 102)
+%left DOT_OR_INDEX_CHAIN
+%left '.'
 
 -- In conjunction with %prec, fixes the dangling else problem (with and without braces):
 --    Term -> if '(' Expr ')' Expr .                      (rule 110)
@@ -423,7 +428,7 @@ UnaryExpr :: { UnaryExpr }
   | '*' UnaryExpr                                        { Dereference $2 }
   | move UnaryExpr                                       { MoveExpr $2 }
   | copy UnaryExpr                                       { CopyExpr $2 }
-  | DotOrIndexChain                                      { DotOrIndexChainExpr $1 }
+  | DotOrIndexChain    %prec DOT_OR_INDEX_CHAIN          { DotOrIndexChainExpr $1 }
 
 
 DotOrIndexChain :: { DotOrIndexChain }
