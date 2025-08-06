@@ -118,6 +118,8 @@ import Move.Token
 %left '+' '-' 
 %left '*' '/' '%' 
 
+%right OPT_TYPE_ARGS
+
 -- Fixes DotOrIndexChain precedence:
 --    UnaryExpr -> DotOrIndexChain .                      (rule 101)
 --    DotOrIndexChain -> DotOrIndexChain . '.' Identifier    (rule 102)
@@ -200,7 +202,7 @@ Friend :: { Friend }
 
 -- Named struct
 NamedStruct :: { NamedStruct }
-  : struct Identifier AngleBracketTypeParameters HasAbilities '{' NamedFields '}'  { -- named structs do not end with ;
+  : struct Identifier OptionalTypeParameters HasAbilities '{' NamedFields '}'  { -- named structs do not end with ;
       NamedStruct {
         namedStructIdentifier = $2,
         namedStructTypeParameters = $3,
@@ -213,7 +215,7 @@ NamedStruct :: { NamedStruct }
 -- Positional struct
 PositionalStruct :: { PositionalStruct }
   -- struct Foo has copy, drop;
-  : struct Identifier AngleBracketTypeParameters HasAbilities ';' { -- positional structs must end with ;
+  : struct Identifier OptionalTypeParameters HasAbilities ';' { -- positional structs must end with ;
     PositionalStruct {
         positionalStructIdentifier = $2,
         positionalStructTypeParameters = $3,
@@ -222,7 +224,7 @@ PositionalStruct :: { PositionalStruct }
       }
   }
   -- struct Foo(A, B) has copy, drop;
-  | struct Identifier AngleBracketTypeParameters '(' PositionalFields ')' HasAbilities ';' {
+  | struct Identifier OptionalTypeParameters '(' PositionalFields ')' HasAbilities ';' {
       PositionalStruct {
         positionalStructIdentifier = $2,
         positionalStructTypeParameters = $3,
@@ -297,7 +299,7 @@ PositionalFields_ :: { [PositionalField] }
 -- Function declaration
 Function :: { Function }
   -- native function (no body, must end with ;)
-  : native VisibilityModifier EntryModifier fun Identifier AngleBracketTypeParameters '(' FunctionParameters ')' FunctionReturnType FunctionAcquires ';' {
+  : native VisibilityModifier EntryModifier fun Identifier OptionalTypeParameters '(' FunctionParameters ')' FunctionReturnType FunctionAcquires ';' {
     Function {
       functionHasNativeModifier = True,
       functionVisibilityModifier = $2,
@@ -311,7 +313,7 @@ Function :: { Function }
     }
   }
   -- non-native function
-  | VisibilityModifier EntryModifier fun Identifier AngleBracketTypeParameters '(' FunctionParameters ')' FunctionReturnType FunctionAcquires '{' FunctionBody '}' {
+  | VisibilityModifier EntryModifier fun Identifier OptionalTypeParameters '(' FunctionParameters ')' FunctionReturnType FunctionAcquires '{' FunctionBody '}' {
     Function {
       functionHasNativeModifier = False,
       functionVisibilityModifier = $1,
@@ -340,7 +342,7 @@ EntryModifier :: { Bool }
   | entry               { True }
 
 -- Type params (both for functions and structs)
-AngleBracketTypeParameters :: {  [TypeParameter] }
+OptionalTypeParameters :: {  [TypeParameter] }
   : {- empty -}             { [] }
   | '<' TypeParameters '>'  { $2 }
 
@@ -562,7 +564,9 @@ NameExpr :: { Expr }
     fbcNameAccessChain = $1,
     fbcFields = $4
   } }
-  -- TODO: variable ?
+  -- This is a variable!
+  -- FIXME: Ambiguity with < considered type arguments or less than operation
+  | NameAccessChain                            %prec LOWER                { NameAccessChainExpr $1 }                      
 
 
 -- A sequence of fields of a literal struct
@@ -583,10 +587,12 @@ NamedStructExprField :: { NamedStructExprField }
 
 
 -- A name access chain is an access to a variable, struct or function that might be declared on another module
+--    Note: as on move-language/move/language/move-compiler/src/parser/ast.rs:419
+--    It's correct to consider a single (Identifier), a tuple with (Address, Identifier) and a triple (Address, Identifier, Identifier)
 NameAccessChain :: { NameAccessChain }
-  -- This is a normal identifier (FIXME: per the grammar, should be Address, but an address alone is correct to be parsed as a variable)
+  -- This is a normal identifier
   : Identifier                                            { LocalNameAccessChain $1 }
-  -- TODO: A bit usure about this second one. Address might be an Identifier since its aliased
+  -- This is an access to an aliased module
   | Address '::' Identifier                               { AliasedNameAccessChain $1 $3 }
   | Address '::' Identifier '::' Identifier               { UnaliasedNameAccessChain $1 $3 $5 }
 

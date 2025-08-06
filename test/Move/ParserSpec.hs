@@ -218,9 +218,10 @@ testParseConstants = describe "Parse modules with constant declarations" $ do
     "const C3: bool = false;\n" ++
     "const C4: address = @0xCAFFE;\n" ++
     "const C5: u64 = 1 + 2 * 3 - 4 | 2 << 4;\n" ++            -- Should parse as ((1 + (2 * 3)) - 4) | (2 << 4)
-    -- "const c6: u64 = -1 + *my_ref + move my_var" ++        -- Should parse as ((-1) + (*my_ref)) + (move my_var). Not valid Move code, but test for expression
-    "const MY_A: A = A { b: 10 };" ++                         -- Not valid Move code, but test for expression
-    "const MY_POS: Pos = 0x42::another_module::Pos(12u64, false);" ++         -- Not valid Move code, but test for expression
+    -- FIXME: -1 not parsing
+    -- "const c6: u64 = -1 + *my_ref + move my_var;\n" ++           -- Should parse as ((-1) + (*my_ref)) + (move my_var). Not valid Move code, but test for expression
+    "const MY_A: A = A { b: 10 };\n" ++                         -- Not valid Move code, but test for expression
+    "const MY_POS: Pos = 0x42::another_module::Pos(12u64, false);\n" ++         -- Not valid Move code, but test for expression
     "}"
   $ Module
     { moduleAddress = NamedAddress $ Identifier "foo",
@@ -267,16 +268,16 @@ testParseConstants = describe "Parse modules with constant declarations" $ do
                 (ValueLiteral $ Numerical $ LiteralIntDec 4)
               )
           },
-          {- TopLevelConstant $ Constant {
-            constantIdentifier = Identifier "C6",
-            constantType = Type (Identifier "u64") [],
-            constantExpression = BinaryOpExprExpr $ Add
-              (BinaryOpExprExpr $ Add
-                (UnaryOpExpr $ Negation $ ValueLiteral $ Numerical $ LiteralIntDec 1)
-                (UnaryOpExpr $ Dereference $ ValueLiteral $ Numerical $ LiteralIntDec 3) -- FIXME: placeholder
-              )
-              (UnaryOpExpr $ MoveExpr $ Identifier "my_var")
-          }, -}
+          -- TopLevelConstant $ Constant {
+          --   constantIdentifier = Identifier "C6",
+          --   constantType = Type (Identifier "u64") [],
+          --   constantExpression = BinaryOpExprExpr $ Add
+          --     (BinaryOpExprExpr $ Add
+          --       (UnaryOpExpr $ Negation $ ValueLiteral $ Numerical $ LiteralIntDec 1)
+          --       (UnaryOpExpr $ Dereference $ NameAccessChainExpr $ LocalNameAccessChain $ Identifier "my_ref") -- FIXME: placeholder
+          --     )
+          --     (UnaryOpExpr $ MoveExpr $ Identifier "my_var")
+          -- },
           TopLevelConstant $ Constant {
             constantIdentifier = Identifier "MY_A",
             constantType = Type (Identifier "A") [],

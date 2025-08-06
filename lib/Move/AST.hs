@@ -236,6 +236,7 @@ data Expr
   | NamedStructExprExpr NamedStructExpr
   | PositionalStructExprOrFunctionCallExpr PositionalStructExprOrFunctionCall
   | FunctionBangCallExpr FunctionBangCall
+  | NameAccessChainExpr NameAccessChain
   | IfThenElseTerm IfThenElse
   | WhileTerm While
   | Loop Expr
