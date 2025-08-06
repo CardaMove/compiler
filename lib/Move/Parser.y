@@ -454,8 +454,8 @@ UnaryExpr :: { Expr }
   | '&' UnaryExpr                                        { UnaryOpExpr $ ImmutableReference $2 }
   -- Dereference
   | '*' UnaryExpr                                        { UnaryOpExpr $ Dereference $2 }
-  | move UnaryExpr                                       { UnaryOpExpr $ MoveExpr $2 }
-  | copy UnaryExpr                                       { UnaryOpExpr $ CopyExpr $2 }
+  | move Identifier                                      { UnaryOpExpr $ MoveExpr $2 }
+  | copy Identifier                                      { UnaryOpExpr $ CopyExpr $2 }
   | DotOrIndexChain    %prec DOT_OR_INDEX_CHAIN          { $1 }
 
 

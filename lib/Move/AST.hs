@@ -261,8 +261,8 @@ data UnaryExpr
   | MutableReference Expr
   | ImmutableReference Expr
   | Dereference Expr
-  | MoveExpr Expr
-  | CopyExpr Expr
+  | MoveExpr Identifier
+  | CopyExpr Identifier
   deriving (Eq, Show)
 
 
