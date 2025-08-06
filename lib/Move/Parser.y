@@ -91,14 +91,23 @@ import Move.Token
   -- Identifiers
   identifier{ TokenIdentifier $$        }
 
-
 -- Fixes Return precedence when encountering * or & after return keyword:
 --    Return -> return .                                  (rule 121)
 --    Return -> return . Expr                             (rule 122)
 --    Return -> return . '{' Expr '}'                     (rule 123)
+-- Must occur prior of '*' and '&' (for some reasons, not working with custom precedence terms)
 %right return
-%right '*'
-%right '&'
+
+%left '||'
+%left '&&'
+%left '==' '!=' '<' '>' '<=' '>='
+%left '|' 
+%left '^' 
+%left '&' 
+%left '<<'
+%left '>>'
+%left '+' '-' 
+%left '*' '/' '%' 
 
 -- Fixes DotOrIndexChain precedence:
 --    UnaryExpr -> DotOrIndexChain .                      (rule 101)
