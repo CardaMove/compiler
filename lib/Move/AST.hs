@@ -210,6 +210,7 @@ data Constant
 -- | Represents any expression
 data Expr
   = BinaryOpExprExpr BinaryOpExpr
+  | AssignmentExpr Assignment
   | UnaryOpExpr UnaryExpr
   | DotOrIndexChainExpr DotOrIndexChain
   | ValueLiteral ValueLiteral
@@ -244,6 +245,14 @@ data BinaryOpExpr
   | Mult Expr Expr
   | Div Expr Expr
   | Mod Expr Expr
+  deriving (Eq, Show)
+
+
+data Assignment
+  = Assignment {
+    assignmentLeft :: Expr,
+    assignmentRight :: Expr
+  }
   deriving (Eq, Show)
 
 

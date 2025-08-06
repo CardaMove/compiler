@@ -95,6 +95,11 @@ import Move.Token
 -- Fixes precedence at State 102 between Expr -> BinaryOpExpr . and the others
 %nonassoc LOWER
 
+-- In conjunction with %prec LOWER at rule 95, fixes precedence at State 103 when encountering a '='
+--    Expr -> UnaryExpr . '=' Expr                        (rule 76)
+--   	BinaryOpExpr -> UnaryExpr .                         (rule 95)
+%left '='
+
 -- Fixes Return precedence when encountering * or & after return keyword:
 --    Return -> return .                                  (rule 121)
 --    Return -> return . Expr                             (rule 122)
@@ -416,7 +421,8 @@ Constant :: { Constant }
 
 -- Expressions
 Expr :: { Expr }
-  : BinaryOpExpr      %prec LOWER                          { $1 }
+  : BinaryOpExpr      %prec LOWER                        { $1 }
+  | UnaryExpr '=' Expr                                   { AssignmentExpr $ Assignment { assignmentLeft = $1, assignmentRight = $3 } }
 
 
 -- Binary operations (listed from lowest to highest precedence)
@@ -439,7 +445,7 @@ BinaryOpExpr :: { Expr }
   | BinaryOpExpr '*' BinaryOpExpr                        { BinaryOpExprExpr $ Mult $1 $3 }
   | BinaryOpExpr '/' BinaryOpExpr                        { BinaryOpExprExpr $ Div $1 $3 }
   | BinaryOpExpr '%' BinaryOpExpr                        { BinaryOpExprExpr $ Mod $1 $3 }
-  | UnaryExpr                                            { $1 }
+  | UnaryExpr                         %prec LOWER        { $1 }
 
 
 UnaryExpr :: { Expr }
@@ -498,7 +504,7 @@ Return :: { Expr }
 CommaExpr :: { Expr }
   : CommaExpr_                 { CommaExpr $ reverse $1 } -- Reverse the left-recursive rule
 
-CommaExpr_ :: { [Expr] }
+CommaExpr_ :: { [Expr] } -- TODO: single expression
   : {- empty -}                { [] }
   | CommaExpr_ ',' Expr        { $3 : $1 }
 
