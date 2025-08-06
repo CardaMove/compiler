@@ -91,6 +91,11 @@ import Move.Token
   -- Identifiers
   identifier{ TokenIdentifier $$        }
 
+%right IF_NO_ELSE
+-- %right IF_BRACES_NO_ELSE
+-- %right IF_ELSE
+-- %right IF_ELSE_BRACES
+%right else
 
 %%
 
@@ -436,11 +441,12 @@ Term :: { Term }
   -- Casting
   | '(' Expr as Type ')'                                 { CastingTerm $ Casting { castingExpr = $2, castingType = $4 } }
   -- TODO: sequence
-  -- if then else
-  | if '(' Expr ')' Expr                                 { IfThenElseTerm $ If { ifThenElseCondition = $3, ifThenElseIfBranch = $5, ifThenElseElseBranch = Nothing } }
+  -- if then else 
+  | if '(' Expr ')' Expr %prec IF_NO_ELSE                                { IfThenElseTerm $ If { ifThenElseCondition = $3, ifThenElseIfBranch = $5, ifThenElseElseBranch = Nothing } }
+  -- %prec IF_ELSE
   | if '(' Expr ')' Expr else Expr                       { IfThenElseTerm $ If { ifThenElseCondition = $3, ifThenElseIfBranch = $5, ifThenElseElseBranch = Just $7 } }
-  | if '(' Expr ')' '{' Expr '}'                         { IfThenElseTerm $ If { ifThenElseCondition = $3, ifThenElseIfBranch = $6, ifThenElseElseBranch = Mothing } }
-  | if '(' Expr ')' '{' Expr '}' else '{' Expr '}'       { IfThenElseTerm $ If { ifThenElseCondition = $3, ifThenElseIfBranch = $6, ifThenElseElseBranch = Just $10 } }
+  -- | if '(' Expr ')' '{' Expr '}'                         { IfThenElseTerm $ If { ifThenElseCondition = $3, ifThenElseIfBranch = $6, ifThenElseElseBranch = Mothing } }
+  -- | if '(' Expr ')' '{' Expr '}' else '{' Expr '}'       { IfThenElseTerm $ If { ifThenElseCondition = $3, ifThenElseIfBranch = $6, ifThenElseElseBranch = Just $10 } }
   -- while
   | while '(' Expr ')' Expr                              { WhileTerm $ While { whileCondition = $3, whileExpr = $5 }}
   | while '(' Expr ')' '{' Expr '}'                      { WhileTerm $ While { whileCondition = $3, whileExpr = $6 }}
