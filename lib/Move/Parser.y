@@ -405,7 +405,7 @@ FunctionBody :: { () }
 
 -- Constants
 Constant :: { Constant }
-  : const Identifier ':' Type '=' Expr          {
+  : const Identifier ':' Type '=' Expr ';'         {
     Constant {
       constantIdentifier = $2,
       constantType = $4,

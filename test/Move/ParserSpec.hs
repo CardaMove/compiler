@@ -139,9 +139,9 @@ testParsePositionalStruct = describe "Parse module with positional structs" $ do
 
 testParseFunction :: Spec
 testParseFunction = describe "Parse module with function declaration" $ do
-  testScan $ "module foo::baz { " ++
-    "public(friend) entry fun my_func<A, B>(a: A, b: B, c: u64): u64 acquires MyResource<A, u64> {}" ++
-    "native public fun empty<Element>(): vector<Element>;" ++
+  testScan $ "module foo::baz {\n" ++
+    "public(friend) entry fun my_func<A, B>(a: A, b: B, c: u64): u64 acquires MyResource<A, u64> {}\n" ++
+    "native public fun empty<Element>(): vector<Element>;\n" ++
     " }"
   $
     Module
@@ -210,6 +210,27 @@ testParseAbilities = describe "Parse structs with abilities and constraints" $ d
           ]
       }
 
+testParseConstants :: Spec
+testParseConstants = describe "Parse modules with constant declarations" $ do
+  testScan $ "module foo::baz {\n" ++
+    "const C1: u64 = 1;\n" ++
+    --"const C2: u64 = 1 + 2 - 3;\n" ++
+    --"const C3: bool = false;\n" ++
+    --"const C4: address = @0xCAFFE;\n" ++
+    "}"
+  $ Module
+    { moduleAddress = NamedAddress $ Identifier "foo",
+      moduleIdentifier = Identifier "baz",
+      moduleTopLevels =
+        [ TopLevelConstant $ Constant {
+            constantIdentifier = Identifier "C1",
+            constantType = Type (Identifier "u64") [],
+            constantExpression = BinaryOpExprExpr $ UnaryOpExpr $ DotOrIndexChainExpr $ TermChain $ Value $ Numerical $ LiteralIntDec 1
+          }
+        ]
+    }
+    
+
 spec :: Spec
 spec = do
   testParseEmptyModule
@@ -219,3 +240,4 @@ spec = do
   testParsePositionalStruct
   testParseFunction
   testParseAbilities
+  testParseConstants
