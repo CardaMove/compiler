@@ -91,6 +91,10 @@ import Move.Token
   -- Identifiers
   identifier{ TokenIdentifier $$        }
 
+
+-- Fixes precedence at State 102 between Expr -> BinaryOpExpr . and the others
+%nonassoc LOWER
+
 -- Fixes Return precedence when encountering * or & after return keyword:
 --    Return -> return .                                  (rule 121)
 --    Return -> return . Expr                             (rule 122)
@@ -412,7 +416,7 @@ Constant :: { Constant }
 
 -- Expressions
 Expr :: { Expr }
-  : BinaryOpExpr        { BinaryOpExprExpr $1 }
+  : BinaryOpExpr      %prec LOWER                          { BinaryOpExprExpr $1 }
 
 
 -- Binary operations (listed from lowest to highest precedence)
