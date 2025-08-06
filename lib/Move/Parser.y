@@ -91,6 +91,15 @@ import Move.Token
   -- Identifiers
   identifier{ TokenIdentifier $$        }
 
+
+-- Fixes Return precedence when encountering * or & after return keyword:
+--    Return -> return .                                  (rule 121)
+--    Return -> return . Expr                             (rule 122)
+--    Return -> return . '{' Expr '}'                     (rule 123)
+%right return
+%right '*'
+%right '&'
+
 -- Fixes DotOrIndexChain precedence:
 --    UnaryExpr -> DotOrIndexChain .                      (rule 101)
 --    DotOrIndexChain -> DotOrIndexChain . '.' Identifier    (rule 102)
@@ -461,12 +470,16 @@ Term :: { Term }
   | loop '{' Expr '}'                                    { LoopTerm $ Loop $3 }
   -- FIXME: where is for?
   -- return
-  | return Expr                                          { ReturnTerm $ Return $ Just $2 }
-  | return '{' Expr '}'                                  { ReturnTerm $ Return $ Just $3 }
-  | return                                               { ReturnTerm $ Return Nothing }
+  | Return                                               { ReturnTerm $1 }
   -- abort
   | abort Expr                                           { AbortTerm $ Abort $2 }
   | abort '{' Expr '}'                                   { AbortTerm $ Abort $3 }
+
+
+Return :: { Return }
+  : return                                               { Return Nothing }
+  | return Expr                                          { Return $ Just $2 }
+  | return '{' Expr '}'                                  { Return $ Just $3 }
 
 
 CommaExpr :: { [Expr] }
