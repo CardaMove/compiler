@@ -217,7 +217,9 @@ testParseConstants = describe "Parse modules with constant declarations" $ do
     "const C2: u64 = 1 + 2 - 3;\n" ++
     "const C3: bool = false;\n" ++
     "const C4: address = @0xCAFFE;\n" ++
-    "const C5: u64 = 1 + 2 * 3 - 4 | 2 << 4;\n" ++ -- (((1 + (2 * 3)) - 4) | (2 << 4))
+    "const C5: u64 = 1 + 2 * 3 - 4 | 2 << 4;\n" ++            -- Should parse as ((1 + (2 * 3)) - 4) | (2 << 4)
+    -- "const c6: u64 = -1 + *my_ref + move my_var" ++        -- Should parse as ((-1) + (*my_ref)) + (move my_var). Not valid Move code, but test for expression
+    "const MY_A: A = A { b: 10 };" ++                         -- Not valid Move code, but test for expression
     "}"
   $ Module
     { moduleAddress = NamedAddress $ Identifier "foo",
@@ -263,6 +265,26 @@ testParseConstants = describe "Parse modules with constant declarations" $ do
                 (ValueLiteral $ Numerical $ LiteralIntDec 2)
                 (ValueLiteral $ Numerical $ LiteralIntDec 4)
               )
+          },
+          {- TopLevelConstant $ Constant {
+            constantIdentifier = Identifier "C6",
+            constantType = Type (Identifier "u64") [],
+            constantExpression = BinaryOpExprExpr $ Add
+              (BinaryOpExprExpr $ Add
+                (UnaryOpExpr $ Negation $ ValueLiteral $ Numerical $ LiteralIntDec 1)
+                (UnaryOpExpr $ Dereference $ ValueLiteral $ Numerical $ LiteralIntDec 3) -- FIXME: placeholder
+              )
+              (UnaryOpExpr $ MoveExpr $ Identifier "my_var")
+          }, -}
+          -- const MY_A: A = A { b: 10 };
+          TopLevelConstant $ Constant {
+            constantIdentifier = Identifier "MY_A",
+            constantType = Type (Identifier "A") [],
+            constantExpression = NamedStructExprExpr $ NamedStructExpr {
+              nseNameAccessChain = LocalNameAccessChain $ Identifier "A",
+              nseTypeArgs = [],
+              nseFields = [NamedStructExprField { nsefIdentifier = Identifier "b", nsefExpr = Just $ ValueLiteral $ Numerical $ LiteralIntDec 10 }]
+            }
           }
         ]
     }

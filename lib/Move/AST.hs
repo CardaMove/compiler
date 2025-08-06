@@ -180,6 +180,7 @@ data Constant
 --          "break"
 --          | "continue"
 --          | "vector" ('<' Comma<Type> ">")? "[" Comma<Exp> "]"
+--          | <NameExp>               -- FIXME: TODO: Inferred from the Move compiler: represents a variable, a function call, a literal struct
 --          | <Value>
 --          | "(" Comma<Exp> ")"
 --          | "(" <Exp> ":" <Type> ")"
@@ -207,6 +208,21 @@ data Constant
 --          | <ByteString>
 
 
+--      NameExp =
+--          <NameAccessChain> <OptionalTypeArgs> "{" Comma<ExpField> "}"
+--          | <NameAccessChain> <OptionalTypeArgs> "(" Comma<Exp> ")"
+--          | <NameAccessChain> "!" "(" Comma<Exp> ")"
+--          | <NameAccessChain> <OptionalTypeArgs>
+
+
+--      ExpField = <Field> <":" <Exp>>?
+
+
+--      NameAccessChain = <LeadingNameAccess> ( "::" <Identifier> ( "::" <Identifier> )? )?
+
+
+-- TODO: rewrite se Identifier into NameAccessChain
+
 -- | Represents any expression
 data Expr
   = BinaryOpExprExpr BinaryOpExpr
@@ -217,6 +233,8 @@ data Expr
   | CommaExpr [Expr]
   | TypedExprTerm TypedExpr
   | CastingTerm Casting
+  | NamedStructExprExpr NamedStructExpr
+  -- TODO: | PositionalStructExprOrFunctionCallExpr PositionalStructExprOrFunctionCall
   | IfThenElseTerm IfThenElse
   | WhileTerm While
   | Loop Expr
@@ -325,4 +343,28 @@ data Address
 data Numerical
   = LiteralIntDec Int
   | LiteralIntHex String
+  deriving (Eq, Show)
+
+
+data NamedStructExpr
+  = NamedStructExpr {
+    nseNameAccessChain :: NameAccessChain,
+    nseTypeArgs :: [Type],
+    nseFields :: [NamedStructExprField]
+  }
+  deriving (Eq, Show)
+
+
+data NamedStructExprField
+  = NamedStructExprField {
+    nsefIdentifier :: Identifier,
+    nsefExpr :: Maybe Expr
+  }
+  deriving (Eq, Show)
+
+
+data NameAccessChain
+  = LocalNameAccessChain Identifier
+  | AliasedNameAccessChain Address Identifier
+  | UnaliasedNameAccessChain Address Identifier Identifier
   deriving (Eq, Show)

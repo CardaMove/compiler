@@ -271,12 +271,18 @@ NamedField ::  { NamedField }
 
 -- Type with optional type parameters
 Type :: { Type }
-  : Identifier                         { Type $1 [] }
-  | Identifier '<' TypeArgs '>'        { Type $1 $ reverse $3 }
+  : Identifier OptionalTypeArgs        { Type $1 $2 }
 
-TypeArgs :: { [Type] }
-  : Type                      { [$1] }
-  | TypeArgs ',' Type         { $3 : $1 }
+
+OptionalTypeArgs :: { [Type] }
+  : {- empty -}                        { [] }
+  | '<' CommaType '>'                  { reverse $2 }
+
+
+CommaType :: { [Type] }
+  : Type                               { [$1] }
+  | CommaType ',' Type                 { $3 : $1 }
+
 
 -- Positional fields of a struct
 PositionalFields :: { [PositionalField] }
@@ -468,8 +474,9 @@ Term :: { Expr }
   : break                                                { Break }
   | continue                                             { Continue }
   -- TODO: vector
+  | NameExpr                                             { $1 }
   | Value                                                { ValueLiteral $1 }
-  -- Function invocation FIXME: (Might also be a tuple value). Also unsure if should have type [Expr]
+  -- A tuple value. TODO: Also unsure if should have type [Expr]
   | '(' CommaExpr ')'                                    { $2 }
   -- Explicit typing 
   | '(' Expr ':' Type ')'                                { TypedExprTerm $ TypedExpr { typedExpr = $2, typedExprType = $4 } }
@@ -501,14 +508,17 @@ Return :: { Expr }
   | return '{' Expr '}'                                  { Return $ Just $3 }
 
 
+-- A sequence of comma-separated expressions. Used for tuples. Includes unit () and single (val)
 CommaExpr :: { Expr }
-  : CommaExpr_                 { CommaExpr $ reverse $1 } -- Reverse the left-recursive rule
+  : {- empty -}                { CommaExpr [] }
+  | CommaExpr_                 { CommaExpr $ reverse $1 } -- Reverse the left-recursive rule
 
-CommaExpr_ :: { [Expr] } -- TODO: single expression
-  : {- empty -}                { [] }
+CommaExpr_ :: { [Expr] }
+  : Expr                       { [$1] }
   | CommaExpr_ ',' Expr        { $3 : $1 }
 
 
+-- Any literal value
 Value :: { ValueLiteral }
   : '@' Address           { Address $2 }
   | false                 { Boolean False }
@@ -529,6 +539,44 @@ Address :: { Address }
 Numerical :: { Numerical }
   : int                   { LiteralIntDec $1 }
   | hex                   { LiteralIntHex $1 }
+
+
+-- Literal struct (named or positional), function call, function call with !, variable
+NameExpr :: { Expr }
+  -- Literal named struct
+  : NameAccessChain OptionalTypeArgs '{' NamedStructExprFields '}'                 { NamedStructExprExpr $ NamedStructExpr {
+      nseNameAccessChain = $1,
+      nseTypeArgs = $2,
+      nseFields = $4
+    } }
+  -- TODO: | PositionalStructExprOrFunctionCall            { $1 }
+  -- TODO: variable ?
+
+
+-- A sequence of fields of a literal struct
+NamedStructExprFields :: { [NamedStructExprField] }
+  : {- empty -}                         { [] }
+  | NamedStructExprFields_              { reverse $1 }
+
+
+NamedStructExprFields_ :: { [NamedStructExprField] }
+  : NamedStructExprField                                      { [$1] }
+  | NamedStructExprFields_ ',' NamedStructExprField           { $3 : $1 }
+
+
+-- A field of a named struct can either be the identifier alone, or with an expression
+NamedStructExprField :: { NamedStructExprField }
+  : Identifier                      { NamedStructExprField { nsefIdentifier = $1, nsefExpr = Nothing } }     
+  | Identifier ':' Expr             { NamedStructExprField { nsefIdentifier = $1, nsefExpr = Just $3 } }
+
+
+-- A name access chain is an access to a variable, struct or function that might be declared on another module
+NameAccessChain :: { NameAccessChain }
+  -- This is a normal identifier (FIXME: per the grammar, should be Address, but an address alone is correct to be parsed as a variable)
+  : Identifier                                            { LocalNameAccessChain $1 }
+  -- TODO: A bit usure about this second one. Address might be an Identifier since its aliased
+  | Address '::' Identifier                               { AliasedNameAccessChain $1 $3 }
+  | Address '::' Identifier '::' Identifier               { UnaliasedNameAccessChain $1 $3 $5 }
 
 
 {
