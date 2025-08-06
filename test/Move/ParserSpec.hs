@@ -214,9 +214,10 @@ testParseConstants :: Spec
 testParseConstants = describe "Parse modules with constant declarations" $ do
   testScan $ "module foo::baz {\n" ++
     "const C1: u64 = 1;\n" ++
-    --"const C2: u64 = 1 + 2 - 3;\n" ++
-    --"const C3: bool = false;\n" ++
-    --"const C4: address = @0xCAFFE;\n" ++
+    "const C2: u64 = 1 + 2 - 3;\n" ++
+    "const C3: bool = false;\n" ++
+    "const C4: address = @0xCAFFE;\n" ++
+    "const C5: u64 = 1 + 2 * 3 - 4 | 2 << 4;\n" ++ -- (((1 + (2 * 3)) - 4) | (2 << 4))
     "}"
   $ Module
     { moduleAddress = NamedAddress $ Identifier "foo",
@@ -226,6 +227,42 @@ testParseConstants = describe "Parse modules with constant declarations" $ do
             constantIdentifier = Identifier "C1",
             constantType = Type (Identifier "u64") [],
             constantExpression = ValueLiteral $ Numerical $ LiteralIntDec 1
+          },
+          TopLevelConstant $ Constant {
+            constantIdentifier = Identifier "C2",
+            constantType = Type (Identifier "u64") [],
+            constantExpression = BinaryOpExprExpr $ Sub 
+              (BinaryOpExprExpr $ Add (ValueLiteral $ Numerical $ LiteralIntDec 1) (ValueLiteral $ Numerical $ LiteralIntDec 2))
+              (ValueLiteral $ Numerical $ LiteralIntDec 3)
+          },
+          TopLevelConstant $ Constant {
+            constantIdentifier = Identifier "C3",
+            constantType = Type (Identifier "bool") [],
+            constantExpression = ValueLiteral $ Boolean False
+          },
+          TopLevelConstant $ Constant {
+            constantIdentifier = Identifier "C4",
+            constantType = Type (Identifier "address") [],
+            constantExpression = ValueLiteral $ Address $ NumericalAddress $ LiteralIntHex "0xCAFFE"
+          },
+          TopLevelConstant $ Constant {
+            constantIdentifier = Identifier "C5",
+            constantType = Type (Identifier "u64") [],
+            constantExpression = BinaryOpExprExpr $ BitwiseOr
+              (BinaryOpExprExpr $ Sub
+                (BinaryOpExprExpr $ Add 
+                  (ValueLiteral $ Numerical $ LiteralIntDec 1)
+                  (BinaryOpExprExpr $ Mult
+                    (ValueLiteral $ Numerical $ LiteralIntDec 2)
+                    (ValueLiteral $ Numerical $ LiteralIntDec 3)
+                  )
+                )
+                (ValueLiteral $ Numerical $ LiteralIntDec 4)
+              )
+              (BinaryOpExprExpr $ ShiftLeft 
+                (ValueLiteral $ Numerical $ LiteralIntDec 2)
+                (ValueLiteral $ Numerical $ LiteralIntDec 4)
+              )
           }
         ]
     }
