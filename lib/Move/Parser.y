@@ -416,55 +416,55 @@ Constant :: { Constant }
 
 -- Expressions
 Expr :: { Expr }
-  : BinaryOpExpr      %prec LOWER                          { BinaryOpExprExpr $1 }
+  : BinaryOpExpr      %prec LOWER                          { $1 }
 
 
 -- Binary operations (listed from lowest to highest precedence)
-BinaryOpExpr :: { BinaryOpExpr }
-  : BinaryOpExpr '||' BinaryOpExpr                       { Or $1 $3 }
-  | BinaryOpExpr '&&' BinaryOpExpr                       { And $1 $3 }
-  | BinaryOpExpr '==' BinaryOpExpr                       { Eq $1 $3 }
-  | BinaryOpExpr '!=' BinaryOpExpr                       { Neq $1 $3 }
-  | BinaryOpExpr '<' BinaryOpExpr                        { Lt $1 $3 }
-  | BinaryOpExpr '>' BinaryOpExpr                        { Gt $1 $3 }
-  | BinaryOpExpr '<=' BinaryOpExpr                       { Leq $1 $3 }
-  | BinaryOpExpr '>=' BinaryOpExpr                       { Geq $1 $3 }
-  | BinaryOpExpr '|' BinaryOpExpr                        { BitwiseOr $1 $3 }
-  | BinaryOpExpr '^' BinaryOpExpr                        { BitwiseXor $1 $3 }
-  | BinaryOpExpr '&' BinaryOpExpr                        { BitwiseAnd $1 $3 }
-  | BinaryOpExpr '<<' BinaryOpExpr                       { ShiftLeft $1 $3 }
-  | BinaryOpExpr '>>' BinaryOpExpr                       { ShiftRight $1 $3 }
-  | BinaryOpExpr '+' BinaryOpExpr                        { Add $1 $3 }
-  | BinaryOpExpr '-' BinaryOpExpr                        { Sub $1 $3 }
-  | BinaryOpExpr '*' BinaryOpExpr                        { Mult $1 $3 }
-  | BinaryOpExpr '/' BinaryOpExpr                        { Div $1 $3 }
-  | BinaryOpExpr '%' BinaryOpExpr                        { Mod $1 $3 }
-  | UnaryExpr                                            { UnaryOpExpr $1 }
+BinaryOpExpr :: { Expr }
+  : BinaryOpExpr '||' BinaryOpExpr                       { BinaryOpExprExpr $ Or $1 $3 }
+  | BinaryOpExpr '&&' BinaryOpExpr                       { BinaryOpExprExpr $ And $1 $3 }
+  | BinaryOpExpr '==' BinaryOpExpr                       { BinaryOpExprExpr $ Eq $1 $3 }
+  | BinaryOpExpr '!=' BinaryOpExpr                       { BinaryOpExprExpr $ Neq $1 $3 }
+  | BinaryOpExpr '<' BinaryOpExpr                        { BinaryOpExprExpr $ Lt $1 $3 }
+  | BinaryOpExpr '>' BinaryOpExpr                        { BinaryOpExprExpr $ Gt $1 $3 }
+  | BinaryOpExpr '<=' BinaryOpExpr                       { BinaryOpExprExpr $ Leq $1 $3 }
+  | BinaryOpExpr '>=' BinaryOpExpr                       { BinaryOpExprExpr $ Geq $1 $3 }
+  | BinaryOpExpr '|' BinaryOpExpr                        { BinaryOpExprExpr $ BitwiseOr $1 $3 }
+  | BinaryOpExpr '^' BinaryOpExpr                        { BinaryOpExprExpr $ BitwiseXor $1 $3 }
+  | BinaryOpExpr '&' BinaryOpExpr                        { BinaryOpExprExpr $ BitwiseAnd $1 $3 }
+  | BinaryOpExpr '<<' BinaryOpExpr                       { BinaryOpExprExpr $ ShiftLeft $1 $3 }
+  | BinaryOpExpr '>>' BinaryOpExpr                       { BinaryOpExprExpr $ ShiftRight $1 $3 }
+  | BinaryOpExpr '+' BinaryOpExpr                        { BinaryOpExprExpr $ Add $1 $3 }
+  | BinaryOpExpr '-' BinaryOpExpr                        { BinaryOpExprExpr $ Sub $1 $3 }
+  | BinaryOpExpr '*' BinaryOpExpr                        { BinaryOpExprExpr $ Mult $1 $3 }
+  | BinaryOpExpr '/' BinaryOpExpr                        { BinaryOpExprExpr $ Div $1 $3 }
+  | BinaryOpExpr '%' BinaryOpExpr                        { BinaryOpExprExpr $ Mod $1 $3 }
+  | UnaryExpr                                            { $1 }
 
 
-UnaryExpr :: { UnaryExpr }
-  : '!' UnaryExpr                                        { Negation $2 }
-  | '&mut' UnaryExpr                                     { MutableReference $2 }
-  | '&' UnaryExpr                                        { ImmutableReference $2 }
+UnaryExpr :: { Expr }
+  : '!' UnaryExpr                                        { UnaryOpExpr $ Negation $2 }
+  | '&mut' UnaryExpr                                     { UnaryOpExpr $ MutableReference $2 }
+  | '&' UnaryExpr                                        { UnaryOpExpr $ ImmutableReference $2 }
   -- Dereference
-  | '*' UnaryExpr                                        { Dereference $2 }
-  | move UnaryExpr                                       { MoveExpr $2 }
-  | copy UnaryExpr                                       { CopyExpr $2 }
-  | DotOrIndexChain    %prec DOT_OR_INDEX_CHAIN          { DotOrIndexChainExpr $1 }
+  | '*' UnaryExpr                                        { UnaryOpExpr $ Dereference $2 }
+  | move UnaryExpr                                       { UnaryOpExpr $ MoveExpr $2 }
+  | copy UnaryExpr                                       { UnaryOpExpr $ CopyExpr $2 }
+  | DotOrIndexChain    %prec DOT_OR_INDEX_CHAIN          { $1 }
 
 
-DotOrIndexChain :: { DotOrIndexChain }
-  : DotOrIndexChain '.' Identifier                       { DotAccessChain $ DotAccess { dotAccessLeft = $1, dotAccessRight = $3 } }
-  | Term                                                 { TermChain $1 }
+DotOrIndexChain :: { Expr }
+  : DotOrIndexChain '.' Identifier                       { DotOrIndexChainExpr $ DotAccess { dotAccessLeft = $1, dotAccessRight = $3 } }
+  | Term                                                 { $1 }
 
 
-Term :: { Term }
+Term :: { Expr }
   : break                                                { Break }
   | continue                                             { Continue }
   -- TODO: vector
-  | Value                                                { Value $1}
+  | Value                                                { ValueLiteral $1 }
   -- Function invocation FIXME: (Might also be a tuple value). Also unsure if should have type [Expr]
-  | '(' CommaExpr ')'                                    { CommaExpr $2 }
+  | '(' CommaExpr ')'                                    { $2 }
   -- Explicit typing 
   | '(' Expr ':' Type ')'                                { TypedExprTerm $ TypedExpr { typedExpr = $2, typedExprType = $4 } }
   -- Casting
@@ -479,28 +479,31 @@ Term :: { Term }
   | while '(' Expr ')' Expr                              { WhileTerm $ While { whileCondition = $3, whileExpr = $5 }}
   | while '(' Expr ')' '{' Expr '}'                      { WhileTerm $ While { whileCondition = $3, whileExpr = $6 }}
   -- loop
-  | loop Expr                                            { LoopTerm $ Loop $2 }
-  | loop '{' Expr '}'                                    { LoopTerm $ Loop $3 }
+  | loop Expr                                            { Loop $2 }
+  | loop '{' Expr '}'                                    { Loop $3 }
   -- FIXME: where is for?
   -- return
-  | Return                                               { ReturnTerm $1 }
+  | Return                                               { $1 }
   -- abort
-  | abort Expr                                           { AbortTerm $ Abort $2 }
-  | abort '{' Expr '}'                                   { AbortTerm $ Abort $3 }
+  | abort Expr                                           { Abort $2 }
+  | abort '{' Expr '}'                                   { Abort $3 }
 
 
-Return :: { Return }
+Return :: { Expr }
   : return                                               { Return Nothing }
   | return Expr                                          { Return $ Just $2 }
   | return '{' Expr '}'                                  { Return $ Just $3 }
 
 
-CommaExpr :: { [Expr] }
-  : {- empty -}               { [] }
-  | CommaExpr ',' Expr        { $3 : $1 }
+CommaExpr :: { Expr }
+  : CommaExpr_                 { CommaExpr $ reverse $1 } -- Reverse the left-recursive rule
+
+CommaExpr_ :: { [Expr] }
+  : {- empty -}                { [] }
+  | CommaExpr_ ',' Expr        { $3 : $1 }
 
 
-Value :: { Value }
+Value :: { ValueLiteral }
   : '@' Address           { Address $2 }
   | false                 { Boolean False }
   | true                  { Boolean True }

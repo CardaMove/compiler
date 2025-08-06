@@ -225,7 +225,7 @@ testParseConstants = describe "Parse modules with constant declarations" $ do
         [ TopLevelConstant $ Constant {
             constantIdentifier = Identifier "C1",
             constantType = Type (Identifier "u64") [],
-            constantExpression = BinaryOpExprExpr $ UnaryOpExpr $ DotOrIndexChainExpr $ TermChain $ Value $ Numerical $ LiteralIntDec 1
+            constantExpression = ValueLiteral $ Numerical $ LiteralIntDec 1
           }
         ]
     }

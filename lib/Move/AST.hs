@@ -208,81 +208,60 @@ data Constant
 
 
 -- | Represents any expression
-newtype Expr = BinaryOpExprExpr BinaryOpExpr
-  deriving (Eq, Show)
-
-data BinaryOpExpr
-  = Or BinaryOpExpr BinaryOpExpr
-  | And BinaryOpExpr BinaryOpExpr
-  | Eq BinaryOpExpr BinaryOpExpr
-  | Neq BinaryOpExpr BinaryOpExpr
-  | Lt BinaryOpExpr BinaryOpExpr
-  | Gt BinaryOpExpr BinaryOpExpr
-  | Leq BinaryOpExpr BinaryOpExpr
-  | Geq BinaryOpExpr BinaryOpExpr
-  | BitwiseOr BinaryOpExpr BinaryOpExpr
-  | BitwiseXor BinaryOpExpr BinaryOpExpr
-  | BitwiseAnd BinaryOpExpr BinaryOpExpr
-  | ShiftLeft BinaryOpExpr BinaryOpExpr
-  | ShiftRight BinaryOpExpr BinaryOpExpr
-  | Add BinaryOpExpr BinaryOpExpr
-  | Sub BinaryOpExpr BinaryOpExpr
-  | Mult BinaryOpExpr BinaryOpExpr
-  | Div BinaryOpExpr BinaryOpExpr
-  | Mod BinaryOpExpr BinaryOpExpr
+data Expr
+  = BinaryOpExprExpr BinaryOpExpr
   | UnaryOpExpr UnaryExpr
-  deriving (Eq, Show)
-
-
-data UnaryExpr
-  = Negation UnaryExpr
-  | MutableReference UnaryExpr
-  | ImmutableReference UnaryExpr
-  | Dereference UnaryExpr
-  | MoveExpr UnaryExpr
-  | CopyExpr UnaryExpr
   | DotOrIndexChainExpr DotOrIndexChain
-  deriving (Eq, Show)
-
-
-data DotOrIndexChain
-  = DotAccessChain DotAccess
-  | TermChain Term
-  deriving (Eq, Show)
-
-
-data DotAccess
-  = DotAccess {
-    dotAccessLeft :: DotOrIndexChain,
-    dotAccessRight :: Identifier
-  }
-  deriving (Eq, Show)
-
-
-data Term
-  = Break
-  | Continue
-  | Value Value
+  | ValueLiteral ValueLiteral
   | CommaExpr [Expr]
   | TypedExprTerm TypedExpr
   | CastingTerm Casting
   | IfThenElseTerm IfThenElse
   | WhileTerm While
-  | LoopTerm Loop
-  | ReturnTerm Return
-  | AbortTerm Abort
+  | Loop Expr
+  | Return (Maybe Expr)
+  | Abort Expr
+  | Break
+  | Continue
+  deriving (Eq, Show)
+
+data BinaryOpExpr
+  = Or Expr Expr
+  | And Expr Expr
+  | Eq Expr Expr
+  | Neq Expr Expr
+  | Lt Expr Expr
+  | Gt Expr Expr
+  | Leq Expr Expr
+  | Geq Expr Expr
+  | BitwiseOr Expr Expr
+  | BitwiseXor Expr Expr
+  | BitwiseAnd Expr Expr
+  | ShiftLeft Expr Expr
+  | ShiftRight Expr Expr
+  | Add Expr Expr
+  | Sub Expr Expr
+  | Mult Expr Expr
+  | Div Expr Expr
+  | Mod Expr Expr
   deriving (Eq, Show)
 
 
-newtype Abort = Abort Expr
+data UnaryExpr
+  = Negation Expr
+  | MutableReference Expr
+  | ImmutableReference Expr
+  | Dereference Expr
+  | MoveExpr Expr
+  | CopyExpr Expr
   deriving (Eq, Show)
 
 
-newtype Return = Return (Maybe Expr)
-  deriving (Eq, Show)
-
-
-newtype Loop = Loop Expr
+data DotOrIndexChain
+  = DotAccess {
+    dotAccessLeft :: Expr,
+    dotAccessRight :: Identifier
+  }
   deriving (Eq, Show)
 
 
@@ -319,7 +298,7 @@ data TypedExpr
   deriving (Eq, Show)
 
 
-data Value
+data ValueLiteral
   = Address Address
   | Boolean Bool
   | Numerical Numerical
