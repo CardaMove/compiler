@@ -477,7 +477,7 @@ Term :: { Expr }
   | NameExpr                                             { $1 }
   | Value                                                { ValueLiteral $1 }
   -- A tuple value. TODO: Also unsure if should have type [Expr]
-  | '(' CommaExpr ')'                                    { $2 }
+  | '(' CommaExpr ')'                                    { CommaExpr $2 }
   -- Explicit typing 
   | '(' Expr ':' Type ')'                                { TypedExprTerm $ TypedExpr { typedExpr = $2, typedExprType = $4 } }
   -- Casting
@@ -508,10 +508,10 @@ Return :: { Expr }
   | return '{' Expr '}'                                  { Return $ Just $3 }
 
 
--- A sequence of comma-separated expressions. Used for tuples. Includes unit () and single (val)
-CommaExpr :: { Expr }
-  : {- empty -}                { CommaExpr [] }
-  | CommaExpr_                 { CommaExpr $ reverse $1 } -- Reverse the left-recursive rule
+-- A sequence of comma-separated expressions. Used for tuples and function calls. Includes unit () and single (val)
+CommaExpr :: { [Expr] }
+  : {- empty -}                { [] }
+  | CommaExpr_                 { reverse $1 } -- Reverse the left-recursive rule
 
 CommaExpr_ :: { [Expr] }
   : Expr                       { [$1] }
@@ -549,7 +549,11 @@ NameExpr :: { Expr }
       nseTypeArgs = $2,
       nseFields = $4
     } }
-  -- TODO: | PositionalStructExprOrFunctionCall            { $1 }
+  | NameAccessChain OptionalTypeArgs '(' CommaExpr ')'                             { PositionalStructExprOrFunctionCallExpr $ PositionalStructExprOrFunctionCall {
+    pseofcNameAccessChain = $1,
+    pseofcTypeArgs = $2,
+    pseofcFields = $4
+  } }
   -- TODO: variable ?
 
 

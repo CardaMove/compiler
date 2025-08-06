@@ -221,7 +221,7 @@ data Constant
 --      NameAccessChain = <LeadingNameAccess> ( "::" <Identifier> ( "::" <Identifier> )? )?
 
 
--- TODO: rewrite se Identifier into NameAccessChain
+-- TODO: rewrite some Identifier into NameAccessChain
 
 -- | Represents any expression
 data Expr
@@ -234,7 +234,7 @@ data Expr
   | TypedExprTerm TypedExpr
   | CastingTerm Casting
   | NamedStructExprExpr NamedStructExpr
-  -- TODO: | PositionalStructExprOrFunctionCallExpr PositionalStructExprOrFunctionCall
+  | PositionalStructExprOrFunctionCallExpr PositionalStructExprOrFunctionCall
   | IfThenElseTerm IfThenElse
   | WhileTerm While
   | Loop Expr
@@ -346,6 +346,7 @@ data Numerical
   deriving (Eq, Show)
 
 
+-- A literal named struct, used as expression
 data NamedStructExpr
   = NamedStructExpr {
     nseNameAccessChain :: NameAccessChain,
@@ -355,6 +356,7 @@ data NamedStructExpr
   deriving (Eq, Show)
 
 
+-- A field of a named struct can either be the identifier alone, or with an expression
 data NamedStructExprField
   = NamedStructExprField {
     nsefIdentifier :: Identifier,
@@ -363,8 +365,21 @@ data NamedStructExprField
   deriving (Eq, Show)
 
 
+-- A name access chain is an access to a variable, struct or function that might be declared on another module
 data NameAccessChain
   = LocalNameAccessChain Identifier
   | AliasedNameAccessChain Address Identifier
   | UnaliasedNameAccessChain Address Identifier Identifier
+  deriving (Eq, Show)
+
+
+-- It's not possible to distinguish a positional struct wrt a function call just by parsing
+-- Example:
+--    `let a = GuessWhoAmI(42, "unknown");`
+data PositionalStructExprOrFunctionCall
+  = PositionalStructExprOrFunctionCall {
+    pseofcNameAccessChain :: NameAccessChain,
+    pseofcTypeArgs :: [Type],
+    pseofcFields :: [Expr]
+  }
   deriving (Eq, Show)

@@ -220,6 +220,7 @@ testParseConstants = describe "Parse modules with constant declarations" $ do
     "const C5: u64 = 1 + 2 * 3 - 4 | 2 << 4;\n" ++            -- Should parse as ((1 + (2 * 3)) - 4) | (2 << 4)
     -- "const c6: u64 = -1 + *my_ref + move my_var" ++        -- Should parse as ((-1) + (*my_ref)) + (move my_var). Not valid Move code, but test for expression
     "const MY_A: A = A { b: 10 };" ++                         -- Not valid Move code, but test for expression
+    "const MY_POS: Pos = 0x42::another_module::Pos(12u64, false);" ++         -- Not valid Move code, but test for expression
     "}"
   $ Module
     { moduleAddress = NamedAddress $ Identifier "foo",
@@ -276,7 +277,6 @@ testParseConstants = describe "Parse modules with constant declarations" $ do
               )
               (UnaryOpExpr $ MoveExpr $ Identifier "my_var")
           }, -}
-          -- const MY_A: A = A { b: 10 };
           TopLevelConstant $ Constant {
             constantIdentifier = Identifier "MY_A",
             constantType = Type (Identifier "A") [],
@@ -284,6 +284,18 @@ testParseConstants = describe "Parse modules with constant declarations" $ do
               nseNameAccessChain = LocalNameAccessChain $ Identifier "A",
               nseTypeArgs = [],
               nseFields = [NamedStructExprField { nsefIdentifier = Identifier "b", nsefExpr = Just $ ValueLiteral $ Numerical $ LiteralIntDec 10 }]
+            }
+          },
+          TopLevelConstant $ Constant {
+            constantIdentifier = Identifier "MY_POS",
+            constantType = Type (Identifier "Pos") [],
+            constantExpression = PositionalStructExprOrFunctionCallExpr $ PositionalStructExprOrFunctionCall {
+              pseofcNameAccessChain = UnaliasedNameAccessChain (NumericalAddress $ LiteralIntHex "0x42") (Identifier "another_module") (Identifier "Pos"),
+              pseofcTypeArgs = [],
+              pseofcFields = [
+                ValueLiteral $ Numerical $ LiteralIntDec 12,
+                ValueLiteral $ Boolean False
+              ]
             }
           }
         ]
