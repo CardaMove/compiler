@@ -235,6 +235,7 @@ data Expr
   | CastingTerm Casting
   | NamedStructExprExpr NamedStructExpr
   | PositionalStructExprOrFunctionCallExpr PositionalStructExprOrFunctionCall
+  | FunctionBangCallExpr FunctionBangCall
   | IfThenElseTerm IfThenElse
   | WhileTerm While
   | Loop Expr
@@ -381,5 +382,14 @@ data PositionalStructExprOrFunctionCall
     pseofcNameAccessChain :: NameAccessChain,
     pseofcTypeArgs :: [Type],
     pseofcFields :: [Expr]
+  }
+  deriving (Eq, Show)
+
+
+-- A function call with a bang! before the left parenthesis. Used by assert!()
+data FunctionBangCall
+  = FunctionBangCall {
+    fbcNameAccessChain :: NameAccessChain,
+    fbcFields :: [Expr]
   }
   deriving (Eq, Show)

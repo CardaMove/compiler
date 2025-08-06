@@ -544,15 +544,23 @@ Numerical :: { Numerical }
 -- Literal struct (named or positional), function call, function call with !, variable
 NameExpr :: { Expr }
   -- Literal named struct
-  : NameAccessChain OptionalTypeArgs '{' NamedStructExprFields '}'                 { NamedStructExprExpr $ NamedStructExpr {
+  : NameAccessChain OptionalTypeArgs '{' NamedStructExprFields '}'        { NamedStructExprExpr $ NamedStructExpr {
       nseNameAccessChain = $1,
       nseTypeArgs = $2,
       nseFields = $4
     } }
-  | NameAccessChain OptionalTypeArgs '(' CommaExpr ')'                             { PositionalStructExprOrFunctionCallExpr $ PositionalStructExprOrFunctionCall {
+  -- It's not possible to distinguish a positional struct wrt a function call just by parsing
+  -- Example:
+  --    `let a = GuessWhoAmI(42, "unknown");`
+  | NameAccessChain OptionalTypeArgs '(' CommaExpr ')'                    { PositionalStructExprOrFunctionCallExpr $ PositionalStructExprOrFunctionCall {
     pseofcNameAccessChain = $1,
     pseofcTypeArgs = $2,
     pseofcFields = $4
+  } }
+  -- A function call with a bang! before the left parenthesis. Used by assert!()
+  | NameAccessChain '!' '(' CommaExpr ')'                                 { FunctionBangCallExpr $ FunctionBangCall {
+    fbcNameAccessChain = $1,
+    fbcFields = $4
   } }
   -- TODO: variable ?
 
