@@ -278,7 +278,7 @@ newtype Abort = Abort Expr
   deriving (Eq, Show)
 
 
-newtype Return = Maybe Expr
+newtype Return = Return (Maybe Expr)
   deriving (Eq, Show)
 
 

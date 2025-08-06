@@ -421,24 +421,24 @@ Expr :: { Expr }
 
 -- Binary operations (listed from lowest to highest precedence)
 BinaryOpExpr :: { BinaryOpExpr }
-  : BinaryOpExpr '||' BinaryOpExpr                       { Or $1 $ 3 }
-  | BinaryOpExpr '&&' BinaryOpExpr                       { And $1 $ 3 }
-  | BinaryOpExpr '==' BinaryOpExpr                       { Eq $1 $ 3 }
-  | BinaryOpExpr '!=' BinaryOpExpr                       { Neq $1 $ 3 }
-  | BinaryOpExpr '<' BinaryOpExpr                        { Lt $1 $ 3 }
-  | BinaryOpExpr '>' BinaryOpExpr                        { Gt $1 $ 3 }
-  | BinaryOpExpr '<=' BinaryOpExpr                       { Leq $1 $ 3 }
-  | BinaryOpExpr '>=' BinaryOpExpr                       { Geq $1 $ 3 }
-  | BinaryOpExpr '|' BinaryOpExpr                        { BitwiseOr $1 $ 3 }
-  | BinaryOpExpr '^' BinaryOpExpr                        { BitwiseXor $1 $ 3 }
-  | BinaryOpExpr '&' BinaryOpExpr                        { BitwiseAnd $1 $ 3 }
-  | BinaryOpExpr '<<' BinaryOpExpr                       { ShiftLeft $1 $ 3 }
-  | BinaryOpExpr '>>' BinaryOpExpr                       { ShiftRight $1 $ 3 }
-  | BinaryOpExpr '+' BinaryOpExpr                        { Add $1 $ 3 }
-  | BinaryOpExpr '-' BinaryOpExpr                        { Sub $1 $ 3 }
-  | BinaryOpExpr '*' BinaryOpExpr                        { Mult $1 $ 3 }
-  | BinaryOpExpr '/' BinaryOpExpr                        { Div $1 $ 3 }
-  | BinaryOpExpr '%' BinaryOpExpr                        { Mod $1 $ 3 }
+  : BinaryOpExpr '||' BinaryOpExpr                       { Or $1 $3 }
+  | BinaryOpExpr '&&' BinaryOpExpr                       { And $1 $3 }
+  | BinaryOpExpr '==' BinaryOpExpr                       { Eq $1 $3 }
+  | BinaryOpExpr '!=' BinaryOpExpr                       { Neq $1 $3 }
+  | BinaryOpExpr '<' BinaryOpExpr                        { Lt $1 $3 }
+  | BinaryOpExpr '>' BinaryOpExpr                        { Gt $1 $3 }
+  | BinaryOpExpr '<=' BinaryOpExpr                       { Leq $1 $3 }
+  | BinaryOpExpr '>=' BinaryOpExpr                       { Geq $1 $3 }
+  | BinaryOpExpr '|' BinaryOpExpr                        { BitwiseOr $1 $3 }
+  | BinaryOpExpr '^' BinaryOpExpr                        { BitwiseXor $1 $3 }
+  | BinaryOpExpr '&' BinaryOpExpr                        { BitwiseAnd $1 $3 }
+  | BinaryOpExpr '<<' BinaryOpExpr                       { ShiftLeft $1 $3 }
+  | BinaryOpExpr '>>' BinaryOpExpr                       { ShiftRight $1 $3 }
+  | BinaryOpExpr '+' BinaryOpExpr                        { Add $1 $3 }
+  | BinaryOpExpr '-' BinaryOpExpr                        { Sub $1 $3 }
+  | BinaryOpExpr '*' BinaryOpExpr                        { Mult $1 $3 }
+  | BinaryOpExpr '/' BinaryOpExpr                        { Div $1 $3 }
+  | BinaryOpExpr '%' BinaryOpExpr                        { Mod $1 $3 }
   | UnaryExpr                                            { UnaryOpExpr $1 }
 
 
@@ -464,17 +464,17 @@ Term :: { Term }
   -- TODO: vector
   | Value                                                { Value $1}
   -- Function invocation FIXME: (Might also be a tuple value). Also unsure if should have type [Expr]
-  | '(' CommaExpr ')'                                    { CommaExpr $1 }
+  | '(' CommaExpr ')'                                    { CommaExpr $2 }
   -- Explicit typing 
   | '(' Expr ':' Type ')'                                { TypedExprTerm $ TypedExpr { typedExpr = $2, typedExprType = $4 } }
   -- Casting
   | '(' Expr as Type ')'                                 { CastingTerm $ Casting { castingExpr = $2, castingType = $4 } }
   -- TODO: sequence
   -- if then else 
-  | if '(' Expr ')' Expr                            %prec IF_NO_ELSE                { IfThenElseTerm $ If { ifThenElseCondition = $3, ifThenElseIfBranch = $5, ifThenElseElseBranch = Nothing } }
-  | if '(' Expr ')' Expr else Expr                                                  { IfThenElseTerm $ If { ifThenElseCondition = $3, ifThenElseIfBranch = $5, ifThenElseElseBranch = Just $7 } }
-  | if '(' Expr ')' '{' Expr '}'                    %prec IF_BRACES_NO_ELSE         { IfThenElseTerm $ If { ifThenElseCondition = $3, ifThenElseIfBranch = $6, ifThenElseElseBranch = Mothing } }
-  | if '(' Expr ')' '{' Expr '}' else '{' Expr '}'                                  { IfThenElseTerm $ If { ifThenElseCondition = $3, ifThenElseIfBranch = $6, ifThenElseElseBranch = Just $10 } }
+  | if '(' Expr ')' Expr                            %prec IF_NO_ELSE                { IfThenElseTerm $ IfThenElse { ifThenElseCondition = $3, ifThenElseIfBranch = $5, ifThenElseElseBranch = Nothing } }
+  | if '(' Expr ')' Expr else Expr                                                  { IfThenElseTerm $ IfThenElse { ifThenElseCondition = $3, ifThenElseIfBranch = $5, ifThenElseElseBranch = Just $7 } }
+  | if '(' Expr ')' '{' Expr '}'                    %prec IF_BRACES_NO_ELSE         { IfThenElseTerm $ IfThenElse { ifThenElseCondition = $3, ifThenElseIfBranch = $6, ifThenElseElseBranch = Nothing } }
+  | if '(' Expr ')' '{' Expr '}' else '{' Expr '}'                                  { IfThenElseTerm $ IfThenElse { ifThenElseCondition = $3, ifThenElseIfBranch = $6, ifThenElseElseBranch = Just $10 } }
   -- while
   | while '(' Expr ')' Expr                              { WhileTerm $ While { whileCondition = $3, whileExpr = $5 }}
   | while '(' Expr ')' '{' Expr '}'                      { WhileTerm $ While { whileCondition = $3, whileExpr = $6 }}
@@ -502,8 +502,8 @@ CommaExpr :: { [Expr] }
 
 Value :: { Value }
   : '@' Address           { Address $2 }
-  | false                 { Boolean $1 }
-  | true                  { Boolean $1 }
+  | false                 { Boolean False }
+  | true                  { Boolean True }
   | Numerical             { Numerical $1 }
   -- TODO: number typed?
   -- TODO: Byte strings and hex strings
