@@ -31,8 +31,16 @@ data TopLevel
 data Use
   = Use {
     useAddress :: Address,
-    useName :: Identifier,
-    useAlias :: Maybe Identifier -- Alias is optional
+    useIdentifier :: Identifier,
+    useAlias :: Maybe Identifier,
+    useMembers :: [UseMember]
+  }
+  deriving (Eq, Show)
+
+data UseMember
+  = UseMember {
+    useMemberIdentifier :: Identifier,
+    useMemberUseAlias :: Maybe Identifier
   }
   deriving (Eq, Show)
 
@@ -228,7 +236,12 @@ data Constant
 --          | "|" Comma<Type> "|" Type   (spec only)
 --          | "(" Comma<Type> ")"
 
--- TODO: rewrite some Identifier into NameAccessChain
+
+--      UseDecl =
+--          "use" <ModuleIdent> <UseAlias> ";" |
+--          "use" <ModuleIdent> :: <UseMember> ";" |
+--          "use" <ModuleIdent> :: "{" Comma<UseMember> "}" ";"
+
 
 -- | Represents any expression
 data Expr

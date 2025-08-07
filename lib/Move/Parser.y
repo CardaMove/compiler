@@ -166,22 +166,26 @@ TopLevel :: { TopLevel }
   | Constant                 { TopLevelConstant $1 }
 
 
--- Use TODO: importing members and aliasing them
+-- Use
 Use :: { Use }
-  : use Address '::' Identifier ';' {
-    Use {
-      useAddress = $2,
-      useName = $4,
-      useAlias = Nothing
-    }
-  }
-  | use Address '::' Identifier as Identifier ';' {
-    Use {
-      useAddress = $2,
-      useName = $4,
-      useAlias = Just $6
-    }
-  }
+  : use Address '::' Identifier OptionalUseAlias ';'                  { Use { useAddress = $2, useIdentifier = $4, useAlias = $5, useMembers = [] } }
+  -- Single aliased member
+  | use Address '::' Identifier '::' UseMember ';'                    { Use { useAddress = $2, useIdentifier = $4, useAlias = Nothing, useMembers = [$6] } }
+  | use Address '::' Identifier '::' '{' CommaUseMember '}' ';'       { Use { useAddress = $2, useIdentifier = $4, useAlias = Nothing, useMembers = reverse $7 } } -- Reverse the left-recursive rule
+
+
+OptionalUseAlias :: { Maybe Identifier }
+  : {- empty -}                   { Nothing }
+  | as Identifier                 { Just $2 }
+
+
+UseMember :: { UseMember }
+  : Identifier OptionalUseAlias            { UseMember { useMemberIdentifier = $1, useMemberUseAlias = $2 } }
+
+
+CommaUseMember :: { [UseMember] }
+  : UseMember                               { [$1] }
+  | CommaUseMember ',' UseMember            { $3 : $1 }
 
 
 -- Friend
@@ -502,7 +506,9 @@ Return :: { Expr }
   | return '{' Expr '}'                                  { Return $ Just $3 }
 
 
--- A sequence of comma-separated expressions. Used for tuples and function calls. Includes unit () and single (val)
+-- A sequence of comma-separated expressions. Used for tuples and function calls.
+-- Includes unit () and single (val)
+-- In fact, this should be the only Comma rule that allows for no members (empty list)
 CommaExpr :: { [Expr] }
   : {- empty -}                { [] }
   | CommaExpr_                 { reverse $1 } -- Reverse the left-recursive rule

@@ -38,20 +38,45 @@ testParseEmptyModule = describe "Parse an empty module" $ do
 
 testParseModuleUse :: Spec
 testParseModuleUse = describe "Parse a module with use keywords" $ do
-  testScan "module 0x42::answer { use std::vector; use 0x42::my_module as my_alias; }" $
-    Module {
+  testScan ("module 0x42::answer {\n" ++
+    "use std::vector;\n" ++
+    "use 0x42::my_module as my_alias;\n" ++
+    "use std::vector::empty as empty_vec;\n" ++
+    "use std::vector::{push_back, length as len, pop_back};\n" ++
+    "}")
+    $ Module {
       moduleAddress = NumericalAddress $ LiteralIntHex "0x42",
       moduleIdentifier = Identifier "answer",
       moduleTopLevels = [
         TopLevelUse (Use {
           useAddress = NamedAddress $ Identifier "std",
-          useName = Identifier "vector",
-          useAlias = Nothing
+          useIdentifier = Identifier "vector",
+          useAlias = Nothing,
+          useMembers = []
         }),
         TopLevelUse (Use {
           useAddress = NumericalAddress $ LiteralIntHex "0x42",
-          useName = Identifier "my_module",
-          useAlias = Just $ Identifier "my_alias"
+          useIdentifier = Identifier "my_module",
+          useAlias = Just $ Identifier "my_alias",
+          useMembers = []
+        }),
+        TopLevelUse (Use {
+          useAddress = NamedAddress $ Identifier "std",
+          useIdentifier = Identifier "vector",
+          useAlias = Nothing,
+          useMembers = [
+            UseMember { useMemberIdentifier = Identifier "empty", useMemberUseAlias = Just $ Identifier "empty_vec" }
+          ]
+        }),
+        TopLevelUse (Use {
+          useAddress = NamedAddress $ Identifier "std",
+          useIdentifier = Identifier "vector",
+          useAlias = Nothing,
+          useMembers = [
+            UseMember { useMemberIdentifier = Identifier "push_back", useMemberUseAlias = Nothing },
+            UseMember { useMemberIdentifier = Identifier "length", useMemberUseAlias = Just $ Identifier "len" },
+            UseMember { useMemberIdentifier = Identifier "pop_back", useMemberUseAlias = Nothing }
+          ]
         })
       ]
     }
@@ -206,7 +231,7 @@ testParseAbilities = describe "Parse structs with abilities and constraints" $ d
 
 testParseConstants :: Spec
 testParseConstants = describe "Parse modules with constant declarations" $ do
-  testScan $ "module foo::baz {\n" ++
+  testScan ("module foo::baz {\n" ++
     "const C1: u64 = 1;\n" ++
     "const C2: u64 = 1 + 2 - 3;\n" ++
     "const C3: bool = false;\n" ++
@@ -216,7 +241,7 @@ testParseConstants = describe "Parse modules with constant declarations" $ do
     "const C6: u64 = 1 + *my_ref + move my_var;\n" ++           -- Should parse as ((-1) + (*my_ref)) + (move my_var). Not valid Move code, but test for expression
     "const MY_A: A = A { b: 10 };\n" ++                         -- Not valid Move code, but test for expression
     "const MY_POS: Pos = 0x42::another_module::Pos(12u64, false);\n" ++         -- Not valid Move code, but test for expression
-    "}"
+    "}")
   $ Module
     { moduleAddress = NamedAddress $ Identifier "foo",
       moduleIdentifier = Identifier "baz",
