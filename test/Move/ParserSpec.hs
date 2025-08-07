@@ -94,15 +94,15 @@ testParseNamedStruct = describe "Parse module with named structs" $ do
               namedStructFields = [
                 NamedField {
                   fieldIdentifier = Identifier "x",
-                  fieldType = Type (Identifier "u64") []
+                  fieldType = TypeConstructor (LocalNameAccessChain $ Identifier "u64") []
                 },
                 NamedField {
                   fieldIdentifier = Identifier "y",
-                  fieldType = Type (Identifier "bool") []
+                  fieldType = TypeConstructor (LocalNameAccessChain $ Identifier "bool") []
                 },
                 NamedField {
                   fieldIdentifier = Identifier "c",
-                  fieldType = Type (Identifier "TypeParam") []
+                  fieldType = TypeConstructor (LocalNameAccessChain $ Identifier "TypeParam") []
                 }
               ]
             }
@@ -130,8 +130,8 @@ testParsePositionalStruct = describe "Parse module with positional structs" $ do
             positionalStructTypeParameters = [],
             positionalStructAbilities = [Copy, Drop],
             positionalStructFields = [
-              PositionalField $ Type (Identifier "A") [],
-              PositionalField $ Type (Identifier "bool") []
+              PositionalField $ TypeConstructor (LocalNameAccessChain $ Identifier "A") [],
+              PositionalField $ TypeConstructor (LocalNameAccessChain $ Identifier "bool") []
             ]
           }
         ]
@@ -158,13 +158,13 @@ testParseFunction = describe "Parse module with function declaration" $ do
               TypeParameter { typeParameterIsPhantom = False, typeIdentifier = Identifier "B", typeConstraints = [] }
             ],
             functionParameters = [
-              Parameter { parameterIdentifier = Identifier "a", parameterType = Type (Identifier "A") [] },
-              Parameter { parameterIdentifier = Identifier "b", parameterType = Type (Identifier "B") [] },
-              Parameter { parameterIdentifier = Identifier "c", parameterType = Type (Identifier "u64") [] }
+              Parameter { parameterIdentifier = Identifier "a", parameterType = TypeConstructor (LocalNameAccessChain $ Identifier "A") [] },
+              Parameter { parameterIdentifier = Identifier "b", parameterType = TypeConstructor (LocalNameAccessChain $ Identifier "B") [] },
+              Parameter { parameterIdentifier = Identifier "c", parameterType = TypeConstructor (LocalNameAccessChain $ Identifier "u64") [] }
             ],
-            functionReturnType = Just $ Type (Identifier "u64") [],
+            functionReturnType = Just $ TypeConstructor (LocalNameAccessChain $ Identifier "u64") [],
             functionAcquires = [
-              Type (Identifier "MyResource") [Type (Identifier "A") [], Type (Identifier "u64") []]
+              TypeConstructor (LocalNameAccessChain $ Identifier "MyResource") [TypeConstructor (LocalNameAccessChain $ Identifier "A") [], TypeConstructor (LocalNameAccessChain $ Identifier "u64") []]
             ],
             functionBody = ()
           },
@@ -176,7 +176,7 @@ testParseFunction = describe "Parse module with function declaration" $ do
             functionName = Identifier "empty",
             functionTypeParameters = [TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "Element", typeConstraints = []}],
             functionParameters = [],
-            functionReturnType = Just $ Type (Identifier "vector") [Type (Identifier "Element") []],
+            functionReturnType = Just $ TypeConstructor (LocalNameAccessChain $ Identifier "vector") [TypeConstructor (LocalNameAccessChain $ Identifier "Element") []],
             functionAcquires = [],
             functionBody = ()
           }
@@ -229,29 +229,29 @@ testParseConstants = describe "Parse modules with constant declarations" $ do
       moduleTopLevels =
         [ TopLevelConstant $ Constant {
             constantIdentifier = Identifier "C1",
-            constantType = Type (Identifier "u64") [],
+            constantType = TypeConstructor (LocalNameAccessChain $ Identifier "u64") [],
             constantExpression = ValueLiteral $ Numerical $ LiteralIntDec 1
           },
           TopLevelConstant $ Constant {
             constantIdentifier = Identifier "C2",
-            constantType = Type (Identifier "u64") [],
+            constantType = TypeConstructor (LocalNameAccessChain $ Identifier "u64") [],
             constantExpression = BinaryOpExprExpr $ Sub 
               (BinaryOpExprExpr $ Add (ValueLiteral $ Numerical $ LiteralIntDec 1) (ValueLiteral $ Numerical $ LiteralIntDec 2))
               (ValueLiteral $ Numerical $ LiteralIntDec 3)
           },
           TopLevelConstant $ Constant {
             constantIdentifier = Identifier "C3",
-            constantType = Type (Identifier "bool") [],
+            constantType = TypeConstructor (LocalNameAccessChain $ Identifier "bool") [],
             constantExpression = ValueLiteral $ Boolean False
           },
           TopLevelConstant $ Constant {
             constantIdentifier = Identifier "C4",
-            constantType = Type (Identifier "address") [],
+            constantType = TypeConstructor (LocalNameAccessChain $ Identifier "address") [],
             constantExpression = ValueLiteral $ Address $ NumericalAddress $ LiteralIntHex "0xCAFFE"
           },
           TopLevelConstant $ Constant {
             constantIdentifier = Identifier "C5",
-            constantType = Type (Identifier "u64") [],
+            constantType = TypeConstructor (LocalNameAccessChain $ Identifier "u64") [],
             constantExpression = BinaryOpExprExpr $ BitwiseOr
               (BinaryOpExprExpr $ Sub
                 (BinaryOpExprExpr $ Add 
@@ -270,7 +270,7 @@ testParseConstants = describe "Parse modules with constant declarations" $ do
           },
           TopLevelConstant $ Constant {
             constantIdentifier = Identifier "C6",
-            constantType = Type (Identifier "u64") [],
+            constantType = TypeConstructor (LocalNameAccessChain $ Identifier "u64") [],
             constantExpression = BinaryOpExprExpr $ Add
               (BinaryOpExprExpr $ Add
                 (ValueLiteral $ Numerical $ LiteralIntDec 1)
@@ -280,7 +280,7 @@ testParseConstants = describe "Parse modules with constant declarations" $ do
           },
           TopLevelConstant $ Constant {
             constantIdentifier = Identifier "MY_A",
-            constantType = Type (Identifier "A") [],
+            constantType = TypeConstructor (LocalNameAccessChain $ Identifier "A") [],
             constantExpression = NamedStructExprExpr $ NamedStructExpr {
               nseNameAccessChain = LocalNameAccessChain $ Identifier "A",
               nseTypeArgs = [],
@@ -289,7 +289,7 @@ testParseConstants = describe "Parse modules with constant declarations" $ do
           },
           TopLevelConstant $ Constant {
             constantIdentifier = Identifier "MY_POS",
-            constantType = Type (Identifier "Pos") [],
+            constantType = TypeConstructor (LocalNameAccessChain $ Identifier "Pos") [],
             constantExpression = PositionalStructExprOrFunctionCallExpr $ PositionalStructExprOrFunctionCall {
               pseofcNameAccessChain = UnaliasedNameAccessChain (NumericalAddress $ LiteralIntHex "0x42") (Identifier "another_module") (Identifier "Pos"),
               pseofcTypeArgs = [],

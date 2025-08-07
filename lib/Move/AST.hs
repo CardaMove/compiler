@@ -84,9 +84,13 @@ data NamedField
 newtype PositionalField = PositionalField Type
   deriving (Eq, Show)
 
--- | Represents a type, optionally with type parameters
+-- | Represents any type: type constructow with arguments, reference types, tuple types
+-- See grammar comment for Type
 data Type
-  = Type Identifier [Type]
+  = TypeConstructor NameAccessChain [Type]
+  | TypeImmutableRef Type
+  | TypeMutableRef Type
+  | TypeTuple [Type]
   deriving (Eq, Show)
 
 
@@ -220,6 +224,13 @@ data Constant
 
 --      NameAccessChain = <LeadingNameAccess> ( "::" <Identifier> ( "::" <Identifier> )? )?
 
+
+--      Type =
+--          <NameAccessChain> ('<' Comma<Type> ">")?
+--          | "&" <Type>
+--          | "&mut" <Type>
+--          | "|" Comma<Type> "|" Type   (spec only)
+--          | "(" Comma<Type> ")"
 
 -- TODO: rewrite some Identifier into NameAccessChain
 

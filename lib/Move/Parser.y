@@ -271,9 +271,12 @@ NamedField ::  { NamedField }
     }
 
 
--- Type with optional type parameters
+-- | Represents any type: type constructow with arguments, reference types, tuple types
 Type :: { Type }
-  : Identifier OptionalTypeArgs        { Type $1 $2 }
+  : NameAccessChain OptionalTypeArgs        { TypeConstructor $1 $2 }
+  | '&' Type                           { TypeImmutableRef $2 }
+  | '&mut' Type                        { TypeMutableRef $2 }
+  | '(' CommaType ')'                  { TypeTuple $2 }
 
 
 OptionalTypeArgs :: { [Type] }
