@@ -474,7 +474,7 @@ Term :: { Expr }
   -- TODO: vector
   | NameExpr                                             { $1 }
   | Value                                                { ValueLiteral $1 }
-  -- A tuple value. TODO: Also unsure if should have type [Expr]
+  -- A tuple value
   | '(' CommaExpr ')'                                    { CommaExpr $2 }
   -- Explicit typing 
   | '(' Expr ':' Type ')'                                { TypedExprTerm $ TypedExpr { typedExpr = $2, typedExprType = $4 } }
