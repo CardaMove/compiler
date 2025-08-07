@@ -37,11 +37,7 @@ data Use
   deriving (Eq, Show)
 
 -- | Friend with another module
-data Friend
-  = Friend {
-    friendAddress :: Maybe Address, -- Address might be Nothing if the friend is aliased
-    friendName :: Identifier
-  }
+newtype Friend = Friend NameAccessChain
   deriving (Eq, Show)
 
 -- | Definition of a struct type

@@ -186,18 +186,7 @@ Use :: { Use }
 
 -- Friend
 Friend :: { Friend }
-  : friend Address '::' Identifier ';' {
-    Friend {
-      friendAddress = Just $2,
-      friendName = $4
-    }
-  }
-  | friend Identifier ';' {
-    Friend {
-      friendAddress = Nothing,
-      friendName = $2
-    }
-  }
+  : friend NameAccessChain ';'            { Friend $2 }
 
 
 -- Named struct

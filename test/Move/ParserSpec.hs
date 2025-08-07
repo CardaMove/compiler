@@ -63,14 +63,8 @@ testParseModuleFriend = describe "Parse a module with friends" $ do
       moduleAddress = NumericalAddress $ LiteralIntHex "0x42",
       moduleIdentifier = Identifier "answer",
       moduleTopLevels = [
-        TopLevelFriend $ Friend {
-          friendAddress = Just (NumericalAddress $ LiteralIntHex "0x42"),
-          friendName = Identifier "b"
-        },
-        TopLevelFriend $ Friend {
-          friendAddress = Nothing,
-          friendName = Identifier "aliased_friend"
-        }
+        TopLevelFriend $ Friend $ AliasedNameAccessChain (NumericalAddress $ LiteralIntHex "0x42") (Identifier "b"),
+        TopLevelFriend $ Friend $ LocalNameAccessChain $ Identifier "aliased_friend"
       ]
     }
 
