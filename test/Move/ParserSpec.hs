@@ -140,7 +140,7 @@ testParsePositionalStruct = describe "Parse module with positional structs" $ do
 testParseFunction :: Spec
 testParseFunction = describe "Parse module with function declaration" $ do
   testScan $ "module foo::baz {\n" ++
-    "public(friend) entry fun my_func<A, B>(a: A, b: B, c: u64): u64 acquires MyResource<A, u64> {}\n" ++
+    "public(friend) entry fun my_func<A, B>(a: A, b: B, c: u64): u64 acquires MyResource {}\n" ++
     "native public fun empty<Element>(): vector<Element>;\n" ++
     " }"
   $
@@ -164,7 +164,7 @@ testParseFunction = describe "Parse module with function declaration" $ do
             ],
             functionReturnType = Just $ TypeConstructor (LocalNameAccessChain $ Identifier "u64") [],
             functionAcquires = [
-              TypeConstructor (LocalNameAccessChain $ Identifier "MyResource") [TypeConstructor (LocalNameAccessChain $ Identifier "A") [], TypeConstructor (LocalNameAccessChain $ Identifier "u64") []]
+              LocalNameAccessChain $ Identifier "MyResource"
             ],
             functionBody = ()
           },

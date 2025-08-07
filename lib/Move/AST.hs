@@ -104,7 +104,7 @@ data Function
     functionTypeParameters :: [TypeParameter],
     functionParameters :: [Parameter],
     functionReturnType :: Maybe Type,
-    functionAcquires :: [Type],
+    functionAcquires :: [NameAccessChain],
     functionBody :: () -- TODO: function body
   }
   deriving (Eq, Show)

@@ -404,14 +404,14 @@ FunctionReturnType :: { Maybe Type }
   | ':' Type              { Just $2 }    
 
 
--- Acquires
-FunctionAcquires :: { [Type] }
+-- Acquires can only be resource names, not including type arguments
+FunctionAcquires :: { [NameAccessChain] }
   : {- empty -}                       { [] }
   | acquires FunctionAcquires_        { reverse $2 }      -- Reverse left-recursive rule
 
-FunctionAcquires_ :: { [Type] }
-  : Type                           { [$1] }
-  | FunctionAcquires_ ',' Type     { $3 : $1 }  
+FunctionAcquires_ :: { [NameAccessChain] }
+  : NameAccessChain                           { [$1] }
+  | FunctionAcquires_ ',' NameAccessChain     { $3 : $1 }  
 
 
 -- Function body
