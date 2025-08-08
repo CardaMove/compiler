@@ -251,6 +251,19 @@ data Constant
 --          | "let" <BindList> (":" <Type>)? ("=" <Exp>)?
 
 
+--      BindList =
+--          <Bind>
+--          | "(" Comma<Bind> ")"
+
+
+--      Bind =
+--          <Var>
+--          | <NameAccessChain> <OptionalTypeArgs> "{" Comma<BindField> "}"
+
+
+--      BindField = <Field> <":" <Bind>>?
+
+
 --      FunctionDecl =      -- FIXME: this definition is missing lot of tokens
 --          "fun"
 --          <FunctionDefName> "(" Comma<Parameter> ")"
@@ -446,5 +459,38 @@ data Sequence
 
 data SequenceItem
   = SequenceItemExpr Expr
-  -- TODO: let binding
+  | SequenceItemBindExpr Bindings
+  deriving (Eq, Show)
+
+
+data Bindings
+  = Bindings {
+    bindings :: [Bind],
+    bindingsBindType :: Maybe Type,
+    bindingsBindExpr :: Maybe Expr
+  }
+  deriving (Eq, Show)
+
+
+data Bind
+  = BindIdentifier Identifier
+  | BindNamedStruct BindedNamedStruct
+  deriving (Eq, Show)
+
+
+data BindedNamedStruct
+  = BindedNamedStruct {
+    bnsNameAccessChain :: NameAccessChain,
+    bnsTypeArgs :: [Type],
+    bnsFields :: [BindNamedField]
+  }
+  deriving (Eq, Show)
+
+
+-- | A field that is being binded can either be an identifier or an inner bind
+data BindNamedField
+  = BindNamedField {
+    bindFieldIdentifier :: Identifier,
+    bindFieldInnerBind :: Maybe Bind
+  }
   deriving (Eq, Show)

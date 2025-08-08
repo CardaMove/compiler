@@ -336,7 +336,7 @@ Function :: { Function }
       functionParameters = $8,
       functionReturnType = $10,
       functionAcquires = $11,
-      functionBody = ()
+      functionBody = Nothing
     }
   }
   -- non-native function
@@ -632,8 +632,65 @@ SequenceItems_ :: { [SequenceItem] }
 
 -- A sequence item can either be an expression or a binding
 SequenceItem :: { SequenceItem }
-  : Expr ';'                             { SequenceItemExpr $1 }
-  -- TODO: Let binding
+  : Expr ';'                                                          { SequenceItemExpr $1 }
+  | let Bind OptionalBindType OptionalBindExpr ';'                    { SequenceItemBindExpr $ Bindings {
+    bindings = [$2],
+    bindingsBindType = $3,
+    bindingsBindExpr = $4
+  } }
+  | let '(' CommaBind ')' OptionalBindType OptionalBindExpr ';'       { SequenceItemBindExpr $ Bindings {
+    bindings = $3,
+    bindingsBindType = $5,
+    bindingsBindExpr = $6
+  } }
+
+
+-- A binding can be done to either an identifier or to fields of a named struct
+Bind :: { Bind }
+  : Identifier                                                         { BindIdentifier $1 }
+  | NameAccessChain OptionalTypeArgs '{' CommaBindNamedField '}'       { BindNamedStruct $ BindedNamedStruct {
+    bnsNameAccessChain = $1,
+    bnsTypeArgs = $2.
+    bnsFields = $4
+  } }
+
+
+-- Binds separated by ,
+CommaBind :: { [Bind] }
+  : CommaBind_                         { reverse $1 }  -- Reverse the left-recursive rule
+
+
+CommaBind_ :: { [Bind] }
+  : Bind                               { [$1] }
+  | CommaBind_ ',' Bind                { $3 : $1 }  
+
+
+OptionalBindType :: { Maybe Type }
+  : {- empty -}                       { Nothing }
+  | ':' Type                          { Just $2 }
+
+
+OptionalBindExpr :: { Maybe Expr }
+  : {- empty -}                       { Nothing }
+  | '=' Expr                          { Just $2 } 
+
+
+-- Similar to NamedFields, but for binding
+-- TODO: Test if possible to bind no fields {}
+CommaBindNamedField :: { [BindNamedField] }
+  : CommaBindNamedField_                              { reverse $1 } -- Reverse the left-recursive rule
+
+
+CommaBindNamedField_ :: { [BindNamedField] }
+  : BindNamedField                                    { [$1] }
+  | CommaBindNamedField_ ',' BindNamedField           { $3 : $1 }
+
+
+-- A field that is being binded can either be an identifier or an inner bind
+BindNamedField ::  { BindNamedField }
+  : Identifier                                        { BindNamedField { bindFieldIdentifier = $1, bindFieldInnerBind = Nothing } }
+  | Identifier ':' Bind                               { BindNamedField { bindFieldIdentifier = $1, bindFieldInnerBind = Just $3 } }
+
 
 {
 onError :: [Token] -> e
