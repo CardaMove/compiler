@@ -8,7 +8,10 @@ import Move.Parser
 import Test.Hspec
 
 testScan :: String -> Module -> SpecWith ()
-testScan str ast = it str $ parse (scan str) `shouldBe` ast
+testScan str ast = it str $ do
+  let tokens = scan str
+  -- print tokens
+  parse tokens `shouldBe` ast
 
 testParseEmptyModule :: Spec
 testParseEmptyModule = describe "Parse an empty module" $ do
@@ -156,8 +159,8 @@ testParsePositionalStruct = describe "Parse module with positional structs" $ do
         ]
       }
 
-testParseFunction :: Spec
-testParseFunction = describe "Parse module with function declaration" $ do
+testParseFunctionNoBody :: Spec
+testParseFunctionNoBody = describe "Parse module with function declaration with no body" $ do
   testScan $ "module foo::baz {\n" ++
     "public(friend) entry fun my_func<A, B>(a: A, b: B, c: u64): u64 acquires MyResource {}\n" ++
     "native public fun empty<Element>(): vector<Element>;\n" ++
@@ -185,7 +188,11 @@ testParseFunction = describe "Parse module with function declaration" $ do
             functionAcquires = [
               LocalNameAccessChain $ Identifier "MyResource"
             ],
-            functionBody = ()
+            functionBody = Just $ Sequence {
+              sequenceUses = [],
+              sequenceItems = [],
+              sequenceEndExpr = Nothing
+            } 
           },
           -- Native function
           TopLevelFunction $ Function {
@@ -197,7 +204,7 @@ testParseFunction = describe "Parse module with function declaration" $ do
             functionParameters = [],
             functionReturnType = Just $ TypeConstructor (LocalNameAccessChain $ Identifier "vector") [TypeConstructor (LocalNameAccessChain $ Identifier "Element") []],
             functionAcquires = [],
-            functionBody = ()
+            functionBody = Nothing
           }
         ]
       }
@@ -320,7 +327,88 @@ testParseConstants = describe "Parse modules with constant declarations" $ do
           }
         ]
     }
-    
+
+
+testParseFunctionWithBody :: Spec
+testParseFunctionWithBody = describe "Parse module with function declaration with body" $ do
+  testScan (
+    "module foo::baz {\n" ++
+    "fun my_func(b: u64): u64 {\n" ++
+    "use std::vector;\n" ++
+    "let a: u64 = 6 * 7;\n" ++
+    "let sum = a + b;\n" ++
+    "let inner = if (sum > 10) sum / 10 else { sum };\n" ++
+    "inner\n" ++
+    "}\n}" )
+  $ Module {
+    moduleAddress = NamedAddress $ Identifier "foo",
+    moduleIdentifier = Identifier "baz",
+    moduleTopLevels = [
+      TopLevelFunction $ Function {
+        functionHasNativeModifier = False,
+        functionVisibilityModifier = Nothing,
+        functionHasEntryModifier = False,
+        functionName = Identifier "my_func",
+        functionTypeParameters  = [],
+        functionParameters = [Parameter {parameterIdentifier = Identifier "b", parameterType = TypeConstructor (LocalNameAccessChain $ Identifier "u64") []}],
+        functionReturnType = Just $ TypeConstructor (LocalNameAccessChain $ Identifier "u64") [],
+        functionAcquires = [],
+        functionBody = Just $ Sequence {
+          -- use ...
+          sequenceUses = [
+            Use {
+              useAddress = NamedAddress $ Identifier "std",
+              useIdentifier = Identifier "vector",
+              useAlias = Nothing,
+              useMembers = []
+            }
+          ],
+          sequenceItems = [
+            -- let a = ...
+            SequenceItemBindExpr $ Bindings {
+              bindings = [BindIdentifier $ Identifier "a"],
+              bindingsBindType = Just $ TypeConstructor (LocalNameAccessChain $ Identifier "u64") [],
+              bindingsBindExpr  = Just $ BinaryOpExprExpr $ Mult
+                (ValueLiteral $ Numerical $ LiteralIntDec 6)
+                (ValueLiteral $ Numerical $ LiteralIntDec 7)
+            },
+            -- let sum =
+            SequenceItemBindExpr $ Bindings {
+              bindings = [BindIdentifier $ Identifier "sum"],
+              bindingsBindType = Nothing,
+              bindingsBindExpr  = Just $ BinaryOpExprExpr $ Add
+                (NameAccessChainExpr $ LocalNameAccessChain $ Identifier "a")
+                (NameAccessChainExpr $ LocalNameAccessChain $ Identifier "b")
+            },
+            -- let inner =
+            SequenceItemBindExpr $ Bindings {
+              bindings = [BindIdentifier $ Identifier "inner"],
+              bindingsBindType = Nothing,
+              bindingsBindExpr = Just $ IfThenElseTerm $ IfThenElse {
+                -- if (...)
+                ifThenElseCondition = BinaryOpExprExpr $ Gt
+                  (NameAccessChainExpr $ LocalNameAccessChain $ Identifier "sum")
+                  (ValueLiteral $ Numerical $ LiteralIntDec 10),
+                -- if branch
+                ifThenElseIfBranch = BinaryOpExprExpr $ Div
+                  (NameAccessChainExpr $ LocalNameAccessChain $ Identifier "sum")
+                  (ValueLiteral $ Numerical $ LiteralIntDec 10),
+                -- else branch
+                ifThenElseElseBranch = Just $ SequenceExpr $ Sequence {
+                  sequenceUses = [],
+                  sequenceItems = [],
+                  sequenceEndExpr = Just $ NameAccessChainExpr $ LocalNameAccessChain $ Identifier "sum"
+                }
+              }
+            }
+          ],
+          -- inner
+          sequenceEndExpr = Just $ NameAccessChainExpr $ LocalNameAccessChain $ Identifier "inner"
+        }
+      }
+    ]
+  }
+
 
 spec :: Spec
 spec = do
@@ -329,6 +417,7 @@ spec = do
   testParseModuleFriend
   testParseNamedStruct
   testParsePositionalStruct
-  testParseFunction
+  testParseFunctionNoBody
   testParseAbilities
   testParseConstants
+  testParseFunctionWithBody

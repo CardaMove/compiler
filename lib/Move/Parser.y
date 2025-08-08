@@ -150,8 +150,9 @@ import Move.Token
 -- In conjunction with %prec, fixes the dangling else problem (with and without braces):
 --    Term -> if '(' Expr ')' Expr .                      (rule 110)
 --    Term -> if '(' Expr ')' Expr . else Expr            (rule 111)
+-- Also see Bison manual at "5.3.6 Using Precedence For Non Operators"
+-- FIXME: Higher precedence than binary operator might cause parsing of (if ... then ... else 1) + 2
 %right IF_NO_ELSE
-%right IF_BRACES_NO_ELSE
 %right else
 
 %%
@@ -615,30 +616,56 @@ NameAccessChain :: { NameAccessChain }
 
 
 -- A sequence of use declarations, expressions, bindings, and optionally a final expression without ;
--- Note: Differently from the Move parser, the Sequence rule includes both braces { and }
+-- The pattern matching is used to determine if the last SequenceItem is followed or not by a ';'
+-- If not, and that item matches an Expr, it will be considered the ending Expr of the sequence
+--
+-- Pattern 1: The last item is followed by a ';'
+--    Example:
+--       SequenceItem1; SequenceItem2; }
+-- Pattern 2: The last item is not followed by a ';' but a '}' instead
+--    Example:
+--       SequenceItem1; SequenceItem2 }
+--    Then, it must be an Expr
+-- Pattern 3: If not an Expr, fail
 Sequence :: { Sequence }
-  : '{' OptionalUses SequenceItems '}'                    { Sequence { sequenceUses = $2, sequenceItems = $3, sequenceEndExpr = Nothing } }
-  | '{' OptionalUses SequenceItems Expr '}'               { Sequence { sequenceUses = $2, sequenceItems = $3, sequenceEndExpr = Just $4 } }
+  : '{' OptionalUses SequenceItems_    %prec LOWER              {
+    case $3 of
+      (seqItems, False) -> Sequence {                 
+        sequenceUses = $2,                            
+        sequenceItems = reverse seqItems,             
+        sequenceEndExpr = Nothing
+      }
+      (SequenceItemExpr(head) : tail, True) -> Sequence {     
+        sequenceUses = $2,                                    
+        sequenceItems = reverse tail,                         
+        sequenceEndExpr = Just head                           
+      }
+      (head : _, True) -> error $ "Sequence ends with non-Expr return" ++ show head       
+  }
 
 
-SequenceItems :: { [SequenceItem] }
-  : SequenceItems_      %prec LOWER                      { reverse $1 }  -- Reverse the left-recursive rule
+SequenceItems_ :: { ([SequenceItem], Bool) }
+  : SequenceItems__                                 { (reverse $ fst $1, snd $1) }
 
 
-SequenceItems_ :: { [SequenceItem] }
-  : {- empty -}                               { [] }
-  | SequenceItems_  SequenceItem              { $2 : $1 }
+-- To resolve ambiguities when parsing Expr ';' with optional ';', it has been used a right recursion,
+-- With a second tuple element indicating if the SequenceItems__ end with a final SequenceItem not followed by a ';'
+-- If this is the case, that element will be considered the ending Expr in the Sequence pattern matching
+SequenceItems__ :: { ([SequenceItem], Bool) }
+  : '}'                                             { ([], False) }
+  | SequenceItem '}'                                { ([$1], True) }
+  | SequenceItem ';' SequenceItems__                { ($1 : (fst $3), snd $3) }
 
 
 -- A sequence item can either be an expression or a binding
 SequenceItem :: { SequenceItem }
-  : Expr ';'                                                          { SequenceItemExpr $1 }
-  | let Bind OptionalBindType OptionalBindExpr ';'                    { SequenceItemBindExpr $ Bindings {
+  : Expr                                                          { SequenceItemExpr $1 }
+  | let Bind OptionalBindType OptionalBindExpr                    { SequenceItemBindExpr $ Bindings {
     bindings = [$2],
     bindingsBindType = $3,
     bindingsBindExpr = $4
   } }
-  | let '(' CommaBind ')' OptionalBindType OptionalBindExpr ';'       { SequenceItemBindExpr $ Bindings {
+  | let '(' CommaBind ')' OptionalBindType OptionalBindExpr       { SequenceItemBindExpr $ Bindings {
     bindings = $3,
     bindingsBindType = $5,
     bindingsBindExpr = $6
@@ -650,7 +677,7 @@ Bind :: { Bind }
   : Identifier                                                         { BindIdentifier $1 }
   | NameAccessChain OptionalTypeArgs '{' CommaBindNamedField '}'       { BindNamedStruct $ BindedNamedStruct {
     bnsNameAccessChain = $1,
-    bnsTypeArgs = $2.
+    bnsTypeArgs = $2,
     bnsFields = $4
   } }
 
