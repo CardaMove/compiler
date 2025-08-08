@@ -95,6 +95,27 @@ import Move.Token
 -- Fixes precedence at State 102 between Expr -> BinaryOpExpr . and the others
 %nonassoc LOWER
 
+-- In conjunction with LOWER, fixes multiple precedences on State 243
+-- Confronting the before-after produced grammar, only that state is affected
+%right '('
+%right '{'
+%nonassoc int
+%nonassoc hex
+%nonassoc true
+%nonassoc false
+%right copy
+%right if
+%left while
+%right loop
+%left break
+%left continue
+%right abort
+%right move
+%right '!'
+%right '&mut'
+%right '@'
+%right identifier
+
 -- In conjunction with %prec LOWER at rule 95, fixes precedence at State 103 when encountering a '='
 --    Expr -> UnaryExpr . '=' Expr                        (rule 76)
 --   	BinaryOpExpr -> UnaryExpr .                         (rule 95)
@@ -494,20 +515,13 @@ Term :: { Expr }
   -- if then else 
   | if '(' Expr ')' Expr                            %prec IF_NO_ELSE                { IfThenElseTerm $ IfThenElse { ifThenElseCondition = $3, ifThenElseIfBranch = $5, ifThenElseElseBranch = Nothing } }
   | if '(' Expr ')' Expr else Expr                                                  { IfThenElseTerm $ IfThenElse { ifThenElseCondition = $3, ifThenElseIfBranch = $5, ifThenElseElseBranch = Just $7 } }
-  -- | if '(' Expr ')' '{' Expr '}'                    %prec IF_BRACES_NO_ELSE         { IfThenElseTerm $ IfThenElse { ifThenElseCondition = $3, ifThenElseIfBranch = $6, ifThenElseElseBranch = Nothing } }
-  -- | if '(' Expr ')' '{' Expr '}' else '{' Expr '}'                                  { IfThenElseTerm $ IfThenElse { ifThenElseCondition = $3, ifThenElseIfBranch = $6, ifThenElseElseBranch = Just $10 } }
   -- while
   | while '(' Expr ')' Expr                              { WhileTerm $ While { whileCondition = $3, whileExpr = $5 }}
-  -- | while '(' Expr ')' '{' Expr '}'                      { WhileTerm $ While { whileCondition = $3, whileExpr = $6 }}
   -- loop
   | loop Expr                                            { Loop $2 }
-  --| loop '{' Expr '}'                                    { Loop $3 }
   -- FIXME: where is for?
-  -- return
   | Return                                               { $1 }
-  -- abort
   | abort Expr                                           { Abort $2 }
-  --| abort Sequence                                       { AbortExpr $ AbortWithSequence $2 }
 
 
 Return :: { Expr }
@@ -612,7 +626,7 @@ Sequence :: { Sequence }
 
 
 SequenceItems :: { [SequenceItem] }
-  : SequenceItems_                            { reverse $1 }  -- Reverse the left-recursive rule
+  : SequenceItems_      %prec LOWER                      { reverse $1 }  -- Reverse the left-recursive rule
 
 
 SequenceItems_ :: { [SequenceItem] }
