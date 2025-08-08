@@ -340,7 +340,7 @@ Function :: { Function }
     }
   }
   -- non-native function
-  | VisibilityModifier EntryModifier fun Identifier OptionalTypeParameters '(' FunctionParameters ')' FunctionReturnType FunctionAcquires '{' FunctionBody '}' {
+  | VisibilityModifier EntryModifier fun Identifier OptionalTypeParameters '(' FunctionParameters ')' FunctionReturnType FunctionAcquires Sequence {
     Function {
       functionHasNativeModifier = False,
       functionVisibilityModifier = $1,
@@ -350,7 +350,7 @@ Function :: { Function }
       functionParameters = $7,
       functionReturnType = $9,
       functionAcquires = $10,
-      functionBody = $12
+      functionBody = Just $11
     }
   }
 
@@ -433,14 +433,10 @@ FunctionAcquires :: { [NameAccessChain] }
   : {- empty -}                       { [] }
   | acquires FunctionAcquires_        { reverse $2 }      -- Reverse left-recursive rule
 
+
 FunctionAcquires_ :: { [NameAccessChain] }
   : NameAccessChain                           { [$1] }
   | FunctionAcquires_ ',' NameAccessChain     { $3 : $1 }  
-
-
--- Function body
-FunctionBody :: { () }
-  : {- empty -}       { () }
 
 
 -- Constants

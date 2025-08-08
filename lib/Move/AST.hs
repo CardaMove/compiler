@@ -109,7 +109,7 @@ data Function
     functionParameters :: [Parameter],
     functionReturnType :: Maybe Type,
     functionAcquires :: [NameAccessChain],
-    functionBody :: () -- TODO: function body
+    functionBody :: Maybe Sequence
   }
   deriving (Eq, Show)
 
@@ -249,6 +249,14 @@ data Constant
 --      SequenceItem =
 --          <Exp>
 --          | "let" <BindList> (":" <Type>)? ("=" <Exp>)?
+
+
+--      FunctionDecl =      -- FIXME: this definition is missing lot of tokens
+--          "fun"
+--          <FunctionDefName> "(" Comma<Parameter> ")"
+--          (":" <Type>)?
+--          ("acquires" <NameAccessChain> ("," <NameAccessChain>)*)?
+--          ("{" <Sequence> "}" | ";")
 
 
 -- | Represents any expression
