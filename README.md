@@ -11,6 +11,9 @@ $ stack run
 
 ```
 
+To manually run Happy:
+`ghci -ilib lib/Move/Parser.hs`
+
 ## Notes
 
 ### Move function bodies
