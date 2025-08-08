@@ -188,6 +188,16 @@ CommaUseMember :: { [UseMember] }
   | CommaUseMember ',' UseMember            { $3 : $1 }
 
 
+-- A sequence of multiple use declarations. Present in function bodies
+OptionalUses :: { [Use] }
+  : OptionalUses_                       { reverse $1 }  -- Reverse the left-recursive rule
+
+
+OptionalUses_ :: { [Use] }
+  : {- empty -}                         { [] }
+  | OptionalUses_ Use                   { $2 : $1 }
+
+
 -- Friend
 Friend :: { Friend }
   : friend NameAccessChain ';'            { Friend $2 }
@@ -480,30 +490,29 @@ Term :: { Expr }
   | '(' Expr ':' Type ')'                                { TypedExprTerm $ TypedExpr { typedExpr = $2, typedExprType = $4 } }
   -- Casting
   | '(' Expr as Type ')'                                 { CastingTerm $ Casting { castingExpr = $2, castingType = $4 } }
-  -- TODO: sequence
+  | Sequence                                             { SequenceExpr $1 }
   -- if then else 
   | if '(' Expr ')' Expr                            %prec IF_NO_ELSE                { IfThenElseTerm $ IfThenElse { ifThenElseCondition = $3, ifThenElseIfBranch = $5, ifThenElseElseBranch = Nothing } }
   | if '(' Expr ')' Expr else Expr                                                  { IfThenElseTerm $ IfThenElse { ifThenElseCondition = $3, ifThenElseIfBranch = $5, ifThenElseElseBranch = Just $7 } }
-  | if '(' Expr ')' '{' Expr '}'                    %prec IF_BRACES_NO_ELSE         { IfThenElseTerm $ IfThenElse { ifThenElseCondition = $3, ifThenElseIfBranch = $6, ifThenElseElseBranch = Nothing } }
-  | if '(' Expr ')' '{' Expr '}' else '{' Expr '}'                                  { IfThenElseTerm $ IfThenElse { ifThenElseCondition = $3, ifThenElseIfBranch = $6, ifThenElseElseBranch = Just $10 } }
+  -- | if '(' Expr ')' '{' Expr '}'                    %prec IF_BRACES_NO_ELSE         { IfThenElseTerm $ IfThenElse { ifThenElseCondition = $3, ifThenElseIfBranch = $6, ifThenElseElseBranch = Nothing } }
+  -- | if '(' Expr ')' '{' Expr '}' else '{' Expr '}'                                  { IfThenElseTerm $ IfThenElse { ifThenElseCondition = $3, ifThenElseIfBranch = $6, ifThenElseElseBranch = Just $10 } }
   -- while
   | while '(' Expr ')' Expr                              { WhileTerm $ While { whileCondition = $3, whileExpr = $5 }}
-  | while '(' Expr ')' '{' Expr '}'                      { WhileTerm $ While { whileCondition = $3, whileExpr = $6 }}
+  -- | while '(' Expr ')' '{' Expr '}'                      { WhileTerm $ While { whileCondition = $3, whileExpr = $6 }}
   -- loop
   | loop Expr                                            { Loop $2 }
-  | loop '{' Expr '}'                                    { Loop $3 }
+  --| loop '{' Expr '}'                                    { Loop $3 }
   -- FIXME: where is for?
   -- return
   | Return                                               { $1 }
   -- abort
   | abort Expr                                           { Abort $2 }
-  | abort '{' Expr '}'                                   { Abort $3 }
+  --| abort Sequence                                       { AbortExpr $ AbortWithSequence $2 }
 
 
 Return :: { Expr }
   : return                                               { Return Nothing }
   | return Expr                                          { Return $ Just $2 }
-  | return '{' Expr '}'                                  { Return $ Just $3 }
 
 
 -- A sequence of comma-separated expressions. Used for tuples and function calls.
@@ -594,6 +603,27 @@ NameAccessChain :: { NameAccessChain }
   | Address '::' Identifier                               { AliasedNameAccessChain $1 $3 }
   | Address '::' Identifier '::' Identifier               { UnaliasedNameAccessChain $1 $3 $5 }
 
+
+-- A sequence of use declarations, expressions, bindings, and optionally a final expression without ;
+-- Note: Differently from the Move parser, the Sequence rule includes both braces { and }
+Sequence :: { Sequence }
+  : '{' OptionalUses SequenceItems '}'                    { Sequence { sequenceUses = $2, sequenceItems = $3, sequenceEndExpr = Nothing } }
+  | '{' OptionalUses SequenceItems Expr '}'               { Sequence { sequenceUses = $2, sequenceItems = $3, sequenceEndExpr = Just $4 } }
+
+
+SequenceItems :: { [SequenceItem] }
+  : SequenceItems_                            { reverse $1 }  -- Reverse the left-recursive rule
+
+
+SequenceItems_ :: { [SequenceItem] }
+  : {- empty -}                               { [] }
+  | SequenceItems_  SequenceItem              { $2 : $1 }
+
+
+-- A sequence item can either be an expression or a binding
+SequenceItem :: { SequenceItem }
+  : Expr ';'                             { SequenceItemExpr $1 }
+  -- TODO: Let binding
 
 {
 onError :: [Token] -> e

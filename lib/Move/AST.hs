@@ -194,16 +194,16 @@ data Constant
 --          | "(" <Exp> ":" <Type> ")"
 --          | "(" <Exp> "as" <Type> ")"
 --          | "{" <Sequence>
---          | "if" "(" <Exp> ")" <Exp> "else" "{" <Exp> "}"
---          | "if" "(" <Exp> ")" "{" <Exp> "}"
---          | "if" "(" <Exp> ")" <Exp> ("else" <Exp>)?
---          | "while" "(" <Exp> ")" "{" <Exp> "}"
---          | "while" "(" <Exp> ")" <Exp> (SpecBlock)?
+--          | "if" "(" <Exp> ")" <Exp> "else" "{" <Exp> "}"     -- FIXME: can be removed
+--          | "if" "(" <Exp> ")" "{" <Exp> "}"                  -- FIXME: can be removed
+--          | "if" "(" <Exp> ")" <Exp> ("else" <Exp>)?    
+--          | "while" "(" <Exp> ")" "{" <Exp> "}"         -- FIXME: can be removed
+--          | "while" "(" <Exp> ")" <Exp> (SpecBlock)?    -- FIXME: ignoring SpecBlock
 --          | "loop" <Exp>
---          | "loop" "{" <Exp> "}"
---          | "return" "{" <Exp> "}"
+--          | "loop" "{" <Exp> "}"      -- FIXME: can be removed
+--          | "return" "{" <Exp> "}"    -- FIXME: simplified with Sequence
 --          | "return" <Exp>?
---          | "abort" "{" <Exp> "}"
+--          | "abort" "{" <Exp> "}"     -- FIXME: can be removed
 --          | "abort" <Exp>
 
 
@@ -243,6 +243,14 @@ data Constant
 --          "use" <ModuleIdent> :: "{" Comma<UseMember> "}" ";"
 
 
+--      Sequence = <UseDecl>* (<SequenceItem> ";")* <Exp>? "}"
+
+
+--      SequenceItem =
+--          <Exp>
+--          | "let" <BindList> (":" <Type>)? ("=" <Exp>)?
+
+
 -- | Represents any expression
 data Expr
   = BinaryOpExprExpr BinaryOpExpr
@@ -257,6 +265,7 @@ data Expr
   | PositionalStructExprOrFunctionCallExpr PositionalStructExprOrFunctionCall
   | FunctionBangCallExpr FunctionBangCall
   | NameAccessChainExpr NameAccessChain
+  | SequenceExpr Sequence
   | IfThenElseTerm IfThenElse
   | WhileTerm While
   | Loop Expr
@@ -413,4 +422,21 @@ data FunctionBangCall
     fbcNameAccessChain :: NameAccessChain,
     fbcFields :: [Expr]
   }
+  deriving (Eq, Show)
+
+-- A sequence of use declarations, expressions, bindings, and optionally a final expression without ;
+data Sequence
+  = Sequence {
+    sequenceUses :: [Use],
+    sequenceItems :: [SequenceItem],
+    sequenceEndExpr :: Maybe Expr
+  }
+  deriving (Eq, Show)
+
+
+-- A sequence item can either be an expression or a binding
+
+data SequenceItem
+  = SequenceItemExpr Expr
+  -- TODO: let binding
   deriving (Eq, Show)
