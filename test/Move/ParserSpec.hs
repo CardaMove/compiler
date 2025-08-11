@@ -427,9 +427,9 @@ testParseStructExpr = describe "Parse function with struct expressions" $ do
         -- Updating a field
         "foo.c = foo.c + *c_ref;\n" ++
         -- Positional structs
-        --   "let positional = PositionalStruct(12, 24);\n" ++
+        "let positional = PositionalStruct(12, 24);\n" ++
         -- Pattern matching with positional struct
-        --   "let PositionalStruct(_, twenty_four) = positional;\n" ++
+        "let PositionalStruct(_, twenty_four) = positional;\n" ++
         -- Partial patterns
         --   "let C { a: my_a,.. } = foo;\n" ++
         --   "let PositionalStruct(twelve,..) = positional;\n" ++
@@ -511,13 +511,13 @@ testParseStructExpr = describe "Parse function with struct expressions" $ do
                 bnsTypeArgs = [],
                 bnsFields = [
                   -- a: _
-                  BindNamedField {
+                  BindedField {
                     bindFieldIdentifier = Identifier "a",
                     -- _ is parsed as an identifier
                     bindFieldInnerBind = Just $ BindIdentifier $ Identifier "_"
                   },
                   -- b: B<bool> ...
-                  BindNamedField {
+                  BindedField {
                     bindFieldIdentifier = Identifier "b",
                     -- _ is parsed as an identifier
                     bindFieldInnerBind = Just $ BindNamedStruct $ BindedNamedStruct {
@@ -525,7 +525,7 @@ testParseStructExpr = describe "Parse function with struct expressions" $ do
                       bnsTypeArgs = [TypeConstructor (LocalNameAccessChain $ Identifier "bool") []],
                       bnsFields = [
                         -- b: my_b
-                        BindNamedField {
+                        BindedField {
                           bindFieldIdentifier = Identifier "b",
                           bindFieldInnerBind = Just $ BindIdentifier $ Identifier "my_b"
                         }
@@ -533,7 +533,7 @@ testParseStructExpr = describe "Parse function with struct expressions" $ do
                     }
                   },
                   -- c: _
-                  BindNamedField {
+                  BindedField {
                     bindFieldIdentifier = Identifier "c",
                     bindFieldInnerBind = Just $ BindIdentifier $ Identifier "_"
                   }
@@ -567,6 +567,42 @@ testParseStructExpr = describe "Parse function with struct expressions" $ do
                 dotAccessRight = Identifier "c"
                 })
                 (UnaryOpExpr $ Dereference $ NameAccessChainExpr $ LocalNameAccessChain $ Identifier "c_ref")
+            },
+            -- let positional = ...
+            SequenceItemBindExpr $ Bindings {
+              bindings = [BindIdentifier $ Identifier "positional"],
+              bindingsBindType = Nothing,
+              -- = PositionalStruct(12, 24)
+              bindingsBindExpr = Just $ PositionalStructExprOrFunctionCallExpr $ PositionalStructExprOrFunctionCall {
+                pseofcNameAccessChain = LocalNameAccessChain $ Identifier "PositionalStruct",
+                pseofcTypeArgs = [],
+                pseofcFields = [
+                  ValueLiteral $ Numerical $ LiteralIntDec 12,
+                  ValueLiteral $ Numerical $ LiteralIntDec 24
+                ]
+              } 
+            },
+            -- let PositionalStruct(...;
+            SequenceItemBindExpr $ Bindings {
+              bindings = [BindPositionalStruct $ BindedPositionalStruct {
+                bpsNameAccessChain = LocalNameAccessChain $ Identifier "PositionalStruct",
+                bpsTypeArgs = [],
+                bpsFields = [
+                  -- _
+                  BindedField {
+                    bindFieldIdentifier = Identifier "_",
+                    bindFieldInnerBind = Nothing
+                  },
+                  -- twenty_four
+                  BindedField {
+                    bindFieldIdentifier = Identifier "twenty_four",
+                    bindFieldInnerBind = Nothing
+                  }
+                ]
+              }],
+              bindingsBindType = Nothing,
+              -- = positional
+              bindingsBindExpr = Just $ NameAccessChainExpr $ LocalNameAccessChain $ Identifier "positional"
             }
           ],
           -- No end expression

@@ -675,10 +675,15 @@ SequenceItem :: { SequenceItem }
 -- A binding can be done to either an identifier or to fields of a named struct
 Bind :: { Bind }
   : Identifier                                                         { BindIdentifier $1 }
-  | NameAccessChain OptionalTypeArgs '{' CommaBindNamedField '}'       { BindNamedStruct $ BindedNamedStruct {
+  | NameAccessChain OptionalTypeArgs '{' CommaBindedField '}'       { BindNamedStruct $ BindedNamedStruct {
     bnsNameAccessChain = $1,
     bnsTypeArgs = $2,
     bnsFields = $4
+  } }
+  | NameAccessChain OptionalTypeArgs '(' CommaBindedField ')'       { BindPositionalStruct $ BindedPositionalStruct {
+    bpsNameAccessChain = $1,
+    bpsTypeArgs = $2,
+    bpsFields = $4
   } }
 
 
@@ -704,19 +709,19 @@ OptionalBindExpr :: { Maybe Expr }
 
 -- Similar to NamedFields, but for binding
 -- TODO: Test if possible to bind no fields {}
-CommaBindNamedField :: { [BindNamedField] }
-  : CommaBindNamedField_                              { reverse $1 } -- Reverse the left-recursive rule
+CommaBindedField :: { [BindedField] }
+  : CommaBindedField_                              { reverse $1 } -- Reverse the left-recursive rule
 
 
-CommaBindNamedField_ :: { [BindNamedField] }
-  : BindNamedField                                    { [$1] }
-  | CommaBindNamedField_ ',' BindNamedField           { $3 : $1 }
+CommaBindedField_ :: { [BindedField] }
+  : BindedField                                    { [$1] }
+  | CommaBindedField_ ',' BindedField           { $3 : $1 }
 
 
 -- A field that is being binded is an identifier with optional inner bind
-BindNamedField ::  { BindNamedField }
-  : Identifier                                        { BindNamedField { bindFieldIdentifier = $1, bindFieldInnerBind = Nothing } }
-  | Identifier ':' Bind                               { BindNamedField { bindFieldIdentifier = $1, bindFieldInnerBind = Just $3 } }
+BindedField ::  { BindedField }
+  : Identifier                                        { BindedField { bindFieldIdentifier = $1, bindFieldInnerBind = Nothing } }
+  | Identifier ':' Bind                               { BindedField { bindFieldIdentifier = $1, bindFieldInnerBind = Just $3 } }
 
 
 {

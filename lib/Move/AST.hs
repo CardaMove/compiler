@@ -258,7 +258,7 @@ data Constant
 
 --      Bind =
 --          <Var>
---          | <NameAccessChain> <OptionalTypeArgs> "{" Comma<BindField> "}"
+--          | <NameAccessChain> <OptionalTypeArgs> "{" Comma<BindField> "}" -- FIXME: Move compiler is missing binding to positional struct
 
 
 --      BindField = <Field> <":" <Bind>>?
@@ -475,6 +475,7 @@ data Bindings
 data Bind
   = BindIdentifier Identifier
   | BindNamedStruct BindedNamedStruct
+  | BindPositionalStruct BindedPositionalStruct
   deriving (Eq, Show)
 
 
@@ -482,15 +483,25 @@ data BindedNamedStruct
   = BindedNamedStruct {
     bnsNameAccessChain :: NameAccessChain,
     bnsTypeArgs :: [Type],
-    bnsFields :: [BindNamedField]
+    bnsFields :: [BindedField]
+  }
+  deriving (Eq, Show)
+
+
+data BindedPositionalStruct
+  = BindedPositionalStruct {
+    bpsNameAccessChain :: NameAccessChain,
+    bpsTypeArgs :: [Type],
+    bpsFields :: [BindedField]
   }
   deriving (Eq, Show)
 
 
 -- | A field that is being binded is an identifier with optional inner bind
-data BindNamedField
-  = BindNamedField {
+data BindedField
+  = BindedField {
     bindFieldIdentifier :: Identifier,
     bindFieldInnerBind :: Maybe Bind
   }
   deriving (Eq, Show)
+
