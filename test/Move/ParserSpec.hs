@@ -432,7 +432,7 @@ testParseStructExpr = describe "Parse function with struct expressions" $ do
         "let PositionalStruct(_, twenty_four) = positional;\n" ++
         -- Partial patterns and tuple
         "let C { a: my_a,.. } = foo;\n" ++
-        "let (PositionalStruct(twelve,..), another_42) = (positional, 42);\n" ++
+        "let (PositionalStruct(twelve,..), another_42): (PositionalStruct, u64) = (positional, 42);\n" ++
     "}\n}" )
   $ Module {
     moduleAddress = NamedAddress $ Identifier "foo",
@@ -651,7 +651,11 @@ testParseStructExpr = describe "Parse function with struct expressions" $ do
                 -- another_42)
                 BindIdentifier $ Identifier "another_42"
               ],
-              bindingsBindType = Nothing,
+              -- : (PositionalSttruct, u64)
+              bindingsBindType = Just $ TypeTuple [
+                TypeConstructor (LocalNameAccessChain $ Identifier "PositionalStruct") [],
+                TypeConstructor (LocalNameAccessChain $ Identifier "u64") []
+              ],
               -- = (positional, 42)
               bindingsBindExpr = Just $ CommaExpr [
                 NameAccessChainExpr $ LocalNameAccessChain $ Identifier "positional",

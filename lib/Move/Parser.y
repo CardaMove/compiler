@@ -299,24 +299,24 @@ NamedField ::  { NamedField }
 -- | Represents any type: type constructow with arguments, reference types, tuple types
 Type :: { Type }
   : NameAccessChain OptionalTypeArgs        { TypeConstructor $1 $2 }
-  | '&' Type                           { TypeImmutableRef $2 }
-  | '&mut' Type                        { TypeMutableRef $2 }
-  | '(' CommaType ')'                  { TypeTuple $2 }
+  | '&' Type                                { TypeImmutableRef $2 }
+  | '&mut' Type                             { TypeMutableRef $2 }
+  | '(' CommaType_ ')'                      { TypeTuple $ reverse $2 }  -- Reverse the left-recursive rule
 
 
 OptionalTypeArgs :: { [Type] }
   : {- empty -}                        { [] }
-  | '<' CommaType '>'                  { reverse $2 }
+  | '<' CommaType_ '>'                 { reverse $2 }  -- Reverse the left-recursive rule
 
 
-CommaType :: { [Type] }
+CommaType_ :: { [Type] }
   : Type                               { [$1] }
-  | CommaType ',' Type                 { $3 : $1 }
+  | CommaType_ ',' Type                { $3 : $1 }
 
 
 -- Positional fields of a struct
 PositionalFields :: { [PositionalField] }
-  : PositionalFields_          { reverse $1 } -- Reverse the left-recursive rule
+  : PositionalFields_                   { reverse $1 } -- Reverse the left-recursive rule
 
 PositionalFields_ :: { [PositionalField] }
   : {- empty -}                         { [] }
