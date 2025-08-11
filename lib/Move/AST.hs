@@ -483,7 +483,7 @@ data BindedNamedStruct
   = BindedNamedStruct {
     bnsNameAccessChain :: NameAccessChain,
     bnsTypeArgs :: [Type],
-    bnsFields :: [BindedField]
+    bnsFields :: BindedFields
   }
   deriving (Eq, Show)
 
@@ -492,10 +492,19 @@ data BindedPositionalStruct
   = BindedPositionalStruct {
     bpsNameAccessChain :: NameAccessChain,
     bpsTypeArgs :: [Type],
-    bpsFields :: [BindedField]
+    bpsFields :: BindedFields
   }
   deriving (Eq, Show)
 
+
+-- | Similar to NamedFields, but for binding
+-- | Additionally, a partial pattern can be used to skip fields
+data BindedFields
+  = BindedFields {
+    hasPartialPattern :: Bool,
+    bindedFields :: [BindedField]
+  }
+  deriving (Eq, Show)
 
 -- | A field that is being binded is an identifier with optional inner bind
 data BindedField

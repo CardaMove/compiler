@@ -509,35 +509,41 @@ testParseStructExpr = describe "Parse function with struct expressions" $ do
               bindings = [BindNamedStruct $ BindedNamedStruct {
                 bnsNameAccessChain = LocalNameAccessChain $ Identifier "C",
                 bnsTypeArgs = [],
-                bnsFields = [
-                  -- a: _
-                  BindedField {
-                    bindFieldIdentifier = Identifier "a",
-                    -- _ is parsed as an identifier
-                    bindFieldInnerBind = Just $ BindIdentifier $ Identifier "_"
-                  },
-                  -- b: B<bool> ...
-                  BindedField {
-                    bindFieldIdentifier = Identifier "b",
-                    -- _ is parsed as an identifier
-                    bindFieldInnerBind = Just $ BindNamedStruct $ BindedNamedStruct {
-                      bnsNameAccessChain = LocalNameAccessChain $ Identifier "B",
-                      bnsTypeArgs = [TypeConstructor (LocalNameAccessChain $ Identifier "bool") []],
-                      bnsFields = [
-                        -- b: my_b
-                        BindedField {
-                          bindFieldIdentifier = Identifier "b",
-                          bindFieldInnerBind = Just $ BindIdentifier $ Identifier "my_b"
+                bnsFields = BindedFields {
+                  hasPartialPattern = False,
+                  bindedFields = [
+                    -- a: _
+                    BindedField {
+                      bindFieldIdentifier = Identifier "a",
+                      -- _ is parsed as an identifier
+                      bindFieldInnerBind = Just $ BindIdentifier $ Identifier "_"
+                    },
+                    -- b: B<bool> ...
+                    BindedField {
+                      bindFieldIdentifier = Identifier "b",
+                      -- _ is parsed as an identifier
+                      bindFieldInnerBind = Just $ BindNamedStruct $ BindedNamedStruct {
+                        bnsNameAccessChain = LocalNameAccessChain $ Identifier "B",
+                        bnsTypeArgs = [TypeConstructor (LocalNameAccessChain $ Identifier "bool") []],
+                        bnsFields = BindedFields {
+                          hasPartialPattern = False,
+                          bindedFields = [
+                            -- b: my_b
+                            BindedField {
+                              bindFieldIdentifier = Identifier "b",
+                              bindFieldInnerBind = Just $ BindIdentifier $ Identifier "my_b"
+                            }
+                          ]
                         }
-                      ]
+                      }
+                    },
+                    -- c: _
+                    BindedField {
+                      bindFieldIdentifier = Identifier "c",
+                      bindFieldInnerBind = Just $ BindIdentifier $ Identifier "_"
                     }
-                  },
-                  -- c: _
-                  BindedField {
-                    bindFieldIdentifier = Identifier "c",
-                    bindFieldInnerBind = Just $ BindIdentifier $ Identifier "_"
-                  }
-                ]
+                  ]
+                }
               }],
               bindingsBindType = Nothing,
               -- = copy foo
@@ -587,18 +593,21 @@ testParseStructExpr = describe "Parse function with struct expressions" $ do
               bindings = [BindPositionalStruct $ BindedPositionalStruct {
                 bpsNameAccessChain = LocalNameAccessChain $ Identifier "PositionalStruct",
                 bpsTypeArgs = [],
-                bpsFields = [
-                  -- _
-                  BindedField {
-                    bindFieldIdentifier = Identifier "_",
-                    bindFieldInnerBind = Nothing
-                  },
-                  -- twenty_four
-                  BindedField {
-                    bindFieldIdentifier = Identifier "twenty_four",
-                    bindFieldInnerBind = Nothing
-                  }
-                ]
+                bpsFields = BindedFields {
+                  hasPartialPattern = False,
+                  bindedFields = [
+                    -- _
+                    BindedField {
+                      bindFieldIdentifier = Identifier "_",
+                      bindFieldInnerBind = Nothing
+                    },
+                    -- twenty_four
+                    BindedField {
+                      bindFieldIdentifier = Identifier "twenty_four",
+                      bindFieldInnerBind = Nothing
+                    }
+                  ]
+                }
               }],
               bindingsBindType = Nothing,
               -- = positional

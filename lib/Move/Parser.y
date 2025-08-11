@@ -674,7 +674,7 @@ SequenceItem :: { SequenceItem }
 
 -- A binding can be done to either an identifier or to fields of a named struct
 Bind :: { Bind }
-  : Identifier                                                         { BindIdentifier $1 }
+  : Identifier                                                      { BindIdentifier $1 }
   | NameAccessChain OptionalTypeArgs '{' CommaBindedField '}'       { BindNamedStruct $ BindedNamedStruct {
     bnsNameAccessChain = $1,
     bnsTypeArgs = $2,
@@ -709,19 +709,39 @@ OptionalBindExpr :: { Maybe Expr }
 
 -- Similar to NamedFields, but for binding
 -- TODO: Test if possible to bind no fields {}
-CommaBindedField :: { [BindedField] }
-  : CommaBindedField_                              { reverse $1 } -- Reverse the left-recursive rule
+-- Additionally, a partial pattern can be used to skip fields
+CommaBindedField :: { BindedFields }
+  : CommaBindedField_                         { BindedFields {
+    hasPartialPattern = hasPartialPattern $1,
+    bindedFields = reverse $ bindedFields $1
+  } } -- Reverse the left-recursive rule
 
 
-CommaBindedField_ :: { [BindedField] }
-  : BindedField                                    { [$1] }
-  | CommaBindedField_ ',' BindedField           { $3 : $1 }
+-- Handle the case of an optional partial pattern
+CommaBindedField_ :: { BindedFields }
+  : BindedField                                    { 
+    case $1 of
+      Nothing -> BindedFields { hasPartialPattern = True, bindedFields = [] }
+      Just(bf) -> BindedFields { hasPartialPattern = False, bindedFields = [bf] }
+   }
+  | CommaBindedField_ ',' BindedField           {
+    case $3 of
+      Nothing -> BindedFields {
+        hasPartialPattern = True,
+        bindedFields = bindedFields $1
+      }
+      Just(bf) -> BindedFields {
+        hasPartialPattern = hasPartialPattern $1,
+        bindedFields = bf : bindedFields $1
+      }
+  }
 
 
 -- A field that is being binded is an identifier with optional inner bind
-BindedField ::  { BindedField }
-  : Identifier                                        { BindedField { bindFieldIdentifier = $1, bindFieldInnerBind = Nothing } }
-  | Identifier ':' Bind                               { BindedField { bindFieldIdentifier = $1, bindFieldInnerBind = Just $3 } }
+BindedField ::  { Maybe BindedField }
+  : '..'                                              { Nothing }
+  | Identifier                                        { Just $ BindedField { bindFieldIdentifier = $1, bindFieldInnerBind = Nothing } }
+  | Identifier ':' Bind                               { Just $ BindedField { bindFieldIdentifier = $1, bindFieldInnerBind = Just $3 } }
 
 
 {
