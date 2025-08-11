@@ -487,7 +487,7 @@ data BindedNamedStruct
   deriving (Eq, Show)
 
 
--- | A field that is being binded can either be an identifier or an inner bind
+-- | A field that is being binded is an identifier with optional inner bind
 data BindNamedField
   = BindNamedField {
     bindFieldIdentifier :: Identifier,

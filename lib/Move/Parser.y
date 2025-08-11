@@ -713,7 +713,7 @@ CommaBindNamedField_ :: { [BindNamedField] }
   | CommaBindNamedField_ ',' BindNamedField           { $3 : $1 }
 
 
--- A field that is being binded can either be an identifier or an inner bind
+-- A field that is being binded is an identifier with optional inner bind
 BindNamedField ::  { BindNamedField }
   : Identifier                                        { BindNamedField { bindFieldIdentifier = $1, bindFieldInnerBind = Nothing } }
   | Identifier ':' Bind                               { BindNamedField { bindFieldIdentifier = $1, bindFieldInnerBind = Just $3 } }

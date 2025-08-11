@@ -300,7 +300,7 @@ testParseConstants = describe "Parse modules with constant declarations" $ do
             constantExpression = BinaryOpExprExpr $ Add
               (BinaryOpExprExpr $ Add
                 (ValueLiteral $ Numerical $ LiteralIntDec 1)
-                (UnaryOpExpr $ Dereference $ NameAccessChainExpr $ LocalNameAccessChain $ Identifier "my_ref") -- FIXME: placeholder
+                (UnaryOpExpr $ Dereference $ NameAccessChainExpr $ LocalNameAccessChain $ Identifier "my_ref")
               )
               (UnaryOpExpr $ MoveExpr $ Identifier "my_var")
           },
@@ -410,6 +410,173 @@ testParseFunctionWithBody = describe "Parse module with function declaration wit
   }
 
 
+testParseStructExpr :: Spec
+testParseStructExpr = describe "Parse function with struct expressions" $ do
+  testScan (
+    "module foo::baz {\n" ++
+    "fun my_func2(b: &mut B<bool>) {\n" ++
+        -- Mutating a struct
+        "*b = B { b: b.b + 2 };\n" ++
+        "let c = 0;\n" ++
+        -- Creating a struct with reference and field name punning
+        "let foo = C<bool> { a: 12, b: *b, c };\n" ++
+        -- Nested pattern matching, copy keyword
+        "let C { a: _, b: B<bool> { b: my_b }, c: _ } = copy foo;\n" ++
+        -- Reference to a field
+        "let c_ref: &u64 = &foo.c;\n" ++
+        -- Updating a field
+        "foo.c = foo.c + *c_ref;\n" ++
+        -- Positional structs
+        --   "let positional = PositionalStruct(12, 24);\n" ++
+        -- Pattern matching with positional struct
+        --   "let PositionalStruct(_, twenty_four) = positional;\n" ++
+        -- Partial patterns
+        --   "let C { a: my_a,.. } = foo;\n" ++
+        --   "let PositionalStruct(twelve,..) = positional;\n" ++
+    "}\n}" )
+  $ Module {
+    moduleAddress = NamedAddress $ Identifier "foo",
+    moduleIdentifier = Identifier "baz",
+    moduleTopLevels = [
+      TopLevelFunction $ Function {
+        functionHasNativeModifier = False,
+        functionVisibilityModifier = Nothing,
+        functionHasEntryModifier = False,
+        functionName = Identifier "my_func2",
+        functionTypeParameters  = [],
+        functionParameters = [Parameter {parameterIdentifier = Identifier "b", parameterType = TypeMutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "B") [TypeConstructor (LocalNameAccessChain $ Identifier "bool") []]}],
+        functionReturnType = Nothing,
+        functionAcquires = [],
+        functionBody = Just $ Sequence {
+          sequenceUses = [],
+          sequenceItems = [
+            -- *b = ...
+            SequenceItemExpr $ AssignmentExpr $ Assignment {
+              assignmentLeft = UnaryOpExpr $ Dereference $ NameAccessChainExpr $ LocalNameAccessChain $ Identifier "b",
+              -- B { ...
+              assignmentRight = NamedStructExprExpr $ NamedStructExpr {
+                nseNameAccessChain = LocalNameAccessChain $ Identifier "B",
+                nseTypeArgs = [],
+                nseFields = [
+                  -- b: b.b + 2
+                  NamedStructExprField {
+                    nsefIdentifier = Identifier "b",
+                    nsefExpr = Just $ BinaryOpExprExpr $ Add
+                      (DotOrIndexChainExpr $ DotAccess {
+                        dotAccessLeft = NameAccessChainExpr $ LocalNameAccessChain $ Identifier "b",
+                        dotAccessRight = Identifier "b"
+                      })
+                      (ValueLiteral $ Numerical $ LiteralIntDec 2)
+                  }
+                ]
+              }
+            },
+            -- let c = 0
+            SequenceItemBindExpr $ Bindings {
+              bindings = [BindIdentifier $ Identifier "c"],
+              bindingsBindType = Nothing,
+              bindingsBindExpr  = Just $ ValueLiteral $ Numerical $ LiteralIntDec 0
+            },
+            -- let foo =
+            SequenceItemBindExpr $ Bindings {
+              bindings = [BindIdentifier $ Identifier "foo"],
+              bindingsBindType = Nothing,
+              -- C<bool> {..
+              bindingsBindExpr = Just $ NamedStructExprExpr $ NamedStructExpr {
+                nseNameAccessChain = LocalNameAccessChain $ Identifier "C",
+                nseTypeArgs = [TypeConstructor (LocalNameAccessChain $ Identifier "bool") []],
+                nseFields = [
+                  -- a: 12
+                  NamedStructExprField {
+                    nsefIdentifier = Identifier "a",
+                    nsefExpr = Just $ ValueLiteral $ Numerical $ LiteralIntDec 12
+                  },
+                  -- b: *b
+                  NamedStructExprField {
+                    nsefIdentifier = Identifier "b",
+                    nsefExpr = Just $ UnaryOpExpr $ Dereference $ NameAccessChainExpr $ LocalNameAccessChain $ Identifier "b"
+                  },
+                  -- c
+                  NamedStructExprField {
+                    nsefIdentifier = Identifier "c",
+                    nsefExpr = Nothing
+                  }
+                ]
+              }
+            },
+            -- let C { ...
+            SequenceItemBindExpr $ Bindings {
+              bindings = [BindNamedStruct $ BindedNamedStruct {
+                bnsNameAccessChain = LocalNameAccessChain $ Identifier "C",
+                bnsTypeArgs = [],
+                bnsFields = [
+                  -- a: _
+                  BindNamedField {
+                    bindFieldIdentifier = Identifier "a",
+                    -- _ is parsed as an identifier
+                    bindFieldInnerBind = Just $ BindIdentifier $ Identifier "_"
+                  },
+                  -- b: B<bool> ...
+                  BindNamedField {
+                    bindFieldIdentifier = Identifier "b",
+                    -- _ is parsed as an identifier
+                    bindFieldInnerBind = Just $ BindNamedStruct $ BindedNamedStruct {
+                      bnsNameAccessChain = LocalNameAccessChain $ Identifier "B",
+                      bnsTypeArgs = [TypeConstructor (LocalNameAccessChain $ Identifier "bool") []],
+                      bnsFields = [
+                        -- b: my_b
+                        BindNamedField {
+                          bindFieldIdentifier = Identifier "b",
+                          bindFieldInnerBind = Just $ BindIdentifier $ Identifier "my_b"
+                        }
+                      ]
+                    }
+                  },
+                  -- c: _
+                  BindNamedField {
+                    bindFieldIdentifier = Identifier "c",
+                    bindFieldInnerBind = Just $ BindIdentifier $ Identifier "_"
+                  }
+                ]
+              }],
+              bindingsBindType = Nothing,
+              -- = copy foo
+              bindingsBindExpr = Just $ UnaryOpExpr $ CopyExpr $ Identifier "foo"
+            },
+            -- let c_ref: &u64 ...
+            SequenceItemBindExpr $ Bindings {
+              bindings = [BindIdentifier $ Identifier "c_ref"],
+              bindingsBindType = Just $ TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "u64") [],
+              -- = &foo.c
+              bindingsBindExpr = Just $ UnaryOpExpr $ ImmutableReference $ DotOrIndexChainExpr $ DotAccess {
+                dotAccessLeft = NameAccessChainExpr $ LocalNameAccessChain $ Identifier "foo",
+                dotAccessRight = Identifier "c"
+              }
+            },
+            -- foo.c = ...
+            SequenceItemExpr $ AssignmentExpr $ Assignment {
+              -- foo.c
+              assignmentLeft = DotOrIndexChainExpr $ DotAccess {
+                dotAccessLeft = NameAccessChainExpr $ LocalNameAccessChain $ Identifier "foo",
+                dotAccessRight = Identifier "c"
+              },
+              -- = foo.c + *c_ref
+              assignmentRight = BinaryOpExprExpr $ Add
+                (DotOrIndexChainExpr $ DotAccess {
+                dotAccessLeft = NameAccessChainExpr $ LocalNameAccessChain $ Identifier "foo",
+                dotAccessRight = Identifier "c"
+                })
+                (UnaryOpExpr $ Dereference $ NameAccessChainExpr $ LocalNameAccessChain $ Identifier "c_ref")
+            }
+          ],
+          -- No end expression
+          sequenceEndExpr = Nothing
+        }
+      }
+    ]
+  }
+
+
 spec :: Spec
 spec = do
   testParseEmptyModule
@@ -421,3 +588,4 @@ spec = do
   testParseAbilities
   testParseConstants
   testParseFunctionWithBody
+  testParseStructExpr
