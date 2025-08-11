@@ -430,9 +430,9 @@ testParseStructExpr = describe "Parse function with struct expressions" $ do
         "let positional = PositionalStruct(12, 24);\n" ++
         -- Pattern matching with positional struct
         "let PositionalStruct(_, twenty_four) = positional;\n" ++
-        -- Partial patterns
-        --   "let C { a: my_a,.. } = foo;\n" ++
-        --   "let PositionalStruct(twelve,..) = positional;\n" ++
+        -- Partial patterns and tuple
+        "let C { a: my_a,.. } = foo;\n" ++
+        "let (PositionalStruct(twelve,..), another_42) = (positional, 42);\n" ++
     "}\n}" )
   $ Module {
     moduleAddress = NamedAddress $ Identifier "foo",
@@ -612,6 +612,51 @@ testParseStructExpr = describe "Parse function with struct expressions" $ do
               bindingsBindType = Nothing,
               -- = positional
               bindingsBindExpr = Just $ NameAccessChainExpr $ LocalNameAccessChain $ Identifier "positional"
+            },
+            -- let C { ...
+            SequenceItemBindExpr $ Bindings {
+              bindings = [BindNamedStruct $ BindedNamedStruct {
+                bnsNameAccessChain = LocalNameAccessChain $ Identifier "C",
+                bnsTypeArgs = [],
+                bnsFields = BindedFields {
+                  -- ..
+                  hasPartialPattern = True,
+                  bindedFields = [
+                    -- a: my_a
+                    BindedField {
+                      bindFieldIdentifier = Identifier "a",
+                      bindFieldInnerBind = Just $ BindIdentifier $ Identifier "my_a"
+                    }
+                  ]
+                }
+              }],
+              bindingsBindType = Nothing,
+              -- = foo
+              bindingsBindExpr = Just $ NameAccessChainExpr $ LocalNameAccessChain $ Identifier "foo"
+            },
+            -- let ( ...
+            SequenceItemBindExpr $ Bindings {
+              bindings = [
+                -- PositionalStruct(twelve,..)
+                BindPositionalStruct $ BindedPositionalStruct {
+                  bpsNameAccessChain = LocalNameAccessChain $ Identifier "PositionalStruct",
+                  bpsTypeArgs = [],
+                  bpsFields = BindedFields {
+                    hasPartialPattern = True,
+                    bindedFields = [
+                      BindedField { bindFieldIdentifier = Identifier "twelve", bindFieldInnerBind = Nothing }
+                    ]
+                  }
+                },
+                -- another_42)
+                BindIdentifier $ Identifier "another_42"
+              ],
+              bindingsBindType = Nothing,
+              -- = (positional, 42)
+              bindingsBindExpr = Just $ CommaExpr [
+                NameAccessChainExpr $ LocalNameAccessChain $ Identifier "positional",
+                ValueLiteral $ Numerical $ LiteralIntDec 42
+              ]
             }
           ],
           -- No end expression
