@@ -151,7 +151,6 @@ import Move.Token
 --    Term -> if '(' Expr ')' Expr .                      (rule 110)
 --    Term -> if '(' Expr ')' Expr . else Expr            (rule 111)
 -- Also see Bison manual at "5.3.6 Using Precedence For Non Operators"
--- FIXME: Higher precedence than binary operator might cause parsing of (if ... then ... else 1) + 2
 %right IF_NO_ELSE
 %right else
 

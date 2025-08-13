@@ -337,7 +337,7 @@ testParseFunctionWithBody = describe "Parse module with function declaration wit
     "use std::vector;\n" ++
     "let a: u64 = 6 * 7;\n" ++
     "let sum = a + b;\n" ++
-    "let inner = if (sum > 10) sum / 10 else { sum };\n" ++
+    "let inner = if (sum > 10) { sum / 10 } else sum + 2;\n" ++
     "inner\n" ++
     "}\n}" )
   $ Module {
@@ -390,15 +390,17 @@ testParseFunctionWithBody = describe "Parse module with function declaration wit
                   (NameAccessChainExpr $ LocalNameAccessChain $ Identifier "sum")
                   (ValueLiteral $ Numerical $ LiteralIntDec 10),
                 -- if branch
-                ifThenElseIfBranch = BinaryOpExprExpr $ Div
-                  (NameAccessChainExpr $ LocalNameAccessChain $ Identifier "sum")
-                  (ValueLiteral $ Numerical $ LiteralIntDec 10),
-                -- else branch
-                ifThenElseElseBranch = Just $ SequenceExpr $ Sequence {
+                ifThenElseIfBranch = SequenceExpr $ Sequence {
                   sequenceUses = [],
                   sequenceItems = [],
-                  sequenceEndExpr = Just $ NameAccessChainExpr $ LocalNameAccessChain $ Identifier "sum"
-                }
+                  sequenceEndExpr = Just $ BinaryOpExprExpr $ Div
+                    (NameAccessChainExpr $ LocalNameAccessChain $ Identifier "sum")
+                    (ValueLiteral $ Numerical $ LiteralIntDec 10)
+                },
+                -- else branch (must include the + 2)
+                ifThenElseElseBranch = Just $ BinaryOpExprExpr $ Add
+                  (NameAccessChainExpr $ LocalNameAccessChain $ Identifier "sum")
+                  (ValueLiteral $ Numerical $ LiteralIntDec 2)
               }
             }
           ],
