@@ -52,8 +52,9 @@ data Token
   | TokenKeywordPhantom
   | TokenKeywordAs
   | TokenKeywordMove
-  -- | TokenKeywordIn
   | -- Operators
+
+    -- | TokenKeywordIn
     TokenOperatorPlus
   | TokenOperatorMinus
   | TokenOperatorTimes
