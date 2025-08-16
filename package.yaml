@@ -22,6 +22,7 @@ dependencies:
   - pretty-terminal
   - text == 2.0.2
   - wide-word == 0.1.6.0
+  - uniplate
 
 build-tools:
   - alex
