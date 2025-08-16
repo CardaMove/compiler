@@ -650,6 +650,7 @@ SequenceItems_ :: { ([SequenceItem], Bool) }
 -- To resolve ambiguities when parsing Expr ';' with optional ';', it has been used a right recursion,
 -- With a second tuple element indicating if the SequenceItems__ end with a final SequenceItem not followed by a ';'
 -- If this is the case, that element will be considered the ending Expr in the Sequence pattern matching
+-- FIXME: right recursion
 SequenceItems__ :: { ([SequenceItem], Bool) }
   : '}'                                             { ([], False) }
   | SequenceItem '}'                                { ([$1], True) }
