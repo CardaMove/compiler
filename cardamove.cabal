@@ -7,9 +7,11 @@ cabal-version: 1.12
 name:           cardamove
 version:        0.1.0.0
 category:       Blockchain
-homepage:       https://github.com/trwa/cardamove#readme
-author:         Lorenzo Fanton
-maintainer:     887857@stud.unive.it
+homepage:       https://github.com/CardaMove/compiler#readme
+author:         Lorenzo Fanton,
+                Andrea Roveroni
+maintainer:     887857@stud.unive.it,
+                880092@stud.unive.it
 copyright:      2024 Lorenzo Fanton
 license:        MIT
 license-file:   LICENSE
