@@ -31,6 +31,7 @@ library
       Move.Parser
       Move.Token
       Move.Translations.Loops
+      Move.Translations.Shadowing
   other-modules:
       Paths_cardamove
   hs-source-dirs:
@@ -43,6 +44,7 @@ library
       array
     , base >=4.7 && <5
     , bytestring
+    , containers
     , megaparsec ==9.5.0
     , mtl
     , pretty-terminal
@@ -66,6 +68,7 @@ executable cardamove-cli
     , base >=4.7 && <5
     , bytestring
     , cardamove
+    , containers
     , megaparsec ==9.5.0
     , mtl
     , optparse-applicative
@@ -96,6 +99,7 @@ test-suite cardamove-test
     , base >=4.7 && <5
     , bytestring
     , cardamove
+    , containers
     , hspec ==2.11.*
     , megaparsec ==9.5.0
     , mtl

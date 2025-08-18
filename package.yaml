@@ -20,6 +20,7 @@ dependencies:
   - array
   - base >= 4.7 && < 5
   - bytestring 
+  - containers
   #- iris == 0.1.0.0
   - megaparsec == 9.5.0
   - mtl

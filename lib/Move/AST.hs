@@ -137,7 +137,7 @@ data Module
 -- | An identifier is a name of a variable or module
 newtype Identifier
   = Identifier String
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data, Typeable, Ord)
 
 -- | Represents any top level construct
 data TopLevel
