@@ -103,9 +103,8 @@ removeShadowingInSequence (Sequence {sequenceUses, sequenceItems, sequenceEndExp
         -- First, retrieve all the identifiers that have been binded
         let newIdentifiers = concatMap getBindIdentifiers bindings
         -- Since some of them can shadow other existing identifiers (declared on the outer scopes), generate new names for them
-        -- Note that normal rebindings are permitted
-        -- FIXME: Here we are passing also the local scope to generateUnshadowedName, but function docs says not to
-        let unshadowedIdentifiers = map (\ident -> (ident, generateUnshadowedName ident scopes')) newIdentifiers
+        -- Note that normal rebindings are permitted, so the local scope is not passed to `generateUnshadowedName`
+        let unshadowedIdentifiers = map (\ident -> (ident, generateUnshadowedName ident outerScopes)) newIdentifiers
         -- Then create a map from them
         let newBindings = Map.fromList unshadowedIdentifiers
 

@@ -3,8 +3,10 @@ module Move.Translations.ShadowingSpec (spec) where
 import Control.Exception (evaluate)
 import Data.Map qualified as Map
 import Move.AST
-import Move.Translations.Shadowing (generateUnshadowedName, getBindIdentifiers, getUnshadowedName, removeShadowingInSequence)
+import Move.Translations.Shadowing (generateUnshadowedName, getBindIdentifiers, getUnshadowedName, removeShadowingInSequence, removeShadowingInModule)
 import Test.Hspec
+import Move.Lexer (scan)
+import Move.Parser (parse)
 
 testGetUnshadowedName :: Spec
 testGetUnshadowedName = describe "Tests the function `getUnshadowedName`" $ do
@@ -191,9 +193,66 @@ testRemoveShadowingInSequence = describe "Tests for the function `removeShadowin
 
     removeShadowingInSequence fromSequence [Map.empty] `shouldBe` toSequence
 
+
+testRemoveShadowingInModule :: Spec
+testRemoveShadowingInModule = describe "Tests for the function `removeShadowingInModule`" $ do
+  it "Collects module constants, function parameters, and removes shadowing" $ do
+    let fromModuleStr = "module NamedAddr::TestingLocalState {\n" ++
+                          "const MY_CONST: u64 = 0;\n" ++
+                          "public fun shadowing(x: u64): u64 {\n" ++
+                            "let x = 5;\n" ++                                                  --   {x: x}
+                            "let y = 0;\n" ++                                                  --   {y: y, x: x}
+                            "{\n" ++
+                                "x = x + 3;\n" ++                                              --   -> x
+                                "let x = x + 1;\n" ++                                          --   Shadowing here                                        [{x: x_inner}, ..]
+                                "x = x + 10;\n" ++                                             --   -> x_inner
+                                "let x = true;\n" ++                                           --   A rebinding can change the type of x        -> x_inner
+                                "{\n" ++
+                                    "let x = 10;\n" ++                                         --   -> x_inner_inner                [{x: x_inner_inner}, ..]
+                                    "x = 50;\n" ++                                             --   -> x_inner_inner
+                                    "let y = 10;\n" ++                                         --   -> y_inner                      [{y: y_inner, x: x_inner_inner}, ..]
+                                    "let MY_CONST = MY_CONST + 3;\n" ++                        --   -> let MY_CONST_inner = MY_CONST + 3             [{MY_CONST, MY_CONST_inner, y: y_inner, x: x_inner_inner}, ..]
+                                    -- Note: This is actually invalid in Move, since it probably clashes with a constant name
+                                    -- The compile-time error is "Unexpected assignment of module access without fields outside of a spec context"
+                                    "MY_CONST = MY_CONST + 1;\n" ++                            --   -> MY_CONST_inner = MY_CONST_inner + 1
+                                "}\n" ++
+                            "};\n" ++
+                            "x\n" ++                                                           --   x == 8
+                          "}" ++
+                        "}"
+
+
+    let toModuleStr = "module NamedAddr::TestingLocalState {\n" ++
+                        "const MY_CONST: u64 = 0;" ++
+                        "public fun shadowing(x: u64): u64 {\n" ++
+                          "let x = 5;\n" ++                                                  
+                          "let y = 0;\n" ++                                                  
+                          "{\n" ++
+                              "x = x + 3;\n" ++                                              
+                              "let x_inner = x + 1;\n" ++                                          
+                              "x_inner = x_inner + 10;\n" ++                                                
+                              "let x_inner = true;\n" ++                                           
+                              "{\n" ++
+                                  "let x_inner_inner = 10;\n" ++                                         
+                                  "x_inner_inner = 50;\n" ++                                             
+                                  "let y_inner = 10;\n" ++                                         
+                                  "let MY_CONST_inner = MY_CONST + 3;\n" ++                        
+                                  "MY_CONST_inner = MY_CONST_inner + 1;\n" ++                            
+                              "}\n" ++
+                          "};\n" ++
+                          "x\n" ++                                                           
+                        "}" ++
+                      "}"
+
+    let fromModule = parse $ scan fromModuleStr
+    let toModule = parse $ scan toModuleStr
+
+    removeShadowingInModule fromModule `shouldBe` toModule
+
 spec :: Spec
 spec = do
   testGetUnshadowedName
   testGetBindIdentifiers
   testGenerateUnshadowedName
   testRemoveShadowingInSequence
+  testRemoveShadowingInModule
