@@ -3,7 +3,7 @@ module Move.Translations.ShadowingSpec (spec) where
 import Control.Exception (evaluate)
 import Data.Map qualified as Map
 import Move.AST
-import Move.Translations.Shadowing (generateUnshadowedName, getBindIdentifiers, getUnshadowedName, removeShadowing)
+import Move.Translations.Shadowing (generateUnshadowedName, getBindIdentifiers, getUnshadowedName, removeShadowingInSequence)
 import Test.Hspec
 
 testGetUnshadowedName :: Spec
@@ -66,8 +66,8 @@ testGenerateUnshadowedName = describe "Tests for the function `generateUnshadowe
     -- Since a appears three times in the scope, append _inner three times
     generateUnshadowedName (Identifier "a") scopes `shouldBe` Identifier "a_inner_inner_inner"
 
-testShadowingExpr :: Spec
-testShadowingExpr = describe "Removing shadowing in an expression" $ do
+testRemoveShadowingInSequence :: Spec
+testRemoveShadowingInSequence = describe "Tests for the function `removeShadowingInSequence`" $ do
   it "Appends _inner to a shadowing bind and subsequent usages" $ do
     {- Code as follows:
         {
@@ -81,121 +81,119 @@ testShadowingExpr = describe "Removing shadowing in an expression" $ do
         }
     -}
 
-    let fromExpr =
-          SequenceExpr $
-            Sequence
-              { sequenceUses = [],
-                sequenceItems =
-                  [ SequenceItemBindExpr $
-                      Bindings
-                        { bindings = [BindIdentifier $ Identifier "x"],
-                          bindingsBindType = Nothing,
-                          bindingsBindExpr = Nothing
-                        },
-                    -- Inner Sequence
-                    SequenceItemExpr $
-                      SequenceExpr $
-                        Sequence
-                          { sequenceUses = [],
-                            sequenceItems =
-                              [ SequenceItemBindExpr $
-                                  Bindings
-                                    { bindings = [BindIdentifier $ Identifier "x"],
-                                      bindingsBindType = Nothing,
-                                      bindingsBindExpr =
-                                        Just $
-                                          BinaryOpExprExpr $
-                                            Add
-                                              (NameAccessChainExpr $ LocalNameAccessChain $ Identifier "x")
-                                              (ValueLiteral $ Numerical $ LiteralIntDec 12)
-                                    },
-                                SequenceItemExpr $
-                                  AssignmentExpr $
-                                    Assignment
-                                      { assignmentLeft = NameAccessChainExpr $ LocalNameAccessChain $ Identifier "x",
-                                        assignmentRight =
-                                          BinaryOpExprExpr $
-                                            Mult
-                                              (NameAccessChainExpr $ LocalNameAccessChain $ Identifier "x")
-                                              (ValueLiteral $ Numerical $ LiteralIntDec 2)
-                                      }
-                              ],
-                            sequenceEndExpr = Nothing
-                          }
-                  ],
-                sequenceEndExpr =
-                  Just $
-                    AssignmentExpr $
-                      Assignment
-                        { assignmentLeft = NameAccessChainExpr $ LocalNameAccessChain $ Identifier "x",
-                          assignmentRight =
-                            BinaryOpExprExpr $
-                              Add
-                                (NameAccessChainExpr $ LocalNameAccessChain $ Identifier "x")
-                                (ValueLiteral $ Numerical $ LiteralIntDec 1)
+    let fromSequence =
+          Sequence
+            { sequenceUses = [],
+              sequenceItems =
+                [ SequenceItemBindExpr $
+                    Bindings
+                      { bindings = [BindIdentifier $ Identifier "x"],
+                        bindingsBindType = Nothing,
+                        bindingsBindExpr = Nothing
+                      },
+                  -- Inner Sequence
+                  SequenceItemExpr $
+                    SequenceExpr $
+                      Sequence
+                        { sequenceUses = [],
+                          sequenceItems =
+                            [ SequenceItemBindExpr $
+                                Bindings
+                                  { bindings = [BindIdentifier $ Identifier "x"],
+                                    bindingsBindType = Nothing,
+                                    bindingsBindExpr =
+                                      Just $
+                                        BinaryOpExprExpr $
+                                          Add
+                                            (NameAccessChainExpr $ LocalNameAccessChain $ Identifier "x")
+                                            (ValueLiteral $ Numerical $ LiteralIntDec 12)
+                                  },
+                              SequenceItemExpr $
+                                AssignmentExpr $
+                                  Assignment
+                                    { assignmentLeft = NameAccessChainExpr $ LocalNameAccessChain $ Identifier "x",
+                                      assignmentRight =
+                                        BinaryOpExprExpr $
+                                          Mult
+                                            (NameAccessChainExpr $ LocalNameAccessChain $ Identifier "x")
+                                            (ValueLiteral $ Numerical $ LiteralIntDec 2)
+                                    }
+                            ],
+                          sequenceEndExpr = Nothing
                         }
-              }
+                ],
+              sequenceEndExpr =
+                Just $
+                  AssignmentExpr $
+                    Assignment
+                      { assignmentLeft = NameAccessChainExpr $ LocalNameAccessChain $ Identifier "x",
+                        assignmentRight =
+                          BinaryOpExprExpr $
+                            Add
+                              (NameAccessChainExpr $ LocalNameAccessChain $ Identifier "x")
+                              (ValueLiteral $ Numerical $ LiteralIntDec 1)
+                      }
+            }
 
-    let toExpr =
-          SequenceExpr $
-            Sequence
-              { sequenceUses = [],
-                sequenceItems =
-                  [ SequenceItemBindExpr $
-                      Bindings
-                        { bindings = [BindIdentifier $ Identifier "x"],
-                          bindingsBindType = Nothing,
-                          bindingsBindExpr = Nothing
-                        },
-                    -- Inner Sequence
-                    SequenceItemExpr $
-                      SequenceExpr $
-                        Sequence
-                          { sequenceUses = [],
-                            sequenceItems =
-                              [ SequenceItemBindExpr $
-                                  Bindings
-                                    { bindings = [BindIdentifier $ Identifier "x_inner"],
-                                      bindingsBindType = Nothing,
-                                      bindingsBindExpr =
-                                        Just $
-                                          BinaryOpExprExpr $
-                                            Add
-                                              (NameAccessChainExpr $ LocalNameAccessChain $ Identifier "x")
-                                              (ValueLiteral $ Numerical $ LiteralIntDec 12)
-                                    },
-                                SequenceItemExpr $
-                                  AssignmentExpr $
-                                    Assignment
-                                      { assignmentLeft = NameAccessChainExpr $ LocalNameAccessChain $ Identifier "x_inner",
-                                        assignmentRight =
-                                          BinaryOpExprExpr $
-                                            Mult
-                                              (NameAccessChainExpr $ LocalNameAccessChain $ Identifier "x_inner")
-                                              (ValueLiteral $ Numerical $ LiteralIntDec 2)
-                                      }
-                              ],
-                            sequenceEndExpr = Nothing
-                          }
-                  ],
-                sequenceEndExpr =
-                  Just $
-                    AssignmentExpr $
-                      Assignment
-                        { assignmentLeft = NameAccessChainExpr $ LocalNameAccessChain $ Identifier "x",
-                          assignmentRight =
-                            BinaryOpExprExpr $
-                              Add
-                                (NameAccessChainExpr $ LocalNameAccessChain $ Identifier "x")
-                                (ValueLiteral $ Numerical $ LiteralIntDec 1)
+    let toSequence =
+          Sequence
+            { sequenceUses = [],
+              sequenceItems =
+                [ SequenceItemBindExpr $
+                    Bindings
+                      { bindings = [BindIdentifier $ Identifier "x"],
+                        bindingsBindType = Nothing,
+                        bindingsBindExpr = Nothing
+                      },
+                  -- Inner Sequence
+                  SequenceItemExpr $
+                    SequenceExpr $
+                      Sequence
+                        { sequenceUses = [],
+                          sequenceItems =
+                            [ SequenceItemBindExpr $
+                                Bindings
+                                  { bindings = [BindIdentifier $ Identifier "x_inner"],
+                                    bindingsBindType = Nothing,
+                                    bindingsBindExpr =
+                                      Just $
+                                        BinaryOpExprExpr $
+                                          Add
+                                            (NameAccessChainExpr $ LocalNameAccessChain $ Identifier "x")
+                                            (ValueLiteral $ Numerical $ LiteralIntDec 12)
+                                  },
+                              SequenceItemExpr $
+                                AssignmentExpr $
+                                  Assignment
+                                    { assignmentLeft = NameAccessChainExpr $ LocalNameAccessChain $ Identifier "x_inner",
+                                      assignmentRight =
+                                        BinaryOpExprExpr $
+                                          Mult
+                                            (NameAccessChainExpr $ LocalNameAccessChain $ Identifier "x_inner")
+                                            (ValueLiteral $ Numerical $ LiteralIntDec 2)
+                                    }
+                            ],
+                          sequenceEndExpr = Nothing
                         }
-              }
+                ],
+              sequenceEndExpr =
+                Just $
+                  AssignmentExpr $
+                    Assignment
+                      { assignmentLeft = NameAccessChainExpr $ LocalNameAccessChain $ Identifier "x",
+                        assignmentRight =
+                          BinaryOpExprExpr $
+                            Add
+                              (NameAccessChainExpr $ LocalNameAccessChain $ Identifier "x")
+                              (ValueLiteral $ Numerical $ LiteralIntDec 1)
+                      }
+            }
 
-    removeShadowing fromExpr [Map.empty] `shouldBe` toExpr
+    removeShadowingInSequence fromSequence [Map.empty] `shouldBe` toSequence
 
 spec :: Spec
 spec = do
   testGetUnshadowedName
   testGetBindIdentifiers
   testGenerateUnshadowedName
-  testShadowingExpr
+  testRemoveShadowingInSequence
