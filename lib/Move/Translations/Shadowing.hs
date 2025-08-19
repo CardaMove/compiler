@@ -36,8 +36,18 @@ generateUnshadowedName ident outerScopes = foldr f ident outerScopes
   where
     f scope (Identifier identName) = if Map.member ident scope then Identifier (identName ++ "_inner") else ident
 
+-- | Helper for `updateBindWithUnshadowedIdentifiers`
+updateBindWithUnshadowedIdentifiersHelper :: BindedField -> [Scope] -> BindedField
+updateBindWithUnshadowedIdentifiersHelper (BindedField {bindFieldIdentifier, bindFieldInnerBind = Nothing}) scopes = BindedField {bindFieldIdentifier = getUnshadowedName bindFieldIdentifier scopes, bindFieldInnerBind = Nothing}
+updateBindWithUnshadowedIdentifiersHelper (BindedField {bindFieldIdentifier, bindFieldInnerBind = Just bindFieldInnerBind}) scopes = BindedField {bindFieldIdentifier, bindFieldInnerBind = Just $ updateBindWithUnshadowedIdentifiers bindFieldInnerBind scopes}
+
+-- | Given a single bind, replaces its bindeed identifiers with the newly unshadowed names
 updateBindWithUnshadowedIdentifiers :: Bind -> [Scope] -> Bind
-updateBindWithUnshadowedIdentifiers bind _scopes = bind -- TODO:
+updateBindWithUnshadowedIdentifiers (BindIdentifier ident) scopes = BindIdentifier $ getUnshadowedName ident scopes
+updateBindWithUnshadowedIdentifiers (BindNamedStruct struct@BindedNamedStruct {bnsFields = fields@BindedFields {bindedFields}}) scopes =
+  BindNamedStruct $ struct {bnsFields = fields {bindedFields = map (`updateBindWithUnshadowedIdentifiersHelper` scopes) bindedFields}}
+updateBindWithUnshadowedIdentifiers (BindPositionalStruct struct@BindedPositionalStruct {bpsFields = fields@BindedFields {bindedFields}}) scopes =
+  BindPositionalStruct $ struct {bpsFields = fields {bindedFields = map (`updateBindWithUnshadowedIdentifiersHelper` scopes) bindedFields}}
 
 removeShadowing :: Expr -> [Scope] -> Expr
 removeShadowing (NameAccessChainExpr (LocalNameAccessChain ident)) scopes = NameAccessChainExpr $ LocalNameAccessChain $ getUnshadowedName ident scopes
@@ -52,7 +62,7 @@ removeShadowing (SequenceExpr (Sequence {sequenceUses, sequenceItems, sequenceEn
       f scopes'@(localScope : outerScopes) (SequenceItemBindExpr (Bindings {bindings, bindingsBindType, bindingsBindExpr})) = do
         -- First, retrieve all the identifier that have been binded
         let newIdentifiers = concatMap getBindIdentifiers bindings
-        -- Since some of them can shadow other existing identifiers (decared on the outer scopes), generate new names for them
+        -- Since some of them can shadow other existing identifiers (declared on the outer scopes), generate new names for them
         -- Note that normal rebindings are permitted
         let unshadowedIdentifiers = map (\ident -> (ident, generateUnshadowedName ident scopes')) newIdentifiers
         -- Then create a map from them
