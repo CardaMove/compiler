@@ -8,7 +8,7 @@ import Move.Parser
 import Test.Hspec
 
 testScan :: String -> Module -> SpecWith ()
-testScan str ast = it str $ do
+testScan str ast = it (filter (/= '\n') str) $ do
   let tokens = scan str
   -- print tokens
   parse tokens `shouldBe` ast
