@@ -1,8 +1,9 @@
-module Move.Translations.Shadowing (removeShadowing) where
+module Move.Translations.Shadowing (removeShadowing, getUnshadowedName, getBindIdentifiers, generateUnshadowedName) where
 
 import Data.List (mapAccumL)
 import Data.Map qualified as Map
 import Move.AST
+import Data.Generics.Uniplate.Data (Uniplate(descend))
 
 -- | Maps an identifier with its unshadowed name: Map from to
 type Scope = Map.Map Identifier Identifier
@@ -34,14 +35,17 @@ getBindIdentifiers (BindPositionalStruct (BindedPositionalStruct {bpsFields = Bi
 generateUnshadowedName :: Identifier -> [Scope] -> Identifier
 generateUnshadowedName ident outerScopes = foldr f ident outerScopes
   where
-    f scope (Identifier identName) = if Map.member ident scope then Identifier (identName ++ "_inner") else ident
+    -- Note: It's always the input identifier that needs to be checked in the scope, not the appended ones
+    -- The accumulator grows with _inner whenever the input identifier is found, until the entire list is scanned
+    -- In other words: count in how many scopes the input identifier is present and append _inner that number of times
+    f scope (Identifier identName) = if Map.member ident scope then Identifier (identName ++ "_inner") else Identifier identName
 
 -- | Helper for `updateBindWithUnshadowedIdentifiers`
 updateBindWithUnshadowedIdentifiersHelper :: BindedField -> [Scope] -> BindedField
 updateBindWithUnshadowedIdentifiersHelper (BindedField {bindFieldIdentifier, bindFieldInnerBind = Nothing}) scopes = BindedField {bindFieldIdentifier = getUnshadowedName bindFieldIdentifier scopes, bindFieldInnerBind = Nothing}
 updateBindWithUnshadowedIdentifiersHelper (BindedField {bindFieldIdentifier, bindFieldInnerBind = Just bindFieldInnerBind}) scopes = BindedField {bindFieldIdentifier, bindFieldInnerBind = Just $ updateBindWithUnshadowedIdentifiers bindFieldInnerBind scopes}
 
--- | Given a single bind, replaces its bindeed identifiers with the newly unshadowed names
+-- | Given a single bind, replaces its binded identifiers with the newly unshadowed names
 updateBindWithUnshadowedIdentifiers :: Bind -> [Scope] -> Bind
 updateBindWithUnshadowedIdentifiers (BindIdentifier ident) scopes = BindIdentifier $ getUnshadowedName ident scopes
 updateBindWithUnshadowedIdentifiers (BindNamedStruct struct@BindedNamedStruct {bnsFields = fields@BindedFields {bindedFields}}) scopes =
@@ -49,18 +53,22 @@ updateBindWithUnshadowedIdentifiers (BindNamedStruct struct@BindedNamedStruct {b
 updateBindWithUnshadowedIdentifiers (BindPositionalStruct struct@BindedPositionalStruct {bpsFields = fields@BindedFields {bindedFields}}) scopes =
   BindPositionalStruct $ struct {bpsFields = fields {bindedFields = map (`updateBindWithUnshadowedIdentifiersHelper` scopes) bindedFields}}
 
+
+-- | Given an expression, removes any shadowing that happens in its scope and inner scopes
+-- | Must be invoked with at least one existing scope
 removeShadowing :: Expr -> [Scope] -> Expr
+-- When a local identifier is found, replace with its unshadowed name
+-- Base case for the recursion
 removeShadowing (NameAccessChainExpr (LocalNameAccessChain ident)) scopes = NameAccessChainExpr $ LocalNameAccessChain $ getUnshadowedName ident scopes
--- TODO: Also assignment
+  -- When a Sequence is found, push a new (empty) scope on top of the existing ones and search for bindings
 removeShadowing (SequenceExpr (Sequence {sequenceUses, sequenceItems, sequenceEndExpr})) scopes = do
-  -- When a Sequence is found, push a new (empty) scope on top of the existing ones
   let (scopes'', sequenceItems') = mapAccumL f (Map.empty : scopes) sequenceItems where
       f [] _ = error "Cannot have no scopes in Sequence"
       -- If the SequenceItem is an expression, recursively remove shadowing
       f scopes' (SequenceItemExpr expr) = (scopes', SequenceItemExpr $ removeShadowing expr scopes')
       -- If the SequenceItem is a let binding:
       f scopes'@(localScope : outerScopes) (SequenceItemBindExpr (Bindings {bindings, bindingsBindType, bindingsBindExpr})) = do
-        -- First, retrieve all the identifier that have been binded
+        -- First, retrieve all the identifiers that have been binded
         let newIdentifiers = concatMap getBindIdentifiers bindings
         -- Since some of them can shadow other existing identifiers (declared on the outer scopes), generate new names for them
         -- Note that normal rebindings are permitted
@@ -86,7 +94,9 @@ removeShadowing (SequenceExpr (Sequence {sequenceUses, sequenceItems, sequenceEn
         sequenceItems = sequenceItems',
         sequenceEndExpr = removeShadowingMaybe sequenceEndExpr scopes''
       }
-removeShadowing _ _scopes = error "TODO:"
+-- For any other expression type, descend the AST and proceed recursively
+removeShadowing expr scopes = descend (`removeShadowing` scopes) expr
 
+-- | Version of `removeShadowing` working with Maybe
 removeShadowingMaybe :: Maybe Expr -> [Scope] -> Maybe Expr
 removeShadowingMaybe mExpr scopes = fmap (`removeShadowing` scopes) mExpr -- infix for (\expr -> removeShadowing expr scopes)

@@ -281,19 +281,19 @@ data Constant
 -- | Also other control flow keywords such as return, abort, break and continue are considered expressions
 -- | A chain of expressions enclosed by braces {...} are called a Sequence. See related type definition
 data Expr
-  = BinaryOpExprExpr BinaryOpExpr
-  | AssignmentExpr Assignment
-  | UnaryOpExpr UnaryExpr
-  | DotOrIndexChainExpr DotOrIndexChain
-  | ValueLiteral ValueLiteral
-  | CommaExpr [Expr]
-  | TypedExprTerm TypedExpr
-  | CastingTerm Casting
-  | NamedStructExprExpr NamedStructExpr
-  | PositionalStructExprOrFunctionCallExpr PositionalStructExprOrFunctionCall
-  | FunctionBangCallExpr FunctionBangCall
-  | NameAccessChainExpr NameAccessChain
-  | SequenceExpr Sequence
+  = BinaryOpExprExpr BinaryOpExpr                 -- e1 <op> e2
+  | AssignmentExpr Assignment                     -- e1 = e2
+  | UnaryOpExpr UnaryExpr                         -- <op> e1
+  | DotOrIndexChainExpr DotOrIndexChain           -- e1.a.b
+  | ValueLiteral ValueLiteral                     -- 42
+  | CommaExpr [Expr]                              -- (e1, .., en)
+  | TypedExprTerm TypedExpr                       -- (e1 : t1)
+  | CastingTerm Casting                           -- (e1 as t1)
+  | NamedStructExprExpr NamedStructExpr           -- MyStruct{..}
+  | PositionalStructExprOrFunctionCallExpr PositionalStructExprOrFunctionCall   -- Foo(..)
+  | FunctionBangCallExpr FunctionBangCall         -- assert!(..)
+  | NameAccessChainExpr NameAccessChain           -- myVariable
+  | SequenceExpr Sequence                         -- { e1; e2; let ..; e3 }
   | IfThenElseTerm IfThenElse
   | WhileTerm While
   | Loop Expr
