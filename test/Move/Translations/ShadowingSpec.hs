@@ -211,8 +211,6 @@ testRemoveShadowingInModule = describe "Tests for the function `removeShadowingI
                                     "let x = 10;\n" ++                                         --   -> x_inner_inner                [{x: x_inner_inner}, ..]
                                     "x = 50;\n" ++                                             --   -> x_inner_inner
                                     "let y = 10;\n" ++                                         --   -> y_inner                      [{y: y_inner, x: x_inner_inner}, ..]
-                                    -- Note: This is invalid in Move, since it clashes with a constant name
-                                    -- The compile-time error is "undeclared struct `TestingLocalState::MY_CONST`"
                                     "let MY_CONST = MY_CONST + 3;\n" ++                        --   -> let MY_CONST_inner = MY_CONST + 3             [{MY_CONST, MY_CONST_inner, y: y_inner, x: x_inner_inner}, ..]
                                     -- Note: This is actually invalid in Move, since it probably clashes with a constant name
                                     -- The compile-time error is "Unexpected assignment of module access without fields outside of a spec context"

@@ -67,7 +67,7 @@ updateBindWithUnshadowedIdentifiers (BindPositionalStruct struct@BindedPositiona
 -- |
 -- Given an expression, removes any shadowing that happens in its scope and inner scopes
 --
--- Must be invoked with at least one existing scope since being this an expression, it must belong to a scope
+-- Must be invoked with at least one existing scope
 removeShadowingInExpr :: Expr -> [Scope] -> Expr
 --    When a local identifier is found, replace with its unshadowed name.
 --    This is the base case for the recursion
@@ -83,68 +83,42 @@ removeShadowingInExprMaybe :: Maybe Expr -> [Scope] -> Maybe Expr
 removeShadowingInExprMaybe mExpr scopes = fmap (`removeShadowingInExpr` scopes) mExpr -- infix for (\expr -> removeShadowingInExpr expr scopes)
 
 -- |
--- Given a Use, returns all the alias identifiers.
---
--- Also handles the use members and the Self member
-getUseIdentifiers :: Use -> [Identifier]
-getUseIdentifiers use = case use of
-  Use {useIdentifier, useAlias, useMembers = []} -> [getIdentifier useAlias useIdentifier]
-  Use {useIdentifier, useMembers = [UseMember {useMemberIdentifier = Identifier "Self", useMemberUseAlias}]} -> [getIdentifier useMemberUseAlias useIdentifier]
-  Use {useMembers = [UseMember {useMemberIdentifier, useMemberUseAlias}]} -> [getIdentifier useMemberUseAlias useMemberIdentifier]
-  use'@Use {useMembers = x : xs} -> getUseIdentifiers use' {useMembers = [x]} ++ getUseIdentifiers use' {useMembers = xs}
-  where
-    getIdentifier :: Maybe Identifier -> Identifier -> Identifier
-    getIdentifier Nothing def = def
-    getIdentifier (Just ident) _ = ident
-
--- |
 -- Given a Sequence, adds a new scope and proceeds by renaming identifiers that cause shadowing,
 --
--- while also collecting new identifiers as they are declared in the local scope or found in the Use declarations local to this sequence.
+-- while also collecting new identifiers as they are declared in the local scope.
 --
 -- Must be called with at least one scope. In fact, the topmost scope will be considered the local one.
 --
 -- This is useful when the Sequence is a function body, since the function parameters have to be on the local scope
 --
--- Note: uses and aliases will not be modified, since in any case they cannot be reassigned.
---    This means they can still shadow other identifiers, so further bindings with same identifiers will be unshadowed
---
 -- Calls `removeShadowingInExpr` when it encounters an expression
 removeShadowingInSequence :: Sequence -> [Scope] -> Sequence
-removeShadowingInSequence _ [] = error "Cannot have no scopes in Sequence"
-removeShadowingInSequence (Sequence {sequenceUses, sequenceItems, sequenceEndExpr}) (localScope : outerScopes) =
-  let usesIdents = map (\ident -> (ident, ident)) $ concatMap getUseIdentifiers sequenceUses
-      -- Uses can shadow other identifiers, but since it is not possible to assign a value to a use alias,
-      -- there is no need to prevent shadowing for them. So, just add their identifiers to the local scope
-      localScope' = Map.union (Map.fromList usesIdents) localScope
+removeShadowingInSequence (Sequence {sequenceUses, sequenceItems, sequenceEndExpr}) scopes =
+  let (scopes'', sequenceItems') = mapAccumL f scopes sequenceItems where
+      f [] _ = error "Cannot have no scopes in Sequence"
+      -- If the SequenceItem is an expression, recursively remove shadowing
+      f scopes' (SequenceItemExpr expr) = (scopes', SequenceItemExpr $ removeShadowingInExpr expr scopes')
+      -- If the SequenceItem is a let binding:
+      f scopes'@(localScope : outerScopes) (SequenceItemBindExpr (Bindings {bindings, bindingsBindType, bindingsBindExpr})) = do
+        -- First, retrieve all the identifiers that have been binded
+        let newIdentifiers = concatMap getBindIdentifiers bindings
+        -- Since some of them can shadow other existing identifiers (declared on the outer scopes), generate new names for them
+        -- Note that normal rebindings are permitted, so the local scope is not passed to `generateUnshadowedName`
+        let unshadowedIdentifiers = map (\ident -> (ident, generateUnshadowedName ident outerScopes)) newIdentifiers
+        -- Then create a map from them
+        let newBindings = Map.fromList unshadowedIdentifiers
 
-      (scopes'', sequenceItems') = mapAccumL f (localScope' : outerScopes) sequenceItems
-        where
-          -- This case is already handled by the outer pattern match
-          f [] _ = error "Cannot have no scopes in Sequence"
-          -- If the SequenceItem is an expression, recursively remove shadowing
-          f scopes (SequenceItemExpr expr) = (scopes, SequenceItemExpr $ removeShadowingInExpr expr scopes)
-          -- If the SequenceItem is a let binding:
-          f scopes@(localScope'' : outerScopes') (SequenceItemBindExpr (Bindings {bindings, bindingsBindType, bindingsBindExpr})) = do
-            -- First, retrieve all the identifiers that have been binded
-            let newIdentifiers = concatMap getBindIdentifiers bindings
-            -- Since some of them can shadow other existing identifiers (declared on the outer scopes), generate new names for them
-            -- Note that normal rebindings are permitted, so the local scope is not passed to `generateUnshadowedName`
-            let unshadowedIdentifiers = map (\ident -> (ident, generateUnshadowedName ident outerScopes')) newIdentifiers
-            -- Then create a map from them
-            let newBindings = Map.fromList unshadowedIdentifiers
-
-            ( -- The newly binded identifiers are added to the local scope
-              Map.union newBindings localScope'' : outerScopes',
-              -- The let binding itself is updated so to reflect the new names for the identifiers
-              -- The right value of the bind is also recursively unshadowed, but without the newly introduced bindings
-              SequenceItemBindExpr $
-                Bindings
-                  { bindings = map (`updateBindWithUnshadowedIdentifiers` [newBindings]) bindings, -- Infix for (\bind -> updateBindWithUnshadowedIdentifiers bind [newBindings])
-                    bindingsBindType,
-                    bindingsBindExpr = removeShadowingInExprMaybe bindingsBindExpr scopes
-                  }
-              )
+        ( -- The newly binded identifiers are added to the local scope
+          Map.union newBindings localScope : outerScopes,
+          -- The let binding itself is updated so to reflect the new names for the identifiers
+          -- The right value of the bind is also recursively unshadowed, but without the newly introduced bindings
+          SequenceItemBindExpr $
+            Bindings
+              { bindings = map (`updateBindWithUnshadowedIdentifiers` [newBindings]) bindings, -- Infix for (\bind -> updateBindWithUnshadowedIdentifiers bind [newBindings])
+                bindingsBindType,
+                bindingsBindExpr = removeShadowingInExprMaybe bindingsBindExpr scopes'
+              }
+          )
 
       sequenceEndExpr' = removeShadowingInExprMaybe sequenceEndExpr scopes''
    in Sequence
@@ -154,22 +128,17 @@ removeShadowingInSequence (Sequence {sequenceUses, sequenceItems, sequenceEndExp
         }
 
 -- |
--- Given a Module, first collects all identifiers belonging to either constants and uses present in this module,
+-- Given a Module, first collects all identifiers belonging to constants declared in this module,
 -- then proceeds by inspecting all function declarations to remove shadowings
--- 
--- Note: uses and aliases will not be modified, since in any case they cannot be reassigned.
---    This means they can still shadow other identifiers, so further bindings with same identifiers will be unshadowed
 removeShadowingInModule :: Module -> Module
 removeShadowingInModule currModule@Module {moduleTopLevels} =
-  -- All the constants and uses declared in this module will act as a base scope for the module
+  -- All the constants declared in this module will act as a base scope for the module
   let constantIdentifiers = [constantIdentifier | TopLevelConstant (Constant {constantIdentifier}) <- moduleTopLevels]
-      usesIdentifiers = concat [getUseIdentifiers use | TopLevelUse use <- moduleTopLevels]
 
-      baseScope = Map.fromList $ map (\ident -> (ident, ident)) (constantIdentifiers ++ usesIdentifiers)
-   in currModule {moduleTopLevels = map (f [baseScope]) moduleTopLevels}
+      baseScope = Map.fromList $ map (\ident -> (ident, ident)) constantIdentifiers
+   in -- Then, proceed with unshadowing both the constants (right value only) and function declarations
+      currModule {moduleTopLevels = map (f [baseScope]) moduleTopLevels}
   where
-    -- Then, proceed with unshadowing both the constants (right value only) and function declarations
-
     -- When encountering a function declaration:
     f scopes (TopLevelFunction fun@Function {functionParameters, functionBody = Just bodySequence}) =
       -- create a new local scope including the function parameters
