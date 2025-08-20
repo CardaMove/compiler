@@ -71,6 +71,7 @@ updateBindWithUnshadowedIdentifiers (BindPositionalStruct struct@BindedPositiona
 removeShadowingInExpr :: Expr -> [Scope] -> Expr
 --    When a local identifier is found, replace with its unshadowed name.
 --    This is the base case for the recursion
+--    Other access chains such as type names or struct/function names will not be matched by this pattern, since they are a `NameAccessChain`, not `NameAccessChainExpr`
 removeShadowingInExpr (NameAccessChainExpr (LocalNameAccessChain ident)) scopes = NameAccessChainExpr $ LocalNameAccessChain $ getUnshadowedName ident scopes
 --    When a Sequence is found, push a new (empty) scope on top of the existing ones and search for bindings
 removeShadowingInExpr (SequenceExpr sequence') scopes = SequenceExpr $ removeShadowingInSequence sequence' (Map.empty : scopes)
