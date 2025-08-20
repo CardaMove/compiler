@@ -154,7 +154,9 @@ data Use
   = Use
   { useAddress :: Address,
     useIdentifier :: Identifier,
+    -- | If the alias is present, no members can be aliased and vice-versa
     useAlias :: Maybe Identifier,
+    -- | If the alias is present, no members can be aliased and vice-versa
     useMembers :: [UseMember]
   }
   deriving (Eq, Show, Data, Typeable)
