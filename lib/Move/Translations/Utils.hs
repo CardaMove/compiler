@@ -22,6 +22,8 @@ type Scope = Map.Map Identifier (Maybe Type)
 traverseExprPostOrder :: (Expr -> [Scope] -> state -> (Expr, state)) -> Expr -> [Scope] -> state -> (Expr, state)
 traverseExprPostOrder f expr scopes state = error "TODO:"
 
+-- TODO: traverseSequencePostOrder internal only
+
 -- |
 -- Checks if the identifier is present in any of the input scopes
 isIdentifierInScope :: Identifier -> [Scope] -> Bool
@@ -39,3 +41,10 @@ getIdentifierTypeFromScope = error "TODO:"
 getValueOrDefault :: Maybe val -> val -> val
 getValueOrDefault Nothing def = def
 getValueOrDefault (Just val) _ = val
+
+-- |
+-- Performs a post-order traversal of an entire module.
+--
+-- Invokes a function for each encountered expression (see `traverseExprPostOrder`), and returns the resulting Module and state
+traverseModulePostOrder :: (Expr -> [Scope] -> state -> (Expr, state)) -> Module -> state -> (Module, state)
+traverseModulePostOrder = error "TODO:"
