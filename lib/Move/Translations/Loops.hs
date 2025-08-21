@@ -4,7 +4,8 @@ module Move.Translations.Loops (mapLoopsToWhile) where
 
 import Data.Data (Data)
 import Data.Generics.Uniplate.Data (transformBi)
-import Move.AST (Expr (..), ValueLiteral (Boolean), While (..))
+import Move.AST
+import Move.Translations.Utils (Scope, getIdentifierTypeFromScope, getValueOrDefault, isIdentifierInScope, traverseExprPostOrder, unknownType)
 
 -- |
 -- Translates all `loop expr` expressions into `while(true) expr`.
@@ -20,3 +21,91 @@ mapLoopsToWhile = transformBi f
             whileExpr = expr
           }
     f expr = expr
+
+-- |
+-- Given an expression tree, maps all free variables in it, meaning the variables that are not declared in this scope or inner scopes,
+-- with a corresponding dereference, and returns both the updated tree and the modified free variables
+mapFreeVariablesInExpr :: Expr -> (Expr, [Identifier])
+mapFreeVariablesInExpr expr = traverseExprPostOrder f expr [] []
+  where
+    f expr'@(NameAccessChainExpr (LocalNameAccessChain ident)) scopes state =
+      if isIdentifierInScope ident scopes
+        then (expr', state)
+        else (UnaryOpExpr $ Dereference expr', ident : state)
+    f expr' _ state = (expr', state)
+
+-- |
+-- Given a free variable, create a corresponding function parameter with the same identifier.
+--
+-- The parameter will be a mutable or immutable reference depending if the input variable is mutable or not.
+--
+-- If the type of the variable is known, it will be used as type argument for the reference, otherwise a dummy type will be returned
+mapFreeVariableToFunctionParameter :: (Identifier, Maybe Type) -> Parameter
+mapFreeVariableToFunctionParameter (ident, identType) =
+  Parameter
+    { parameterIdentifier = ident,
+      parameterType = TypeMutableRef $ getValueOrDefault identType unknownType
+    }
+
+mapFreeVariableToFunctionArgument :: Identifier -> Expr
+mapFreeVariableToFunctionArgument ident = UnaryOpExpr $ MutableReference $ NameAccessChainExpr $ LocalNameAccessChain ident
+
+-- |
+-- Given a while loop, returns a corresponding function call along with function declaration.
+--
+-- The function name is passed as input to this function.
+--
+-- Free variables, meaning variables declared outside of the loop, are converteed to references passed as function parameters.
+--
+-- Control keywords such as continue and break are handled internally on the function.
+mapWhileToFunction :: While -> [Scope] -> Identifier -> (PositionalStructExprOrFunctionCall, Function)
+mapWhileToFunction (While {whileCondition, whileExpr}) scopes functionName =
+  let (mappedConditionExpr, freeVarsInConditionExpr) = mapFreeVariablesInExpr whileCondition
+      (mappedBodyExpr, freeVarsInBodyExpr) = mapFreeVariablesInExpr whileExpr
+      freeVarsWithType = map (\ident -> (ident, getIdentifierTypeFromScope ident scopes)) (freeVarsInConditionExpr ++ freeVarsInBodyExpr)
+      functionParameters = map mapFreeVariableToFunctionParameter freeVarsWithType
+      functionArguments = map mapFreeVariableToFunctionArgument (freeVarsInConditionExpr ++ freeVarsInBodyExpr)
+
+      functionBody =
+        Just $
+          Sequence
+            { sequenceUses = [],
+              sequenceItems =
+                [ SequenceItemExpr $
+                    IfThenElseTerm $
+                      IfThenElse
+                        { ifThenElseCondition = mappedConditionExpr,
+                          ifThenElseIfBranch = mappedBodyExpr,
+                          ifThenElseElseBranch = Nothing
+                        }
+                ],
+              sequenceEndExpr = Nothing
+            }
+   in ( PositionalStructExprOrFunctionCall
+          { pseofcNameAccessChain = LocalNameAccessChain functionName,
+            pseofcTypeArgs = [],
+            pseofcFields = functionArguments
+          },
+        Function
+          { functionHasNativeModifier = False,
+            functionVisibilityModifier = Nothing,
+            functionHasEntryModifier = False,
+            functionName = functionName,
+            functionTypeParameters = [],
+            functionParameters,
+            functionReturnType = Nothing,
+            functionAcquires = [],
+            functionBody
+          }
+      )
+
+-- |
+-- Given an expression, recursively converts each while loop into a function declaration,
+-- and substitutes the loop expression with that function call
+translateWhilesToFunctionsInExpr :: Expr -> [Scope] -> (Expr, [Function])
+translateWhilesToFunctionsInExpr expr scopes = traverseExprPostOrder f expr scopes []
+  where
+    f (WhileTerm whileExpr) scopes' functionDecls =
+      let (functionCall, functionDecl) = mapWhileToFunction whileExpr scopes' (Identifier $ "mapped_while_" ++ show (length functionDecls))
+       in (PositionalStructExprOrFunctionCallExpr functionCall, functionDecl : functionDecls)
+    f expr' _ functionDecls = (expr', functionDecls)
