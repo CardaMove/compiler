@@ -477,10 +477,19 @@ data SequenceItem
 -- | Example: `let (a, b): (u64, bool) = (12, true);`
 data Bindings
   = Bindings
-  { bindings :: [Bind],
+  { bindings :: Binded,
     bindingsBindType :: Maybe Type,
     bindingsBindExpr :: Maybe Expr
   }
+  deriving (Eq, Show, Data, Typeable)
+
+-- | A binding can either be a single bind, or multiple
+-- Note that multiple bindings also include the case of a one-element tuple
+--
+-- Example of single bind: `let x = ...`
+--
+-- Example of multiple binds: `let (x) = (...)`, `let (a, b) = (...)`
+data Binded = BindedSingle Bind | BindedTuple [Bind]
   deriving (Eq, Show, Data, Typeable)
 
 -- | A single binding (left side of the '=').

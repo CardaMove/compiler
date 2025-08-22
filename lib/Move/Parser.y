@@ -661,12 +661,12 @@ SequenceItems__ :: { ([SequenceItem], Bool) }
 SequenceItem :: { SequenceItem }
   : Expr                                                          { SequenceItemExpr $1 }
   | let Bind OptionalBindType OptionalBindExpr                    { SequenceItemBindExpr $ Bindings {
-    bindings = [$2],
+    bindings = BindedSingle $2,
     bindingsBindType = $3,
     bindingsBindExpr = $4
   } }
   | let '(' CommaBind ')' OptionalBindType OptionalBindExpr       { SequenceItemBindExpr $ Bindings {
-    bindings = $3,
+    bindings = BindedTuple $3,
     bindingsBindType = $5,
     bindingsBindExpr = $6
   } }

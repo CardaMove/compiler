@@ -3,10 +3,11 @@ module Move.Translations.ShadowingSpec (spec) where
 import Control.Exception (evaluate)
 import Data.Map qualified as Map
 import Move.AST
-import Move.Translations.Shadowing (generateUnshadowedName, getBindIdentifiers, getUnshadowedName, removeShadowingInSequence, removeShadowingInModule)
+import Move.Translations.Shadowing (generateUnshadowedName, getUnshadowedName, removeShadowingInSequence, removeShadowingInModule)
 import Test.Hspec
 import Move.Lexer (scan)
 import Move.Parser (parse)
+import Move.Translations.Utils (getBindIdentifiers)
 
 testGetUnshadowedName :: Spec
 testGetUnshadowedName = describe "Tests the function `getUnshadowedName`" $ do
@@ -32,6 +33,7 @@ testGetUnshadowedName = describe "Tests the function `getUnshadowedName`" $ do
         ]
       `shouldBe` Identifier "a_inner"
 
+-- FIXME: Should be moved in separate Spec file
 testGetBindIdentifiers :: Spec
 testGetBindIdentifiers = describe "Tests the function `getBindIdentifiers`" $ do
   it "Returns all the binded identifiers given a single bind" $ do
@@ -89,7 +91,7 @@ testRemoveShadowingInSequence = describe "Tests for the function `removeShadowin
               sequenceItems =
                 [ SequenceItemBindExpr $
                     Bindings
-                      { bindings = [BindIdentifier $ Identifier "x"],
+                      { bindings = BindedSingle $ BindIdentifier $ Identifier "x",
                         bindingsBindType = Nothing,
                         bindingsBindExpr = Nothing
                       },
@@ -101,7 +103,7 @@ testRemoveShadowingInSequence = describe "Tests for the function `removeShadowin
                           sequenceItems =
                             [ SequenceItemBindExpr $
                                 Bindings
-                                  { bindings = [BindIdentifier $ Identifier "x"],
+                                  { bindings = BindedSingle $ BindIdentifier $ Identifier "x",
                                     bindingsBindType = Nothing,
                                     bindingsBindExpr =
                                       Just $
@@ -143,7 +145,7 @@ testRemoveShadowingInSequence = describe "Tests for the function `removeShadowin
               sequenceItems =
                 [ SequenceItemBindExpr $
                     Bindings
-                      { bindings = [BindIdentifier $ Identifier "x"],
+                      { bindings = BindedSingle $ BindIdentifier $ Identifier "x",
                         bindingsBindType = Nothing,
                         bindingsBindExpr = Nothing
                       },
@@ -155,7 +157,7 @@ testRemoveShadowingInSequence = describe "Tests for the function `removeShadowin
                           sequenceItems =
                             [ SequenceItemBindExpr $
                                 Bindings
-                                  { bindings = [BindIdentifier $ Identifier "x_inner"],
+                                  { bindings = BindedSingle $ BindIdentifier $ Identifier "x_inner",
                                     bindingsBindType = Nothing,
                                     bindingsBindExpr =
                                       Just $

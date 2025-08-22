@@ -6,6 +6,7 @@ import Move.AST
 import Move.Lexer
 import Move.Parser
 import Test.Hspec
+import Move.AST (Binded(BindedSingle, BindedTuple))
 
 testScan :: String -> Module -> SpecWith ()
 testScan str ast = it (filter (/= '\n') str) $ do
@@ -420,7 +421,7 @@ testParseFunctionWithBody =
                             [ -- let a = ...
                               SequenceItemBindExpr $
                                 Bindings
-                                  { bindings = [BindIdentifier $ Identifier "a"],
+                                  { bindings = BindedSingle $ BindIdentifier $ Identifier "a",
                                     bindingsBindType = Just $ TypeConstructor (LocalNameAccessChain $ Identifier "u64") [],
                                     bindingsBindExpr =
                                       Just $
@@ -432,7 +433,7 @@ testParseFunctionWithBody =
                               -- let sum =
                               SequenceItemBindExpr $
                                 Bindings
-                                  { bindings = [BindIdentifier $ Identifier "sum"],
+                                  { bindings = BindedSingle $ BindIdentifier $ Identifier "sum",
                                     bindingsBindType = Nothing,
                                     bindingsBindExpr =
                                       Just $
@@ -444,7 +445,7 @@ testParseFunctionWithBody =
                               -- let inner =
                               SequenceItemBindExpr $
                                 Bindings
-                                  { bindings = [BindIdentifier $ Identifier "inner"],
+                                  { bindings = BindedSingle $ BindIdentifier $ Identifier "inner",
                                     bindingsBindType = Nothing,
                                     bindingsBindExpr =
                                       Just $
@@ -573,14 +574,14 @@ testParseStructExpr =
                               -- let c = 0
                               SequenceItemBindExpr $
                                 Bindings
-                                  { bindings = [BindIdentifier $ Identifier "c"],
+                                  { bindings = BindedSingle $ BindIdentifier $ Identifier "c",
                                     bindingsBindType = Nothing,
                                     bindingsBindExpr = Just $ ValueLiteral $ Numerical $ LiteralIntDec 0
                                   },
                               -- let foo =
                               SequenceItemBindExpr $
                                 Bindings
-                                  { bindings = [BindIdentifier $ Identifier "foo"],
+                                  { bindings = BindedSingle $ BindIdentifier $ Identifier "foo",
                                     bindingsBindType = Nothing,
                                     -- C<bool> {..
                                     bindingsBindExpr =
@@ -611,8 +612,8 @@ testParseStructExpr =
                               -- let C { ...
                               SequenceItemBindExpr $
                                 Bindings
-                                  { bindings =
-                                      [ BindNamedStruct $
+                                  { bindings = BindedSingle $
+                                        BindNamedStruct $
                                           BindedNamedStruct
                                             { bnsNameAccessChain = LocalNameAccessChain $ Identifier "C",
                                               bnsTypeArgs = [],
@@ -657,7 +658,7 @@ testParseStructExpr =
                                                       ]
                                                   }
                                             }
-                                      ],
+                                      ,
                                     bindingsBindType = Nothing,
                                     -- = copy foo
                                     bindingsBindExpr = Just $ UnaryOpExpr $ CopyExpr $ Identifier "foo"
@@ -665,7 +666,7 @@ testParseStructExpr =
                               -- let c_ref: &u64 ...
                               SequenceItemBindExpr $
                                 Bindings
-                                  { bindings = [BindIdentifier $ Identifier "c_ref"],
+                                  { bindings = BindedSingle $ BindIdentifier $ Identifier "c_ref",
                                     bindingsBindType = Just $ TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "u64") [],
                                     -- = &foo.c
                                     bindingsBindExpr =
@@ -704,7 +705,7 @@ testParseStructExpr =
                               -- let positional = ...
                               SequenceItemBindExpr $
                                 Bindings
-                                  { bindings = [BindIdentifier $ Identifier "positional"],
+                                  { bindings = BindedSingle $ BindIdentifier $ Identifier "positional",
                                     bindingsBindType = Nothing,
                                     -- = PositionalStruct(12, 24)
                                     bindingsBindExpr =
@@ -722,8 +723,8 @@ testParseStructExpr =
                               -- let PositionalStruct(...;
                               SequenceItemBindExpr $
                                 Bindings
-                                  { bindings =
-                                      [ BindPositionalStruct $
+                                  { bindings = BindedSingle $
+                                        BindPositionalStruct $
                                           BindedPositionalStruct
                                             { bpsNameAccessChain = LocalNameAccessChain $ Identifier "PositionalStruct",
                                               bpsTypeArgs = [],
@@ -744,7 +745,7 @@ testParseStructExpr =
                                                       ]
                                                   }
                                             }
-                                      ],
+                                      ,
                                     bindingsBindType = Nothing,
                                     -- = positional
                                     bindingsBindExpr = Just $ NameAccessChainExpr $ LocalNameAccessChain $ Identifier "positional"
@@ -752,8 +753,8 @@ testParseStructExpr =
                               -- let C { ...
                               SequenceItemBindExpr $
                                 Bindings
-                                  { bindings =
-                                      [ BindNamedStruct $
+                                  { bindings = BindedSingle $ 
+                                        BindNamedStruct $
                                           BindedNamedStruct
                                             { bnsNameAccessChain = LocalNameAccessChain $ Identifier "C",
                                               bnsTypeArgs = [],
@@ -770,7 +771,7 @@ testParseStructExpr =
                                                       ]
                                                   }
                                             }
-                                      ],
+                                      ,
                                     bindingsBindType = Nothing,
                                     -- = foo
                                     bindingsBindExpr = Just $ NameAccessChainExpr $ LocalNameAccessChain $ Identifier "foo"
@@ -778,7 +779,7 @@ testParseStructExpr =
                               -- let ( ...
                               SequenceItemBindExpr $
                                 Bindings
-                                  { bindings =
+                                  { bindings = BindedTuple $
                                       [ -- PositionalStruct(twelve,..)
                                         BindPositionalStruct $
                                           BindedPositionalStruct

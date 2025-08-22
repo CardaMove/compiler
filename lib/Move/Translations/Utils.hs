@@ -17,9 +17,6 @@ numericType = TypeConstructor (LocalNameAccessChain $ Identifier "u256") []
 
 type Scope = Map.Map Identifier (Maybe Type)
 
-flipPair :: (a, b) -> (b, a)
-flipPair (a, b) = (b, a)
-
 -- |
 -- Performs a post-order traversal of a tree of expressions.
 --
@@ -62,7 +59,7 @@ traverseSequencePostOrder f (Sequence {sequenceUses, sequenceItems, sequenceEndE
              in -- It can be noticed that traversing an expression has not changed the scope
                 ((scopesBeforeExpr, stateAfterTraversingExpr), SequenceItemExpr expr')
           -- When a binding is encountered in the sequence:
-          fAcc (scopesBeforeBind@(localScopeBeforeBind : outerScopesBeforeBind), stateBeforeBind) (SequenceItemBindExpr (Bindings {bindings, bindingsBindType, bindingsBindExpr})) =
+          fAcc (scopesBeforeBind@(localScopeBeforeBind : outerScopesBeforeBind), stateBeforeBind) (SequenceItemBindExpr bindings@(Bindings {bindingsBindExpr})) =
             -- first, traverse the binded expression and retrieve the new expression and state
             let (traversedBindExpr, stateAfterTraversingBindExpr) = case bindingsBindExpr of
                   Nothing -> (Nothing, stateBeforeBind)
@@ -71,16 +68,11 @@ traverseSequencePostOrder f (Sequence {sequenceUses, sequenceItems, sequenceEndE
                      in (Just mappedBindExpr, state')
                 -- Note: here should be called any function that would map the binding
                 -- Then, add the binded identifiers to the local scope
-                bindIdentifiers = concatMap getBindIdentifiers bindings
-                bindScopes = Map.fromList (map (,Nothing) bindIdentifiers) -- TODO: try inferring variable type
+                bindScopes = Map.fromList $ inferBindingsTypes bindings
                 localScopeAfterBind = Map.union bindScopes localScopeBeforeBind
              in ( (localScopeAfterBind : outerScopesBeforeBind, stateAfterTraversingBindExpr),
                   SequenceItemBindExpr $
-                    Bindings
-                      { bindings,
-                        bindingsBindType,
-                        bindingsBindExpr = traversedBindExpr
-                      }
+                    bindings {bindingsBindExpr = traversedBindExpr}
                 )
 
       -- Then, traverse the ending expression
@@ -157,3 +149,14 @@ getBindIdentifiers :: Bind -> [Identifier]
 getBindIdentifiers (BindIdentifier ident) = [ident]
 getBindIdentifiers (BindNamedStruct (BindedNamedStruct {bnsFields = BindedFields {bindedFields}})) = getBindIdentifiersHelper bindedFields
 getBindIdentifiers (BindPositionalStruct (BindedPositionalStruct {bpsFields = BindedFields {bindedFields}})) = getBindIdentifiersHelper bindedFields
+
+-- |
+-- Given a binding, returns a list with every binded identifier along with its type, if it could be inferred
+inferBindingsTypes :: Bindings -> [(Identifier, Maybe Type)]
+-- inferBindingsTypes (Bindings{bindings = []}) = []
+-- inferBindingsTypes (Bindings{bindings = [bind], bindingsBindType, bindingsBindExpr}) = inferBindType bind bindingsBindType bindingsBindExpr
+-- inferBindingsTypes (Bindings{bindings = bind:binds, bindingsBindType = Nothing}) = inferBindType bind
+inferBindingsTypes _ = error "TODO:"
+
+inferBindType :: Bind -> Maybe Type -> Maybe Expr -> [(Identifier, Maybe Type)]
+inferBindType = error "TODO:"

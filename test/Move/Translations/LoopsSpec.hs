@@ -15,9 +15,7 @@ testLoopsToWhile = describe "Translating a loop into a while" $ do
                   [ -- let a = 10
                     SequenceItemBindExpr $
                       Bindings
-                        { bindings =
-                            [ BindIdentifier $ Identifier "a"
-                            ],
+                        { bindings = BindedSingle $ BindIdentifier $ Identifier "a",
                           bindingsBindType = Nothing,
                           bindingsBindExpr = Just $ ValueLiteral $ Numerical $ LiteralIntDec 10
                         }
@@ -69,9 +67,7 @@ testLoopsToWhile = describe "Translating a loop into a while" $ do
                             [ -- let a = 10
                               SequenceItemBindExpr $
                                 Bindings
-                                  { bindings =
-                                      [ BindIdentifier $ Identifier "a"
-                                      ],
+                                  { bindings = BindedSingle $ BindIdentifier $ Identifier "a",
                                     bindingsBindType = Nothing,
                                     bindingsBindExpr = Just $ ValueLiteral $ Numerical $ LiteralIntDec 10
                                   },
@@ -101,9 +97,7 @@ testLoopsToWhile = describe "Translating a loop into a while" $ do
                                            [ -- let a = 10
                                              SequenceItemBindExpr $
                                                Bindings
-                                                 { bindings =
-                                                     [ BindIdentifier $ Identifier "a"
-                                                     ],
+                                                 { bindings = BindedSingle $ BindIdentifier $ Identifier "a",
                                                    bindingsBindType = Nothing,
                                                    bindingsBindExpr = Just $ ValueLiteral $ Numerical $ LiteralIntDec 10
                                                  },

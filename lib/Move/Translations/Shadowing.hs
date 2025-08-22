@@ -19,7 +19,6 @@ getUnshadowedName from (x : xs) = case Map.lookup from x of
   Just to -> to
   Nothing -> getUnshadowedName from xs
 
-
 -- |
 -- Given an identifier, returns a new name where no shadowing happens.
 --
@@ -90,7 +89,9 @@ removeShadowingInSequence (Sequence {sequenceUses, sequenceItems, sequenceEndExp
       -- If the SequenceItem is a let binding:
       f scopes'@(localScope : outerScopes) (SequenceItemBindExpr (Bindings {bindings, bindingsBindType, bindingsBindExpr})) = do
         -- First, retrieve all the identifiers that have been binded
-        let newIdentifiers = concatMap getBindIdentifiers bindings
+        let newIdentifiers = case bindings of
+              BindedSingle bind -> getBindIdentifiers bind
+              BindedTuple binds -> concatMap getBindIdentifiers binds
         -- Since some of them can shadow other existing identifiers (declared on the outer scopes), generate new names for them
         -- Note that normal rebindings are permitted, so the local scope is not passed to `generateUnshadowedName`
         let unshadowedIdentifiers = map (\ident -> (ident, generateUnshadowedName ident outerScopes)) newIdentifiers
@@ -103,7 +104,10 @@ removeShadowingInSequence (Sequence {sequenceUses, sequenceItems, sequenceEndExp
           -- The right value of the bind is also recursively unshadowed, but without the newly introduced bindings
           SequenceItemBindExpr $
             Bindings
-              { bindings = map (`updateBindWithUnshadowedIdentifiers` [newBindings]) bindings, -- Infix for (\bind -> updateBindWithUnshadowedIdentifiers bind [newBindings])
+              { bindings =
+                  case bindings of
+                      BindedSingle bind -> BindedSingle $ updateBindWithUnshadowedIdentifiers bind [newBindings]
+                      BindedTuple binds -> BindedTuple $ map (`updateBindWithUnshadowedIdentifiers` [newBindings]) binds,
                 bindingsBindType,
                 bindingsBindExpr = removeShadowingInExprMaybe bindingsBindExpr scopes'
               }
