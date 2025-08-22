@@ -1,9 +1,10 @@
-module Move.Translations.Shadowing (removeShadowingInModule, removeShadowingInExpr, removeShadowingInSequence, getUnshadowedName, getBindIdentifiers, generateUnshadowedName) where
+module Move.Translations.Shadowing (removeShadowingInModule, removeShadowingInExpr, removeShadowingInSequence, getUnshadowedName, generateUnshadowedName) where
 
 import Data.Generics.Uniplate.Data (Uniplate (descend))
 import Data.List (mapAccumL)
 import Data.Map qualified as Map
 import Move.AST
+import Move.Translations.Utils (getBindIdentifiers)
 
 -- | Keeps track of a scope. A scope is a map from an identifier to its unshadowed name
 type Scope = Map.Map Identifier Identifier
@@ -18,19 +19,6 @@ getUnshadowedName from (x : xs) = case Map.lookup from x of
   Just to -> to
   Nothing -> getUnshadowedName from xs
 
--- | Helper function for `getBindIdentifiers`
-getBindIdentifiersHelper :: [BindedField] -> [Identifier]
-getBindIdentifiersHelper = concatMap f
-  where
-    f (BindedField {bindFieldIdentifier, bindFieldInnerBind = Nothing}) = [bindFieldIdentifier]
-    f (BindedField {bindFieldInnerBind = Just innerBind}) = getBindIdentifiers innerBind
-
--- |
--- Given a single bind, returns all its binded identifiers as they are named in the AST
-getBindIdentifiers :: Bind -> [Identifier]
-getBindIdentifiers (BindIdentifier ident) = [ident]
-getBindIdentifiers (BindNamedStruct (BindedNamedStruct {bnsFields = BindedFields {bindedFields}})) = getBindIdentifiersHelper bindedFields
-getBindIdentifiers (BindPositionalStruct (BindedPositionalStruct {bpsFields = BindedFields {bindedFields}})) = getBindIdentifiersHelper bindedFields
 
 -- |
 -- Given an identifier, returns a new name where no shadowing happens.
