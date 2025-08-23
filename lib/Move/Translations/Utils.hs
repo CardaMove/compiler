@@ -153,10 +153,65 @@ getBindIdentifiers (BindPositionalStruct (BindedPositionalStruct {bpsFields = Bi
 -- |
 -- Given a binding, returns a list with every binded identifier along with its type, if it could be inferred
 inferBindingsTypes :: Bindings -> [(Identifier, Maybe Type)]
--- inferBindingsTypes (Bindings{bindings = []}) = []
--- inferBindingsTypes (Bindings{bindings = [bind], bindingsBindType, bindingsBindExpr}) = inferBindType bind bindingsBindType bindingsBindExpr
--- inferBindingsTypes (Bindings{bindings = bind:binds, bindingsBindType = Nothing}) = inferBindType bind
-inferBindingsTypes _ = error "TODO:"
+--  For a single bind, infer its type
+inferBindingsTypes (Bindings {bindings = BindedSingle bind, bindingsBindType, bindingsBindExpr}) = inferBindType bind bindingsBindType bindingsBindExpr
+--  For a tuple bind, if neither types nor expression is specified, types can not be inferred
+inferBindingsTypes (Bindings {bindings = BindedTuple binds, bindingsBindType = Nothing, bindingsBindExpr = Nothing}) =
+  let bindsIdentifiers = concatMap getBindIdentifiers binds
+   in map (,Nothing) bindsIdentifiers
+--  For a tuple bind, if types are specified, they must be a tuple of types
+inferBindingsTypes (Bindings {bindings = BindedTuple binds, bindingsBindType = Just (TypeTuple types)}) =
+  if length binds /= length types
+    then error ("When inferring binding types: number of bindings is different from number of types. " ++ show binds ++ ", " ++ show types)
+    else concatMap (\(bind, t) -> inferBindType bind (Just t) Nothing) (zip binds types)
+--  If instead types are not specified, they must be inferred from the expression, which should be a tuple
+inferBindingsTypes (Bindings {bindings = BindedTuple binds, bindingsBindType = Nothing, bindingsBindExpr = Just (CommaExpr exprs)}) =
+  if length binds /= length exprs
+    then error ("When inferring binding types: number of bindings is different from number of expression. " ++ show binds ++ ", " ++ show exprs)
+    else concatMap (\(bind, expr) -> inferBindType bind Nothing (Just expr)) (zip binds exprs)
+--  A tuple bind can destructure a function result. This is not currently inferred
+inferBindingsTypes (Bindings {bindings = BindedTuple binds, bindingsBindType = Nothing, bindingsBindExpr = Just (PositionalStructExprOrFunctionCallExpr _)}) =
+  let bindsIdentifiers = concatMap getBindIdentifiers binds
+   in map (,Nothing) bindsIdentifiers
+--  It is not possible to specify a non-tuple types for a tuple binding
+inferBindingsTypes (Bindings {bindings = BindedTuple _, bindingsBindType = Just _}) = error "Found a tuple binding typed with a non-tuple type"
+-- A tuple bind with any other expression is invalid
+inferBindingsTypes (Bindings {bindings = BindedTuple _, bindingsBindType = Nothing, bindingsBindExpr = Just _}) = error "Found a tuple binding assigned with a non-tuple expression"
 
+-- |
+-- Give a single bind and its corresponding type or expression, tries to infer the type of all the binded identifiers
 inferBindType :: Bind -> Maybe Type -> Maybe Expr -> [(Identifier, Maybe Type)]
-inferBindType = error "TODO:"
+--  It is not possible to infer the type of an identifier alone (or in another way, it can be any type)
+inferBindType (BindIdentifier ident) Nothing Nothing = [(ident, Nothing)]
+--  Identifier with type annotation
+inferBindType (BindIdentifier ident) identType@(Just _) _ = [(ident, identType)]
+--  Identifier with corresponding binary expression
+inferBindType (BindIdentifier ident) Nothing (Just (BinaryOpExprExpr (Or _ _))) = [(ident, Just booleanType)]
+inferBindType (BindIdentifier ident) Nothing (Just (BinaryOpExprExpr (And _ _))) = [(ident, Just booleanType)]
+inferBindType (BindIdentifier ident) Nothing (Just (BinaryOpExprExpr (Eq _ _))) = [(ident, Just booleanType)]
+inferBindType (BindIdentifier ident) Nothing (Just (BinaryOpExprExpr (Neq _ _))) = [(ident, Just booleanType)]
+inferBindType (BindIdentifier ident) Nothing (Just (BinaryOpExprExpr (Lt _ _))) = [(ident, Just booleanType)]
+inferBindType (BindIdentifier ident) Nothing (Just (BinaryOpExprExpr (Gt _ _))) = [(ident, Just booleanType)]
+inferBindType (BindIdentifier ident) Nothing (Just (BinaryOpExprExpr (Leq _ _))) = [(ident, Just booleanType)]
+inferBindType (BindIdentifier ident) Nothing (Just (BinaryOpExprExpr (Geq _ _))) = [(ident, Just booleanType)]
+inferBindType (BindIdentifier ident) Nothing (Just (BinaryOpExprExpr (BitwiseOr _ _))) = [(ident, Just numericType)]
+inferBindType (BindIdentifier ident) Nothing (Just (BinaryOpExprExpr (BitwiseXor _ _))) = [(ident, Just numericType)]
+inferBindType (BindIdentifier ident) Nothing (Just (BinaryOpExprExpr (BitwiseAnd _ _))) = [(ident, Just numericType)]
+inferBindType (BindIdentifier ident) Nothing (Just (BinaryOpExprExpr (ShiftLeft _ _))) = [(ident, Just numericType)]
+inferBindType (BindIdentifier ident) Nothing (Just (BinaryOpExprExpr (ShiftRight _ _))) = [(ident, Just numericType)]
+inferBindType (BindIdentifier ident) Nothing (Just (BinaryOpExprExpr (Add _ _))) = [(ident, Just numericType)]
+inferBindType (BindIdentifier ident) Nothing (Just (BinaryOpExprExpr (Sub _ _))) = [(ident, Just numericType)]
+inferBindType (BindIdentifier ident) Nothing (Just (BinaryOpExprExpr (Mult _ _))) = [(ident, Just numericType)]
+inferBindType (BindIdentifier ident) Nothing (Just (BinaryOpExprExpr (Div _ _))) = [(ident, Just numericType)]
+inferBindType (BindIdentifier ident) Nothing (Just (BinaryOpExprExpr (Mod _ _))) = [(ident, Just numericType)]
+--  An assignment has unit type
+inferBindType (BindIdentifier ident) Nothing (Just (AssignmentExpr _)) = [(ident, Just $ TypeTuple [])]
+--  Identifier with unary expression
+inferBindType (BindIdentifier ident) Nothing (Just (UnaryOpExpr (Negation _))) = [(ident, Just numericType)]
+--  Identifier with a typed expression or a casting
+inferBindType (BindIdentifier ident) Nothing (Just (TypedExprTerm (TypedExpr {typedExprType}))) = [(ident, Just typedExprType)]
+inferBindType (BindIdentifier ident) Nothing (Just (CastingTerm (Casting {castingType}))) = [(ident, Just castingType)]
+-- while loops have unit type
+inferBindType (BindIdentifier ident) Nothing (Just (WhileTerm _)) = [(ident, Just $ TypeTuple [])]
+-- For all other expressions, either is it needed to know the scope or have any type
+inferBindType bind _ _ = map (,Nothing) (getBindIdentifiers bind)

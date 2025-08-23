@@ -295,11 +295,12 @@ NamedField ::  { NamedField }
     }
 
 
--- | Represents any type: type constructow with arguments, reference types, tuple types
+-- | Represents any type: type constructow with arguments, reference types, tuple types (including unit type)
 Type :: { Type }
   : NameAccessChain OptionalTypeArgs        { TypeConstructor $1 $2 }
   | '&' Type                                { TypeImmutableRef $2 }
   | '&mut' Type                             { TypeMutableRef $2 }
+  | '(' ')'                                 { TypeTuple [] }
   | '(' CommaType_ ')'                      { TypeTuple $ reverse $2 }  -- Reverse the left-recursive rule
 
 
