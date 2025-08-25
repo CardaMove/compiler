@@ -7,7 +7,6 @@ import Move.Translations.Shadowing (generateUnshadowedName, getUnshadowedName, r
 import Test.Hspec
 import Move.Lexer (scan)
 import Move.Parser (parse)
-import Move.Translations.Utils (getBindIdentifiers)
 
 testGetUnshadowedName :: Spec
 testGetUnshadowedName = describe "Tests the function `getUnshadowedName`" $ do
@@ -32,30 +31,6 @@ testGetUnshadowedName = describe "Tests the function `getUnshadowedName`" $ do
           Map.fromList [(Identifier "a", Identifier "a")]
         ]
       `shouldBe` Identifier "a_inner"
-
--- FIXME: Should be moved in separate Spec file
-testGetBindIdentifiers :: Spec
-testGetBindIdentifiers = describe "Tests the function `getBindIdentifiers`" $ do
-  it "Returns all the binded identifiers given a single bind" $ do
-    {- Code as follows:
-      let MyStruct{a, b: b_alias} = e
-    -}
-    let bind =
-          BindNamedStruct $
-            BindedNamedStruct
-              { bnsNameAccessChain = LocalNameAccessChain $ Identifier "MyStruct",
-                bnsTypeArgs = [],
-                bnsFields =
-                  BindedFields
-                    { hasPartialPattern = False,
-                      bindedFields =
-                        [ BindedField {bindFieldIdentifier = Identifier "a", bindFieldInnerBind = Nothing},
-                          BindedField {bindFieldIdentifier = Identifier "b", bindFieldInnerBind = Just $ BindIdentifier $ Identifier "b_alias"}
-                        ]
-                    }
-              }
-
-    getBindIdentifiers bind `shouldBe` [Identifier "a", Identifier "b_alias"]
 
 testGenerateUnshadowedName :: Spec
 testGenerateUnshadowedName = describe "Tests for the function `generateUnshadowedName`" $ do
@@ -254,7 +229,6 @@ testRemoveShadowingInModule = describe "Tests for the function `removeShadowingI
 spec :: Spec
 spec = do
   testGetUnshadowedName
-  testGetBindIdentifiers
   testGenerateUnshadowedName
   testRemoveShadowingInSequence
   testRemoveShadowingInModule
