@@ -25,8 +25,8 @@ mapLoopsToWhile = transformBi f
 -- |
 -- Given an expression tree, maps all free variables in it, meaning the variables that are not declared in this scope or inner scopes,
 -- with a corresponding dereference, and returns both the updated tree and the modified free variables
-mapFreeVariablesInExpr :: Expr -> (Expr, [Identifier])
-mapFreeVariablesInExpr expr = traverseExprPostOrder f expr [] []
+mapFreeVariablesToDerefsInExpr :: Expr -> (Expr, [Identifier])
+mapFreeVariablesToDerefsInExpr expr = traverseExprPostOrder f expr [] []
   where
     f expr'@(NameAccessChainExpr (LocalNameAccessChain ident)) scopes state =
       if isIdentifierInScope ident scopes
@@ -60,8 +60,8 @@ mapFreeVariableToFunctionArgument ident = UnaryOpExpr $ MutableReference $ NameA
 -- Control keywords such as continue and break are handled internally on the function.
 mapWhileToFunction :: While -> [Scope] -> Identifier -> (PositionalStructExprOrFunctionCall, Function)
 mapWhileToFunction (While {whileCondition, whileExpr}) scopes functionName =
-  let (mappedConditionExpr, freeVarsInConditionExpr) = mapFreeVariablesInExpr whileCondition
-      (mappedBodyExpr, freeVarsInBodyExpr) = mapFreeVariablesInExpr whileExpr -- TODO: Add translation for break and continue
+  let (mappedConditionExpr, freeVarsInConditionExpr) = mapFreeVariablesToDerefsInExpr whileCondition
+      (mappedBodyExpr, freeVarsInBodyExpr) = mapFreeVariablesToDerefsInExpr whileExpr -- TODO: Add translation for break and continue
       freeVarsWithType = map (\ident -> (ident, getIdentifierTypeFromScope ident scopes)) (freeVarsInConditionExpr ++ freeVarsInBodyExpr)
       functionParameters = map mapFreeVariableToFunctionParameter freeVarsWithType
       functionArguments = map mapFreeVariableToFunctionArgument (freeVarsInConditionExpr ++ freeVarsInBodyExpr)
