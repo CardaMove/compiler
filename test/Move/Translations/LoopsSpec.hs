@@ -134,6 +134,7 @@ testTranslateWhilesToFunctionsInModule = describe "Tests for the function `trans
     let toModuleStr = "module NamedAddr::TraversalUtilsSpec {\n" ++
                       "fun mapped_while_0(a: &mut u256, x: &mut u64) {\n" ++
                       -- The body of the while is inside a Sequence, with the end expression as the recursive call
+                      -- Note: a comparison between two different numeric types is not allowed in Move
                       "if (*a < *x) {\n" ++
                       "{\n" ++
                       "let b = 9;\n" ++
