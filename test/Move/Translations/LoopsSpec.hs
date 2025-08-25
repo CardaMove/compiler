@@ -1,7 +1,7 @@
 module Move.Translations.LoopsSpec (spec) where
 
 import Move.AST
-import Move.Translations.Loops (mapLoopsToWhile)
+import Move.Translations.Loops (translateLoopsToWhile)
 import Test.Hspec
 
 testLoopsToWhile :: Spec
@@ -24,7 +24,7 @@ testLoopsToWhile = describe "Translating a loop into a while" $ do
                 sequenceEndExpr = Just $ Return $ Just $ NameAccessChainExpr $ LocalNameAccessChain $ Identifier "a"
               }
 
-    mapLoopsToWhile (Loop loopBody)
+    translateLoopsToWhile (Loop loopBody)
       `shouldBe` ( WhileTerm $
                      While
                        { whileCondition = ValueLiteral $ Boolean True,
@@ -79,7 +79,7 @@ testLoopsToWhile = describe "Translating a loop into a while" $ do
                         }
             }
 
-    mapLoopsToWhile functionBody
+    translateLoopsToWhile functionBody
       `shouldBe` ( Sequence
                      { sequenceUses = [],
                        sequenceItems = [],

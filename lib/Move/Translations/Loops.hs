@@ -1,4 +1,4 @@
-module Move.Translations.Loops (mapLoopsToWhile, translateWhilesToFunctions, translateWhilesToFunctionsInModule) where
+module Move.Translations.Loops (translateLoopsToWhile, translateWhilesToFunctions, translateWhilesToFunctionsInModule) where
 
 -- Importing from Uniplate.Data allows to derive Biplate instances automatically from data types that derive Data
 
@@ -12,8 +12,8 @@ import Move.Translations.Utils (Scope, getIdentifierTypeFromScope, getValueOrDef
 -- Translates all `loop expr` expressions into `while(true) expr`.
 --
 -- Works recursively on any node of the AST
-mapLoopsToWhile :: (Data from) => from -> from
-mapLoopsToWhile = transformBi f
+translateLoopsToWhile :: (Data from) => from -> from
+translateLoopsToWhile = transformBi f
   where
     f (Loop expr) =
       WhileTerm $
