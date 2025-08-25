@@ -123,6 +123,7 @@ removeShadowingInSequence (Sequence {sequenceUses, sequenceItems, sequenceEndExp
 -- |
 -- Given a Module, first collects all identifiers belonging to constants declared in this module,
 -- then proceeds by inspecting all function declarations to remove shadowings
+-- TODO: Should also the "use" be considered in the scope?
 removeShadowingInModule :: Module -> Module
 removeShadowingInModule currModule@Module {moduleTopLevels} =
   -- All the constants declared in this module will act as a base scope for the module
