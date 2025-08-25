@@ -89,6 +89,7 @@ test-suite cardamove-test
       Move.ParserSpec
       Move.Translations.LoopsSpec
       Move.Translations.ShadowingSpec
+      Move.Translations.TraversalUtilsSpec
       Move.Translations.UtilsSpec
       Paths_cardamove
   hs-source-dirs:
