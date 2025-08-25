@@ -119,7 +119,34 @@ getValueOrDefault (Just val) _ = val
 --
 -- Invokes a function for each encountered expression (see `traverseExprPostOrder`), and returns the resulting Module and state
 traverseModulePostOrder :: (Expr -> [Scope] -> state -> (Expr, state)) -> Module -> state -> (Module, state)
-traverseModulePostOrder = error "TODO:"
+traverseModulePostOrder f currModule@Module {moduleTopLevels} state =
+  -- Since top level identifiers are never renamed, add all of them to the module scope before starting to traverse
+  let identifiersAndType = concatMap topLevelMap moduleTopLevels
+        where
+          topLevelMap (TopLevelUse use) = map (,Nothing) (getUseIdentifiers use)
+          topLevelMap (TopLevelFriend _) = []
+          -- Structs and function declarations for now do not have a type
+          topLevelMap (TopLevelNamedStruct (NamedStruct {namedStructIdentifier})) = [(namedStructIdentifier, Nothing)]
+          topLevelMap (TopLevelPositionalStruct (PositionalStruct {positionalStructIdentifier})) = [(positionalStructIdentifier, Nothing)]
+          topLevelMap (TopLevelFunction (Function {functionName})) = [(functionName, Nothing)]
+          topLevelMap (TopLevelConstant (Constant {constantIdentifier, constantType})) = [(constantIdentifier, Just constantType)]
+      moduleScope = Map.fromList identifiersAndType
+
+      (stateAfterStraversal, mappedTopLevels) = mapAccumL topLevelMap state moduleTopLevels
+        where
+          -- Traverse the constant expressions
+          -- Note that the scope is unchanged, only the state is forwarded
+          topLevelMap state' (TopLevelConstant constant@Constant {constantExpression}) =
+            let (mappedExpr, state'') = traverseExprPostOrder f constantExpression [moduleScope] state'
+             in (state'', TopLevelConstant $ constant {constantExpression = mappedExpr})
+          -- Traverse the function declarations that have a body.
+          -- Note that also here the scope is unchanged
+          topLevelMap state' (TopLevelFunction function@Function {functionBody = Just bodySequence}) =
+            let (mappedSequence, state'') = traverseSequencePostOrder f bodySequence [moduleScope] state'
+             in (state'', TopLevelFunction $ function {functionBody = Just mappedSequence})
+          -- Otherwise do nothing
+          topLevelMap state' topLevel = (state', topLevel)
+   in (currModule {moduleTopLevels = mappedTopLevels}, stateAfterStraversal)
 
 -- |
 -- Given a Use, returns all the alias identifiers.
