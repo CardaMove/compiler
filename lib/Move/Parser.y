@@ -11,6 +11,7 @@ import Move.Token
 %error { onError }
 
 %token
+  -- There exist a TokenWhitespace token, but should never be present here
   -- Separators
   '('       { TokenSeparatorLParen      }
   ')'       { TokenSeparatorRParen      }
@@ -72,6 +73,8 @@ import Move.Token
   '=='      { TokenOperatorEq           }
   '!='      { TokenOperatorNeq          }
   '<'       { TokenOperatorLt           }
+  -- See the NameExpr comment on this file
+  ' <'      { TokenOperatorWhiteLt      }
   '<='      { TokenOperatorLeq          }
   '>'       { TokenOperatorGt           }
   '>='      { TokenOperatorGeq          }
@@ -130,7 +133,9 @@ import Move.Token
 
 %left '||'
 %left '&&'
-%left '==' '!=' '<' '>' '<=' '>='
+-- Note that is also present the ' <' token along with '<'.
+-- See the NameExpr comment on this file 
+%left '==' '!=' '<' ' <' '>' '<=' '>='
 %left '|' 
 %left '^' 
 %left '&' 
@@ -464,6 +469,8 @@ BinaryOpExpr :: { Expr }
   | BinaryOpExpr '==' BinaryOpExpr                       { BinaryOpExprExpr $ Eq $1 $3 }
   | BinaryOpExpr '!=' BinaryOpExpr                       { BinaryOpExprExpr $ Neq $1 $3 }
   | BinaryOpExpr '<' BinaryOpExpr                        { BinaryOpExprExpr $ Lt $1 $3 }
+  -- For the ' <' token, see the NameExpr comment on this file
+  | BinaryOpExpr ' <' BinaryOpExpr                       { BinaryOpExprExpr $ Lt $1 $3 }
   | BinaryOpExpr '>' BinaryOpExpr                        { BinaryOpExprExpr $ Gt $1 $3 }
   | BinaryOpExpr '<=' BinaryOpExpr                       { BinaryOpExprExpr $ Leq $1 $3 }
   | BinaryOpExpr '>=' BinaryOpExpr                       { BinaryOpExprExpr $ Geq $1 $3 }
@@ -561,7 +568,20 @@ Numerical :: { Numerical }
   | hex                   { LiteralIntHex $1 }
 
 
+-- |
 -- Literal struct (named or positional), function call, function call with !, variable
+-- 
+-- Note: the Move compiler shows an ambiguity where the '<' symbol can either be interpreted as the start of type arguments,
+-- for example in `myFunc<A, B>()`
+-- or a less-than binary operation, such as `myFunc < myFunc2`
+--
+-- The Move compiler solves this issue by requiring that a whitespace must be present before a '<'
+-- in case it refers to a less-than operation, otherwise it must not be present
+-- 
+-- In any other case, the whitespace should be ignored
+--
+-- So, the OptionalTypeArgs are defined with the '<' symbol exclusively,
+-- while the binary operation "less-than" can be defined by both tokens
 NameExpr :: { Expr }
   -- Literal named struct
   : NameAccessChain OptionalTypeArgs '{' NamedStructExprFields '}'        { NamedStructExprExpr $ NamedStructExpr {
@@ -583,7 +603,6 @@ NameExpr :: { Expr }
     fbcFields = $4
   } }
   -- This is a variable!
-  -- FIXME: Ambiguity with < considered type arguments or less than operation
   | NameAccessChain                            %prec LOWER                { NameAccessChainExpr $1 }                      
 
 

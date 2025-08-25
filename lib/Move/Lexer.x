@@ -17,7 +17,9 @@ $graphic                        = $printable # $white
 -- Rules
 tokens :-
   -- Ignored tokens
-  $white+                       ; -- skip white space
+  -- Note that whitespace must be considered in a single case
+  -- For more details, see the NameExpr comment on `Parser.y`
+  $white+                       { \_ _ -> TokenWhitespace                   }
   "//".*                        ; -- skip comments
   -- Separators
   \(                            { \_ _ -> TokenSeparatorLParen              }
@@ -107,9 +109,22 @@ tokens :-
 
 {
 scan :: String -> [Token]
-scan = alexScanTokens
+scan str = filterWhitespace $ alexScanTokens str
 
 -- | Removes underscores and suffix from an integer literal
 parseLiteralInteger :: String -> String
 parseLiteralInteger = filter (/= '_') . takeWhile (/= 'u')
+
+-- |
+-- Given a list of tokens, if there is a whitespace token followed by a '<',
+-- replaces them with a single `TokenOperatorWhiteLt` token,
+-- otherwise just removes the whitespace token.
+--
+-- This is used to prevent an ambiguity of the grammar.
+-- For more details, see the NameExpr comment on `Parser.y`
+filterWhitespace :: [Token] -> [Token]
+filterWhitespace [] = []
+filterWhitespace (TokenWhitespace:TokenOperatorLt:toks) = TokenOperatorWhiteLt:filterWhitespace toks
+filterWhitespace (TokenWhitespace:toks) = filterWhitespace toks
+filterWhitespace (token:toks) = token:filterWhitespace toks
 }

@@ -1,7 +1,10 @@
 module Move.Token (Token (..)) where
 
 data Token
-  = -- Separators
+  = -- The whitespace is required to distinguish "less than" from "type arguments"
+    -- For more details, see the NameExpr comment on `Parser.y`
+    TokenWhitespace
+  | -- Separators
     TokenSeparatorLParen
   | TokenSeparatorRParen
   | TokenSeparatorLBrace
@@ -63,6 +66,9 @@ data Token
   | TokenOperatorEq
   | TokenOperatorNeq
   | TokenOperatorLt
+  -- The following operator means a whitespace followed by a '<'.
+  -- For more details, see the NameExpr comment on `Parser.y`
+  | TokenOperatorWhiteLt
   | TokenOperatorLeq
   | TokenOperatorGt
   | TokenOperatorGeq

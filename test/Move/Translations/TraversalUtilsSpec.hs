@@ -40,7 +40,7 @@ testTraverseModulePostOrder = describe "Tests the function `traverseModulePostOr
           f (ValueLiteral (Numerical (LiteralIntDec val))) _ state = (ValueLiteral $ Numerical $ LiteralIntDec $ val + 1, state + 1)
           f expr _ state = (expr, state)
 
-    (traversedModule, finalState) `shouldBe` (toModule, 7)
+    (traversedModule, finalState) `shouldBe` (toModule, 7 :: Integer)
 
 spec :: Spec
 spec = do
