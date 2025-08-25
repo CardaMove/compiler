@@ -11,8 +11,30 @@ $ stack run
 
 ```
 
-To manually run Happy:
-`ghci -ilib lib/Move/Parser.hs`
+## Lexer commands
+By default, Stack generates the lexer by itself on the build step. Alex can still be manually invoked with the following:
+
+```shell
+$ alex lib/Move/Lexer.x
+```
+
+## Parser commands
+By default, Stack generates the parser by itself on the build step. Happy can still be manually invoked with the following:
+
+```shell
+$ happy lib/Move/Parser.y -i -p -a -d
+```
+
+Where:
+- `-i` generates the `Parser.info` files
+- `-p` generates the `Parser.grammar` file
+- `-a` and `-d` are useful for debugging and will make Happy print the state transitions and shifts/reductions when invoked
+
+The generated parser can also be loaded in **GHCI**:
+
+```shell
+$ ghci -ilib lib/Move/Parser.hs`
+```
 
 ## Notes
 
