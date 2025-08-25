@@ -1,8 +1,10 @@
 module Move.Translations.LoopsSpec (spec) where
 
 import Move.AST
-import Move.Translations.Loops (translateLoopsToWhile)
 import Test.Hspec
+import Move.Lexer (scan)
+import Move.Parser (parse)
+import Move.Translations.Loops (translateLoopsToWhile, translateWhilesToFunctionsInModule)
 
 testLoopsToWhile :: Spec
 testLoopsToWhile = describe "Translating a loop into a while" $ do
@@ -116,6 +118,43 @@ testLoopsToWhile = describe "Translating a loop into a while" $ do
                      }
                  )
 
+testTranslateWhilesToFunctionsInModule :: Spec
+testTranslateWhilesToFunctionsInModule = describe "Tests for the function `translateWhilesToFunctionsInModule`" $ do
+  it "Translates a while loop into a function declaration" $ do
+    let fromModuleStr = "module NamedAddr::TraversalUtilsSpec {\n" ++
+                        "public fun test(x: u64) {\n" ++
+                        "let a = 12;\n" ++
+                        "while(a < x){\n" ++
+                        "let b = 9;\n" ++
+                        "a = a + b;\n" ++
+                        "}\n" ++
+                        "}\n" ++
+                        "}"
+
+    let toModuleStr = "module NamedAddr::TraversalUtilsSpec {\n" ++
+                      "fun mapped_while_0(a: &mut u256, x: &mut u64) {\n" ++
+                      -- The body of the while is inside a Sequence, with the end expression as the recursive call
+                      "if (*a < *x) {\n" ++
+                      "{\n" ++
+                      "let b = 9;\n" ++
+                      "*a = *a + b;\n" ++
+                      "};\n" ++
+                      "mapped_while_0(a, x)\n" ++
+                      "}\n" ++
+                      "}\n" ++
+                      -- The original function calls the newly created one
+                      "public fun test(x: u64) {\n" ++
+                      "let a = 12;\n" ++
+                      "mapped_while_0(&mut a, &mut x)\n" ++
+                      "}\n" ++
+                      "}"
+
+    let fromModule = parse $ scan fromModuleStr
+    let toModule = parse $ scan toModuleStr
+
+    translateWhilesToFunctionsInModule fromModule `shouldBe` toModule
+
 spec :: Spec
 spec = do
   testLoopsToWhile
+  testTranslateWhilesToFunctionsInModule

@@ -31,7 +31,8 @@ traverseExprPostOrder f expr scopes state =
 
 -- |
 -- Similar to `traverseExprPostOrder` but restricted to a Sequence
--- The topmost scope is considered the local one, so it must be provided
+
+-- The topmost scope is considered the local one, so at least one must be provided
 traverseSequencePostOrder :: (Expr -> [Scope] -> state -> (Expr, state)) -> Sequence -> [Scope] -> state -> (Sequence, state)
 traverseSequencePostOrder _ _ [] _ = error "Cannot traverse Sequence with no scopes"
 traverseSequencePostOrder f (Sequence {sequenceUses, sequenceItems, sequenceEndExpr}) (localScope : outerScopes) state =
@@ -106,9 +107,11 @@ traverseModulePostOrder f currModule@Module {moduleTopLevels} state =
             let (mappedExpr, state'') = traverseExprPostOrder f constantExpression [moduleScope] state'
              in (state'', TopLevelConstant $ constant {constantExpression = mappedExpr})
           -- Traverse the function declarations that have a body.
-          -- Note that also here the scope is unchanged
-          topLevelMap state' (TopLevelFunction function@Function {functionBody = Just bodySequence}) =
-            let (mappedSequence, state'') = traverseSequencePostOrder f bodySequence [moduleScope] state'
+          -- Each function will have an additional scope for both the parameters and the body
+          topLevelMap state' (TopLevelFunction function@Function {functionParameters, functionBody = Just bodySequence}) =
+            -- Create a new local scope including the function parameters
+            let functionParametersScope = Map.fromList $ map (\(Parameter{parameterIdentifier, parameterType}) -> (parameterIdentifier, Just parameterType)) functionParameters
+                (mappedSequence, state'') = traverseSequencePostOrder f bodySequence [functionParametersScope, moduleScope] state'
              in (state'', TopLevelFunction $ function {functionBody = Just mappedSequence})
           -- Otherwise do nothing
           topLevelMap state' topLevel = (state', topLevel)

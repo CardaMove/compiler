@@ -3,12 +3,16 @@ module Move.Translations.Utils where
 import Data.Map qualified as Map
 import Move.AST
 
+-- | Dummy type representing any type that is not possible to infer
 unknownType :: Type
 unknownType = TypeConstructor (LocalNameAccessChain $ Identifier "UNKNOWN_TYPE") []
 
+-- | bool type
 booleanType :: Type
 booleanType = TypeConstructor (LocalNameAccessChain $ Identifier "bool") []
 
+-- | Numeric type.
+-- For simplicity, it represents the "bigger" of the numeric types in Move, `u256`
 numericType :: Type
 numericType = TypeConstructor (LocalNameAccessChain $ Identifier "u256") []
 
@@ -130,5 +134,9 @@ inferBindType (BindIdentifier ident) Nothing (Just (TypedExprTerm (TypedExpr {ty
 inferBindType (BindIdentifier ident) Nothing (Just (CastingTerm (Casting {castingType}))) = [(ident, Just castingType)]
 -- while loops have unit type
 inferBindType (BindIdentifier ident) Nothing (Just (WhileTerm _)) = [(ident, Just $ TypeTuple [])]
+-- Basic inference with literal values
+inferBindType (BindIdentifier ident) Nothing (Just (ValueLiteral (Numerical _))) = [(ident, Just numericType)]
+inferBindType (BindIdentifier ident) Nothing (Just (ValueLiteral (Address _))) = [(ident, Just $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [])]
+inferBindType (BindIdentifier ident) Nothing (Just (ValueLiteral (Boolean _))) = [(ident, Just booleanType)]
 -- For all other expressions, either is it needed to know the scope or have any type
 inferBindType bind _ _ = map (,Nothing) (getBindIdentifiers bind)

@@ -4,6 +4,7 @@ module Move.Translations.Loops (translateLoopsToWhile, translateWhilesToFunction
 
 import Data.Data (Data)
 import Data.Generics.Uniplate.Data (transformBi)
+import Data.List (nub, sort)
 import Move.AST
 import Move.Translations.TraversalUtils (traverseExprPostOrder, traverseModulePostOrder)
 import Move.Translations.Utils (Scope, getIdentifierTypeFromScope, getValueOrDefault, isIdentifierInScope, unknownType)
@@ -48,9 +49,6 @@ mapFreeVariableToFunctionParameter (ident, identType) =
       parameterType = TypeMutableRef $ getValueOrDefault identType unknownType
     }
 
-mapFreeVariableToFunctionArgument :: Identifier -> Expr
-mapFreeVariableToFunctionArgument ident = UnaryOpExpr $ MutableReference $ NameAccessChainExpr $ LocalNameAccessChain ident
-
 -- |
 -- Given a while loop, returns a corresponding function call along with function declaration.
 --
@@ -59,33 +57,60 @@ mapFreeVariableToFunctionArgument ident = UnaryOpExpr $ MutableReference $ NameA
 -- Free variables, meaning variables declared outside of the loop, are converteed to references passed as function parameters.
 --
 -- Control keywords such as continue and break are handled internally on the function.
+--
+-- The newly declared function will have as body a sequence with just an end expression, consisting in a if-then term.
+--
+-- The if-then term itself will be composed of a sequence, contaning the while body and a recursive call as end expression
 mapWhileToFunction :: While -> [Scope] -> Identifier -> (PositionalStructExprOrFunctionCall, Function)
 mapWhileToFunction (While {whileCondition, whileExpr}) scopes functionName =
-  let (mappedConditionExpr, freeVarsInConditionExpr) = mapFreeVariablesToDerefsInExpr whileCondition
+  let -- Map both the condition expression and the body of the while
+      (mappedConditionExpr, freeVarsInConditionExpr) = mapFreeVariablesToDerefsInExpr whileCondition
       (mappedBodyExpr, freeVarsInBodyExpr) = mapFreeVariablesToDerefsInExpr whileExpr -- TODO: Add translation for break and continue
-      freeVarsWithType = map (\ident -> (ident, getIdentifierTypeFromScope ident scopes)) (freeVarsInConditionExpr ++ freeVarsInBodyExpr)
+      -- Get all the free variables with their type
+      -- Note that variables are sorted so to avoid confusion when testing
+      allFreeVars = sort $ nub (freeVarsInConditionExpr ++ freeVarsInBodyExpr)
+      freeVarsWithType = map (\ident -> (ident, getIdentifierTypeFromScope ident scopes)) allFreeVars
+      -- For each free variable, create a function parameter as a mutable reference
       functionParameters = map mapFreeVariableToFunctionParameter freeVarsWithType
-      functionArguments = map mapFreeVariableToFunctionArgument (freeVarsInConditionExpr ++ freeVarsInBodyExpr)
+      -- For the invocation from the original function, dereference the variables with the same name
+      functionCallArguments = map (UnaryOpExpr . MutableReference . NameAccessChainExpr . LocalNameAccessChain) allFreeVars
+      -- For the recursive invocation instead, just pass the variables without dereferencing since they are already defined as references
+      recursiveFunctionCallArguments = map (NameAccessChainExpr . LocalNameAccessChain) allFreeVars
 
       functionBody =
         Just $
           Sequence
             { sequenceUses = [],
-              sequenceItems =
-                [ SequenceItemExpr $
-                    IfThenElseTerm $
-                      IfThenElse
-                        { ifThenElseCondition = mappedConditionExpr,
-                          ifThenElseIfBranch = mappedBodyExpr,
-                          ifThenElseElseBranch = Nothing
-                        }
-                ],
-              sequenceEndExpr = Nothing
+              sequenceItems = [],
+              sequenceEndExpr =
+                Just $
+                  IfThenElseTerm $
+                    IfThenElse
+                      { ifThenElseCondition = mappedConditionExpr,
+                        -- The if branch will consist in a sequence with two expression
+                        -- The first expression is the while expression (Note that this might result in a sequence inside a sequence)
+                        -- and the last (end) expression is the recursive call
+                        ifThenElseIfBranch =
+                          SequenceExpr $
+                            Sequence
+                              { sequenceUses = [],
+                                sequenceItems = [SequenceItemExpr mappedBodyExpr],
+                                sequenceEndExpr =
+                                  Just $
+                                    PositionalStructExprOrFunctionCallExpr $
+                                      PositionalStructExprOrFunctionCall
+                                        { pseofcNameAccessChain = LocalNameAccessChain functionName,
+                                          pseofcTypeArgs = [],
+                                          pseofcFields = recursiveFunctionCallArguments
+                                        }
+                              },
+                        ifThenElseElseBranch = Nothing
+                      }
             }
    in ( PositionalStructExprOrFunctionCall
           { pseofcNameAccessChain = LocalNameAccessChain functionName,
             pseofcTypeArgs = [],
-            pseofcFields = functionArguments
+            pseofcFields = functionCallArguments
           },
         Function
           { functionHasNativeModifier = False,
@@ -114,6 +139,7 @@ translationHelper expr' _ functionDecls = (expr', functionDecls)
 -- |
 -- Given an expression, recursively converts each while loop into a function declaration,
 -- and substitutes the loop expression with that function call
+-- Also see documentation of `mapWhileToFunction`
 translateWhilesToFunctions :: Expr -> [Scope] -> (Expr, [Function])
 translateWhilesToFunctions expr scopes = traverseExprPostOrder translationHelper expr scopes []
 
@@ -121,6 +147,7 @@ translateWhilesToFunctions expr scopes = traverseExprPostOrder translationHelper
 -- Given a module, translates all while loops into function calls.
 --
 -- The corresponding function declarations are added inside the module
+-- Also see documentation of `mapWhileToFunction`
 translateWhilesToFunctionsInModule :: Module -> Module
 translateWhilesToFunctionsInModule currModule =
   let (translatedModule@Module {moduleTopLevels}, functionDecls) = traverseModulePostOrder translationHelper currModule []
