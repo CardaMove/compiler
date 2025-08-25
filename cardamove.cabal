@@ -32,6 +32,7 @@ library
       Move.Token
       Move.Translations.Loops
       Move.Translations.Shadowing
+      Move.Translations.TraversalUtils
       Move.Translations.Utils
   other-modules:
       Paths_cardamove

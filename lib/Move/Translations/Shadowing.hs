@@ -106,8 +106,8 @@ removeShadowingInSequence (Sequence {sequenceUses, sequenceItems, sequenceEndExp
             Bindings
               { bindings =
                   case bindings of
-                      BindedSingle bind -> BindedSingle $ updateBindWithUnshadowedIdentifiers bind [newBindings]
-                      BindedTuple binds -> BindedTuple $ map (`updateBindWithUnshadowedIdentifiers` [newBindings]) binds,
+                    BindedSingle bind -> BindedSingle $ updateBindWithUnshadowedIdentifiers bind [newBindings]
+                    BindedTuple binds -> BindedTuple $ map (`updateBindWithUnshadowedIdentifiers` [newBindings]) binds,
                 bindingsBindType,
                 bindingsBindExpr = removeShadowingInExprMaybe bindingsBindExpr scopes'
               }

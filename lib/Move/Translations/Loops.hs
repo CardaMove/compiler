@@ -5,7 +5,8 @@ module Move.Translations.Loops (mapLoopsToWhile, translateWhilesToFunctions, tra
 import Data.Data (Data)
 import Data.Generics.Uniplate.Data (transformBi)
 import Move.AST
-import Move.Translations.Utils (Scope, getIdentifierTypeFromScope, getValueOrDefault, isIdentifierInScope, traverseExprPostOrder, traverseModulePostOrder, unknownType)
+import Move.Translations.TraversalUtils (traverseExprPostOrder, traverseModulePostOrder)
+import Move.Translations.Utils (Scope, getIdentifierTypeFromScope, getValueOrDefault, isIdentifierInScope, unknownType)
 
 -- |
 -- Translates all `loop expr` expressions into `while(true) expr`.
