@@ -5,6 +5,7 @@ module Move.Translations.Loops (translateLoopsToWhile, translateWhilesToFunction
 import Data.Data (Data)
 import Data.Generics.Uniplate.Data (transformBi)
 import Data.List (nub, sort)
+import Data.Maybe (isJust)
 import Data.Set qualified as Set
 import Move.AST
 import Move.Translations.TraversalUtils (traverseExprPostOrder, traverseModulePostOrder)
@@ -153,15 +154,7 @@ traversalHelper Break _ (functionDecls, exprsWithBreak) =
 -- When a SequenceExpr is found
 traversalHelper currSequence@(SequenceExpr Sequence {sequenceUses, sequenceItems, sequenceEndExpr}) _ (functionDecls, exprsWithBreak) =
   -- Check if any of the inner sequence items contain a break. If so, all the subsequent items need to be inserted inside an if
-  --
-  -- Start by converting the end expression into a sequence item.
-  -- Note that this does not interphere with any return value, since in any case the while returns unit
-  let endExprAsSequenceItem = case sequenceEndExpr of
-        Nothing -> []
-        Just expr -> [SequenceItemExpr expr]
-
-      -- Now, if a sequence item contains a break, replace all the subsequent items with an if
-      (mappedSequenceItems, exprsWithBreak') = foldr mapSeqItem (endExprAsSequenceItem, exprsWithBreak) sequenceItems
+  let (mappedSequenceItems, exprsWithBreak') = foldr mapSeqItem ([], exprsWithBreak) sequenceItems
         where
           mapSeqItem seqItemExpr (subseqItems, exprsWithBreakBefore) =
             -- Internal function that, given the expression inside a sequence item, returns the correct sequcne items and state depending if the current expression has a break inside or not
@@ -192,18 +185,34 @@ traversalHelper currSequence@(SequenceExpr Sequence {sequenceUses, sequenceItems
                   SequenceItemExpr itemExpr -> mapItem itemExpr
                   SequenceItemBindExpr Bindings {bindingsBindExpr = Just bindingsBindExpr} -> mapItem bindingsBindExpr
                   _ -> (seqItemExpr : subseqItems, exprsWithBreakBefore)
-   in -- Return a new sequence.
-      -- Note that the ending expression is always moved as a sequence item, unregarding if breaks are encountered or not
-      -- Note that this does not interphere with any return value, since in any case the while returns unit
-      --
+
+      -- The ending expression has not been handled yet
+      -- If the previous sequence items have a break (can be know by checking if this sequence is inside the set of expressions with a break)
+      -- and if the ending expression exists, replace it with an if-then with the expression itself in it, and update the set accodingly.
+      -- Otherwise, do nothing
+      (sequenceEndExpr', exprsWithBreak'') =
+        if Set.member currSequence exprsWithBreak'
+          then case sequenceEndExpr of
+            Nothing -> (sequenceEndExpr, exprsWithBreak')
+            Just sequenceEndExpr'' ->
+              let newEndExpr =
+                    IfThenElseTerm $
+                      IfThenElse
+                        { ifThenElseCondition = UnaryOpExpr $ Negation $ NameAccessChainExpr $ LocalNameAccessChain $ Identifier "break_hit",
+                          ifThenElseIfBranch = sequenceEndExpr'',
+                          ifThenElseElseBranch = Nothing
+                        }
+               in (Just newEndExpr, Set.delete sequenceEndExpr'' exprsWithBreak')
+          else (sequenceEndExpr, exprsWithBreak')
+   in -- Return a new sequence
       -- No additional functions should be declared, the set of expressions containing a break might have been updated
       ( SequenceExpr $
           Sequence
             { sequenceUses = sequenceUses,
               sequenceItems = mappedSequenceItems,
-              sequenceEndExpr = Nothing
+              sequenceEndExpr = sequenceEndExpr'
             },
-        (functionDecls, exprsWithBreak')
+        (functionDecls, exprsWithBreak'')
       )
 --  Otherwise, do nothing
 traversalHelper expr' _ state = (expr', state)
