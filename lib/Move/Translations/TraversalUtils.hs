@@ -7,12 +7,14 @@ import Data.Map qualified as Map
 import Move.AST
 import Move.Translations.Utils
 
+type TraverseExprMapper state = Expr -> [Scope] -> state -> (Expr, state)
+
 -- |
 -- Performs a post-order traversal of a tree of expressions.
 --
 -- Accepts as input a function that takes the current expression, all the accumulated scopes at that node,
 -- and a custom state. The function should return an expression to substitute and a new state
-traverseExprPostOrder :: (Expr -> [Scope] -> state -> (Expr, state)) -> Expr -> [Scope] -> state -> (Expr, state)
+traverseExprPostOrder :: TraverseExprMapper state -> Expr -> [Scope] -> state -> (Expr, state)
 --      When a sequence is found, call the specific traversal for it and then invoke f on the resulting Sequence
 --      Note that outside of a SequenceExpr, the scope is not modified
 traverseExprPostOrder f (SequenceExpr sequence') scopes state =
@@ -33,7 +35,7 @@ traverseExprPostOrder f expr scopes state =
 -- Similar to `traverseExprPostOrder` but restricted to a Sequence
 
 -- The topmost scope is considered the local one, so at least one must be provided
-traverseSequencePostOrder :: (Expr -> [Scope] -> state -> (Expr, state)) -> Sequence -> [Scope] -> state -> (Sequence, state)
+traverseSequencePostOrder :: TraverseExprMapper state -> Sequence -> [Scope] -> state -> (Sequence, state)
 traverseSequencePostOrder _ _ [] _ = error "Cannot traverse Sequence with no scopes"
 traverseSequencePostOrder f (Sequence {sequenceUses, sequenceItems, sequenceEndExpr}) (localScope : outerScopes) state =
   -- First, add the uses to the local scope

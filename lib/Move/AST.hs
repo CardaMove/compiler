@@ -157,7 +157,7 @@ data Use
     useAlias :: Maybe Identifier,
     useMembers :: [UseMember]
   }
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data, Typeable, Ord)
 
 -- | A use can include specific members, each with an optional alias
 data UseMember
@@ -165,7 +165,7 @@ data UseMember
   { useMemberIdentifier :: Identifier,
     useMemberUseAlias :: Maybe Identifier
   }
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data, Typeable, Ord)
 
 -- | Friend with another module
 newtype Friend = Friend NameAccessChain
@@ -222,7 +222,7 @@ data Type
   | TypeImmutableRef Type
   | TypeMutableRef Type
   | TypeTuple [Type]
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data, Typeable, Ord)
 
 -- | A function declaration
 -- | Example: `public entry my_func<...>(a: A, b: B): u64 acquires B {...}`
@@ -301,7 +301,7 @@ data Expr
   | Abort Expr
   | Break
   | Continue
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data, Typeable, Ord)
 
 -- | Binary operators involve two expressions
 data BinaryOpExpr
@@ -323,7 +323,7 @@ data BinaryOpExpr
   | Mult Expr Expr
   | Div Expr Expr
   | Mod Expr Expr
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data, Typeable, Ord)
 
 -- | An assignment is considered an expression. It is composed by `left_part = right_part`, both expressions
 data Assignment
@@ -331,7 +331,7 @@ data Assignment
   { assignmentLeft :: Expr,
     assignmentRight :: Expr
   }
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data, Typeable, Ord)
 
 -- | A unary expression involves a single expression or identifier
 -- | References and dereferences are considered unary expressions
@@ -342,7 +342,7 @@ data UnaryExpr
   | Dereference Expr
   | MoveExpr Identifier
   | CopyExpr Identifier
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data, Typeable, Ord)
 
 -- | A dot chain is a serie of accesses via dot notation
 -- | Example `my_obj.inner.a`
@@ -352,7 +352,7 @@ data DotOrIndexChain
   { dotAccessLeft :: Expr,
     dotAccessRight :: Identifier
   }
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data, Typeable, Ord)
 
 -- | A while construct
 data While
@@ -360,7 +360,7 @@ data While
   { whileCondition :: Expr,
     whileExpr :: Expr
   }
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data, Typeable, Ord)
 
 -- | If-then-else construct, with else branch optional
 data IfThenElse
@@ -369,7 +369,7 @@ data IfThenElse
     ifThenElseIfBranch :: Expr,
     ifThenElseElseBranch :: Maybe Expr
   }
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data, Typeable, Ord)
 
 -- | A casting is composed by an expression and the target type
 data Casting
@@ -377,7 +377,7 @@ data Casting
   { castingExpr :: Expr,
     castingType :: Type
   }
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data, Typeable, Ord)
 
 -- | A typed expression TODO: unsure when it is used
 data TypedExpr
@@ -385,26 +385,26 @@ data TypedExpr
   { typedExpr :: Expr,
     typedExprType :: Type
   }
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data, Typeable, Ord)
 
 -- | A literal value can either be an address, a boolean or a numeric value
 data ValueLiteral
   = Address Address
   | Boolean Bool
   | Numerical Numerical
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data, Typeable, Ord)
 
 -- | An address can either be named (string name) or numerical
 data Address
   = NamedAddress Identifier
   | NumericalAddress Numerical
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data, Typeable, Ord)
 
 -- | A integer value
 data Numerical
   = LiteralIntDec Int
   | LiteralIntHex String
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data, Typeable, Ord)
 
 -- | A literal named struct, used as expression
 -- | Example: `MyStruct<...>{a: 12, b: 24}`
@@ -414,7 +414,7 @@ data NamedStructExpr
     nseTypeArgs :: [Type],
     nseFields :: [NamedStructExprField]
   }
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data, Typeable, Ord)
 
 -- | A field of a named struct is composed by an identifier (the label of the struct), and the related expression.
 -- | If the expression is the same identifier of the label, it can be omitted as a suger syntax
@@ -424,7 +424,7 @@ data NamedStructExprField
   { nsefIdentifier :: Identifier,
     nsefExpr :: Maybe Expr
   }
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data, Typeable, Ord)
 
 -- | A name access chain is an access to a variable, struct or function that might be declared on the current module or another one
 -- | Examples: `my_local_variable`, `friendModule::my_struct`, `moduleAddress::moduleIdentifier::my_function`
@@ -432,7 +432,7 @@ data NameAccessChain
   = LocalNameAccessChain Identifier
   | AliasedNameAccessChain Address Identifier
   | UnaliasedNameAccessChain Address Identifier Identifier
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data, Typeable, Ord)
 
 -- | The following can either be a function call or a positional struct used as an expression.
 -- | It's not possible to distinguish a positional struct wrt a function call just by parsing.
@@ -444,7 +444,7 @@ data PositionalStructExprOrFunctionCall
     pseofcTypeArgs :: [Type],
     pseofcFields :: [Expr]
   }
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data, Typeable, Ord)
 
 -- | A function call with a bang! before the left parenthesis. Used by `assert!()`
 data FunctionBangCall
@@ -452,7 +452,7 @@ data FunctionBangCall
   { fbcNameAccessChain :: NameAccessChain,
     fbcFields :: [Expr]
   }
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data, Typeable, Ord)
 
 -- | A Sequence starts and ends with braces {...} and it's a serie of use declarations separated by ';',
 -- | followed by a serie of expressions or bindings separated by ';',
@@ -464,14 +464,14 @@ data Sequence
     sequenceItems :: [SequenceItem],
     sequenceEndExpr :: Maybe Expr
   }
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data, Typeable, Ord)
 
 -- | A sequence item can either be an expression or a binding. Always ends with a ';'
 -- | Examples: `let a: u64 = 12;`, `a + 2;`
 data SequenceItem
   = SequenceItemExpr Expr
   | SequenceItemBindExpr Bindings
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data, Typeable, Ord)
 
 -- | A let can bind a single variable or multiple ones via tuple notation
 -- | Example: `let (a, b): (u64, bool) = (12, true);`
@@ -481,7 +481,7 @@ data Bindings
     bindingsBindType :: Maybe Type,
     bindingsBindExpr :: Maybe Expr
   }
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data, Typeable, Ord)
 
 -- | A binding can either be a single bind, or multiple
 -- Note that multiple bindings also include the case of a one-element tuple
@@ -490,7 +490,7 @@ data Bindings
 --
 -- Example of multiple binds: `let (x) = (...)`, `let (a, b) = (...)`
 data Binded = BindedSingle Bind | BindedTuple [Bind]
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data, Typeable, Ord)
 
 -- | A single binding (left side of the '=').
 -- | It can either bind an identifier, or perform pattern matching to bind labels of a struct.
@@ -499,7 +499,7 @@ data Bind
   = BindIdentifier Identifier
   | BindNamedStruct BindedNamedStruct
   | BindPositionalStruct BindedPositionalStruct
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data, Typeable, Ord)
 
 -- | A bind consisting in a pattern matching with a named struct
 -- | This binding can specify a partial pattern via '..'
@@ -510,7 +510,7 @@ data BindedNamedStruct
     bnsTypeArgs :: [Type],
     bnsFields :: BindedFields
   }
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data, Typeable, Ord)
 
 -- | A bind consisting in a pattern matching with a positional struct
 -- | This binding can specify a partial pattern via '..'
@@ -521,7 +521,7 @@ data BindedPositionalStruct
     bpsTypeArgs :: [Type],
     bpsFields :: BindedFields
   }
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data, Typeable, Ord)
 
 -- | Fields in a binding via pattern match, either named or positional struct
 -- | Additionally, a partial pattern can be used to skip fields
@@ -530,7 +530,7 @@ data BindedFields
   { hasPartialPattern :: Bool,
     bindedFields :: [BindedField]
   }
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data, Typeable, Ord)
 
 -- | A single field that is being binded via pattern matching
 -- | Optionally, it can have an inner bind to it
@@ -540,4 +540,4 @@ data BindedField
   { bindFieldIdentifier :: Identifier,
     bindFieldInnerBind :: Maybe Bind
   }
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data, Typeable, Ord)
