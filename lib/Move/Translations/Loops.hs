@@ -67,7 +67,9 @@ mapWhileToFunction :: While -> [Scope] -> Identifier -> (PositionalStructExprOrF
 mapWhileToFunction (While {whileCondition, whileExpr}) scopes functionName =
   let -- Map both the condition expression and the body of the while
       (mappedConditionExpr, freeVarsInConditionExpr) = mapFreeVariablesToDerefsInExpr whileCondition
-      (mappedBodyExpr, freeVarsInBodyExpr) = mapFreeVariablesToDerefsInExpr whileExpr -- TODO: Add translation for break and continue
+      -- TODO: translations for break and continue here are already handled
+      -- TODO: just add definitions for break_hit and continue_hit
+      (mappedBodyExpr, freeVarsInBodyExpr) = mapFreeVariablesToDerefsInExpr whileExpr
       -- Get all the free variables with their type
       -- Note that variables are sorted so to avoid confusion when testing
       allFreeVars = sort $ nub (freeVarsInConditionExpr ++ freeVarsInBodyExpr)
