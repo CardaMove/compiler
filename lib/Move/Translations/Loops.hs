@@ -3,13 +3,12 @@ module Move.Translations.Loops (translateLoopsToWhile, translateWhilesToFunction
 -- Importing from Uniplate.Data allows to derive Biplate instances automatically from data types that derive Data
 
 import Data.Data (Data)
-import Data.Generics.Uniplate.Data (transformBi)
+import Data.Generics.Uniplate.Data (children, transformBi)
 import Data.List (nub, sort)
-import Data.Maybe (isJust)
 import Data.Set qualified as Set
 import Move.AST
 import Move.Translations.TraversalUtils (traverseExprPostOrder, traverseModulePostOrder)
-import Move.Translations.Utils (Scope, getIdentifierTypeFromScope, getValueOrDefault, isIdentifierInScope, unknownType)
+import Move.Translations.Utils (Scope, booleanType, getIdentifierTypeFromScope, getValueOrDefault, isIdentifierInScope, unknownType)
 
 -- |
 -- Translates all `loop expr` expressions into `while(true) expr`.
@@ -63,13 +62,50 @@ mapFreeVariableToFunctionParameter (ident, identType) =
 -- The newly declared function will have as body a sequence with just an end expression, consisting in a if-then term.
 --
 -- The if-then term itself will be composed of a sequence, contaning the while body and a recursive call as end expression
-mapWhileToFunction :: While -> [Scope] -> Identifier -> (PositionalStructExprOrFunctionCall, Function)
-mapWhileToFunction (While {whileCondition, whileExpr}) scopes functionName =
+--
+-- Also see `traversalHelper`
+mapWhileToFunction :: While -> [Scope] -> Bool -> Identifier -> (PositionalStructExprOrFunctionCall, Function)
+mapWhileToFunction (While {whileCondition, whileExpr}) scopes containsBreak functionName =
   let -- Map both the condition expression and the body of the while
       (mappedConditionExpr, freeVarsInConditionExpr) = mapFreeVariablesToDerefsInExpr whileCondition
-      -- TODO: translations for break and continue here are already handled
-      -- TODO: just add definitions for break_hit and continue_hit
-      (mappedBodyExpr, freeVarsInBodyExpr) = mapFreeVariablesToDerefsInExpr whileExpr
+      -- Translations for break and continue here have already been handled since it's a post order traversal
+      -- It is needed to add the bindings for break (and continue) variables
+      whileExprWithBreakBind =
+        if containsBreak
+          then case whileExpr of
+            SequenceExpr currSeq@Sequence {sequenceItems} ->
+              SequenceExpr $
+                currSeq
+                  { sequenceItems =
+                      ( SequenceItemBindExpr $
+                          Bindings
+                            { bindings = BindedSingle $ BindIdentifier $ Identifier "break_hit",
+                              bindingsBindType = Just booleanType,
+                              bindingsBindExpr = Just $ ValueLiteral $ Boolean False
+                            }
+                      )
+                        : sequenceItems
+                  }
+            -- Is it possible that the while body is not a sequence, but still has a break in it
+            --    Example: `while(a > b) a = a + if (a < b) break else 2`
+            -- In this case, wrap it in a sequence
+            expr ->
+              SequenceExpr $
+                Sequence
+                  { sequenceUses = [],
+                    sequenceItems =
+                      [ SequenceItemBindExpr $
+                          Bindings
+                            { bindings = BindedSingle $ BindIdentifier $ Identifier "break_hit",
+                              bindingsBindType = Just booleanType,
+                              bindingsBindExpr = Just $ ValueLiteral $ Boolean False
+                            }
+                      ],
+                    sequenceEndExpr = Just expr
+                  }
+          else whileExpr
+
+      (mappedBodyExpr, freeVarsInBodyExpr) = mapFreeVariablesToDerefsInExpr whileExprWithBreakBind
       -- Get all the free variables with their type
       -- Note that variables are sorted so to avoid confusion when testing
       allFreeVars = sort $ nub (freeVarsInConditionExpr ++ freeVarsInBodyExpr)
@@ -80,6 +116,13 @@ mapWhileToFunction (While {whileCondition, whileExpr}) scopes functionName =
       functionCallArguments = map (UnaryOpExpr . MutableReference . NameAccessChainExpr . LocalNameAccessChain) allFreeVars
       -- For the recursive invocation instead, just pass the variables without dereferencing since they are already defined as references
       recursiveFunctionCallArguments = map (NameAccessChainExpr . LocalNameAccessChain) allFreeVars
+      recursiveFunctionCall =
+        PositionalStructExprOrFunctionCallExpr $
+          PositionalStructExprOrFunctionCall
+            { pseofcNameAccessChain = LocalNameAccessChain functionName,
+              pseofcTypeArgs = [],
+              pseofcFields = recursiveFunctionCallArguments
+            }
 
       functionBody =
         Just $
@@ -93,22 +136,26 @@ mapWhileToFunction (While {whileCondition, whileExpr}) scopes functionName =
                       { ifThenElseCondition = mappedConditionExpr,
                         -- The if branch will consist in a sequence with two expression
                         -- The first expression is the while expression (Note that this might result in a sequence inside a sequence)
-                        -- and the last (end) expression is the recursive call
+                        -- and the last (end) expression is the recursive call (if break not hit)
                         -- Note that this does not interphere with any return value, since in any case the while returns unit
                         ifThenElseIfBranch =
                           SequenceExpr $
                             Sequence
                               { sequenceUses = [],
                                 sequenceItems = [SequenceItemExpr mappedBodyExpr],
-                                -- TODO: Add check if break not hit
+                                -- If the while body contains breaks, wrap the recursion in a if(!break_hit) expression
                                 sequenceEndExpr =
-                                  Just $
-                                    PositionalStructExprOrFunctionCallExpr $
-                                      PositionalStructExprOrFunctionCall
-                                        { pseofcNameAccessChain = LocalNameAccessChain functionName,
-                                          pseofcTypeArgs = [],
-                                          pseofcFields = recursiveFunctionCallArguments
-                                        }
+                                  if containsBreak
+                                    then
+                                      Just $
+                                        IfThenElseTerm $
+                                          IfThenElse
+                                            { ifThenElseCondition = UnaryOpExpr $ Negation $ NameAccessChainExpr $ LocalNameAccessChain $ Identifier "break_hit",
+                                              ifThenElseIfBranch = recursiveFunctionCall,
+                                              ifThenElseElseBranch = Nothing
+                                            }
+                                    -- Otherwise just pass the recursive call
+                                    else Just recursiveFunctionCall
                               },
                         ifThenElseElseBranch = Nothing
                       }
@@ -134,12 +181,24 @@ mapWhileToFunction (While {whileCondition, whileExpr}) scopes functionName =
 -- |
 -- Helper function for both `translateWhilesToFunctions` and `translateWhilesToFunctionsInModule`.
 --
--- What it dos is calling the other `mapWhileToFunction` to translate a single while loop,
--- and ignoring any other expression type
+-- It is the function invoked during the post order traversal.
+-- The intended execution is the following:
+--
+--  - Each break is substituted with an assignment to the flag variable `break_hit`
+--    and the break expression is marked as having a break in it
+--
+--  - As the traversal moves to the root, each parent expression that has at least an expression with a break
+--    is considered as having a break itself
+--  - If a sequence is found an any of its sequence items (end expression excluded) have a break:
+--  - - Wrap every subsequent sequence item inside an `if (!break_hit)`
+--  - - Eventually, wrap the ending expression
+--  - When a while is found, translate it into a function call and declaration where:
+--  - - All free variables in both the body and condition of the while are function parameters as references
+--  - - If the while body is marked as having a break, declare the flag variable `break_hit` and wrap the recursive call in an if-then
 traversalHelper :: (Expr -> [Scope] -> ([Function], Set.Set Expr) -> (Expr, ([Function], Set.Set Expr)))
 --  When a while loop is found, translate it
-traversalHelper (WhileTerm whileExpr) scopes' (functionDecls, exprsWithBreak) =
-  let (functionCall, functionDecl) = mapWhileToFunction whileExpr scopes' (Identifier $ "mapped_while_" ++ show (length functionDecls))
+traversalHelper (WhileTerm whileLoop@While {whileExpr}) scopes' (functionDecls, exprsWithBreak) =
+  let (functionCall, functionDecl) = mapWhileToFunction whileLoop scopes' (Set.member whileExpr exprsWithBreak) (Identifier $ "mapped_while_" ++ show (length functionDecls))
    in (PositionalStructExprOrFunctionCallExpr functionCall, (functionDecl : functionDecls, exprsWithBreak))
 --  When a break is found
 traversalHelper Break _ (functionDecls, exprsWithBreak) =
@@ -216,8 +275,15 @@ traversalHelper currSequence@(SequenceExpr Sequence {sequenceUses, sequenceItems
             },
         (functionDecls, exprsWithBreak'')
       )
---  Otherwise, do nothing
-traversalHelper expr' _ state = (expr', state)
+--  Otherwise, simply check if the inner expressions have a break in them
+--  If so, this expression should also be marked as having a break
+traversalHelper expr _ (functionDecls, exprsWithBreak) =
+  let subExpr = children expr
+      -- TODO: Remove the sub expression for cleaning?
+      hasBreak = any (`Set.member` exprsWithBreak) subExpr
+
+      exprsWithBreak' = if hasBreak then Set.insert expr exprsWithBreak else exprsWithBreak
+   in (expr, (functionDecls, exprsWithBreak'))
 
 -- |
 -- Given an expression, recursively converts each while loop into a function declaration,
