@@ -5,6 +5,7 @@ module Move.Translations.Loops (translateLoopsToWhile, translateWhilesToFunction
 import Data.Data (Data)
 import Data.Generics.Uniplate.Data (children, transformBi)
 import Data.List (nub, sort)
+import Data.Map qualified as Map
 import Data.Set qualified as Set
 import Move.AST
 import Move.Translations.TraversalUtils (traverseExprPostOrder, traverseModulePostOrder)
@@ -106,14 +107,23 @@ mapWhileToFunction (While {whileCondition, whileExpr}) scopes containsBreak func
           else whileExpr
 
       (mappedBodyExpr, freeVarsInBodyExpr) = mapFreeVariablesToDerefsInExpr whileExprWithBreakBind
+      --
+      -- If a break_hit flag is added to the body of the while, it needs to be pushed on the scope so that its type can be retrieved
+      scopes' =
+        if containsBreak
+          then Map.fromList [(Identifier "break_hit", Just booleanType)] : scopes
+          else scopes
+
       -- Get all the free variables with their type
       -- Note that variables are sorted so to avoid confusion when testing
       allFreeVars = sort $ nub (freeVarsInConditionExpr ++ freeVarsInBodyExpr)
-      freeVarsWithType = map (\ident -> (ident, getIdentifierTypeFromScope ident scopes)) allFreeVars
+      freeVarsWithType = map (\ident -> (ident, getIdentifierTypeFromScope ident scopes')) allFreeVars
+      --
       -- For each free variable, create a function parameter as a mutable reference
       functionParameters = map mapFreeVariableToFunctionParameter freeVarsWithType
       -- For the invocation from the original function, dereference the variables with the same name
       functionCallArguments = map (UnaryOpExpr . MutableReference . NameAccessChainExpr . LocalNameAccessChain) allFreeVars
+      --
       -- For the recursive invocation instead, just pass the variables without dereferencing since they are already defined as references
       recursiveFunctionCallArguments = map (NameAccessChainExpr . LocalNameAccessChain) allFreeVars
       recursiveFunctionCall =
@@ -196,10 +206,12 @@ mapWhileToFunction (While {whileCondition, whileExpr}) scopes containsBreak func
 --  - - All free variables in both the body and condition of the while are function parameters as references
 --  - - If the while body is marked as having a break, declare the flag variable `break_hit` and wrap the recursive call in an if-then
 traversalHelper :: (Expr -> [Scope] -> ([Function], Set.Set Expr) -> (Expr, ([Function], Set.Set Expr)))
+--
 --  When a while loop is found, translate it
 traversalHelper (WhileTerm whileLoop@While {whileExpr}) scopes' (functionDecls, exprsWithBreak) =
   let (functionCall, functionDecl) = mapWhileToFunction whileLoop scopes' (Set.member whileExpr exprsWithBreak) (Identifier $ "mapped_while_" ++ show (length functionDecls))
    in (PositionalStructExprOrFunctionCallExpr functionCall, (functionDecl : functionDecls, exprsWithBreak))
+--
 --  When a break is found
 traversalHelper Break _ (functionDecls, exprsWithBreak) =
   -- Replace it with an assignment `break_hit = true`
@@ -212,15 +224,18 @@ traversalHelper Break _ (functionDecls, exprsWithBreak) =
    in -- Add the new assignment to the set of expressions that contain a break
       -- (in fact, this assignment will act as a break)
       (expr', (functionDecls, Set.insert expr' exprsWithBreak))
+--
 -- When a SequenceExpr is found
-traversalHelper currSequence@(SequenceExpr Sequence {sequenceUses, sequenceItems, sequenceEndExpr}) _ (functionDecls, exprsWithBreak) =
+traversalHelper (SequenceExpr Sequence {sequenceUses, sequenceItems, sequenceEndExpr}) _ (functionDecls, exprsWithBreak) =
   -- Check if any of the inner sequence items contain a break. If so, all the subsequent items need to be inserted inside an if
-  let (mappedSequenceItems, exprsWithBreak') = foldr mapSeqItem ([], exprsWithBreak) sequenceItems
+  let (mappedSequenceItems, anySeqItemHasBreak) = foldr mapSeqItem ([], False) sequenceItems
         where
-          mapSeqItem seqItemExpr (subseqItems, exprsWithBreakBefore) =
-            -- Internal function that, given the expression inside a sequence item, returns the correct sequcne items and state depending if the current expression has a break inside or not
+          mapSeqItem seqItemExpr (subseqItems, anySeqItemHasBreak'') =
+            -- Internal function that, given the expression inside a sequence item,
+            -- returns the correct sequence items and state depending if the current expression has a break inside or not
             let mapItem currExpr =
-                  if Set.member currExpr exprsWithBreakBefore
+                  if Set.member currExpr exprsWithBreak && not (null subseqItems)
+                    -- The if-then should be created only if there are sequence items to wrap
                     then
                       let ifThenElse =
                             SequenceItemExpr $
@@ -236,26 +251,23 @@ traversalHelper currSequence@(SequenceExpr Sequence {sequenceUses, sequenceItems
                                           },
                                     ifThenElseElseBranch = Nothing
                                   }
-                          -- Remove the current expression from the set of expression that have a break, both for cleaning and to mark this expression as "handled"
-                          -- Then, add the whole sequence expression to this set. This operation might be redundant if the sequence ha already been added
-                          exprsWithBreakAfter = Set.insert currSequence $ Set.delete currExpr exprsWithBreakBefore
-                       in ([seqItemExpr, ifThenElse], exprsWithBreakAfter)
-                    else (seqItemExpr : subseqItems, exprsWithBreakBefore)
+                       in ([seqItemExpr, ifThenElse], True)
+                    -- Otherwise, append this item and still check if it has a break
+                    else (seqItemExpr : subseqItems, anySeqItemHasBreak'' || Set.member currExpr exprsWithBreak)
              in -- The action to take is the same independently if the sequence item is an expression or a binding
                 case seqItemExpr of
                   SequenceItemExpr itemExpr -> mapItem itemExpr
                   SequenceItemBindExpr Bindings {bindingsBindExpr = Just bindingsBindExpr} -> mapItem bindingsBindExpr
-                  _ -> (seqItemExpr : subseqItems, exprsWithBreakBefore)
+                  _ -> (seqItemExpr : subseqItems, anySeqItemHasBreak'')
 
-      -- The ending expression has not been handled yet
-      -- If the previous sequence items have a break (can be know by checking if this sequence is inside the set of expressions with a break)
-      -- and if the ending expression exists, replace it with an if-then with the expression itself in it, and update the set accodingly.
-      -- Otherwise, do nothing
-      (sequenceEndExpr', exprsWithBreak'') =
-        if Set.member currSequence exprsWithBreak'
-          then case sequenceEndExpr of
-            Nothing -> (sequenceEndExpr, exprsWithBreak')
-            Just sequenceEndExpr'' ->
+      -- Then, handle the ending expression
+      -- This expression might be wrapped if any of the previous sequence items have a brek
+      -- And in any case, it might contain a break itself, that must be forwarded to the entire sequence
+      (sequenceEndExpr', anySeqItemHasBreak') = case sequenceEndExpr of
+        Nothing -> (sequenceEndExpr, anySeqItemHasBreak)
+        Just sequenceEndExpr'' ->
+          if anySeqItemHasBreak
+            then
               let newEndExpr =
                     IfThenElseTerm $
                       IfThenElse
@@ -263,23 +275,27 @@ traversalHelper currSequence@(SequenceExpr Sequence {sequenceUses, sequenceItems
                           ifThenElseIfBranch = sequenceEndExpr'',
                           ifThenElseElseBranch = Nothing
                         }
-               in (Just newEndExpr, Set.delete sequenceEndExpr'' exprsWithBreak')
-          else (sequenceEndExpr, exprsWithBreak')
-   in -- Return a new sequence
-      -- No additional functions should be declared, the set of expressions containing a break might have been updated
-      ( SequenceExpr $
+               in (Just newEndExpr, True)
+            else (sequenceEndExpr, Set.member sequenceEndExpr'' exprsWithBreak)
+
+      -- Create the new sequence expression
+      newSequence =
+        SequenceExpr $
           Sequence
             { sequenceUses = sequenceUses,
               sequenceItems = mappedSequenceItems,
               sequenceEndExpr = sequenceEndExpr'
-            },
-        (functionDecls, exprsWithBreak'')
-      )
+            }
+      -- And if necessary, add it to the set of expressions that have a break
+      exprsWithBreak' = if anySeqItemHasBreak' then Set.insert newSequence exprsWithBreak else exprsWithBreak
+   in -- Return a new sequence
+      -- No additional functions should be declared, the set of expressions containing a break might have been updated
+      (newSequence, (functionDecls, exprsWithBreak'))
+--
 --  Otherwise, simply check if the inner expressions have a break in them
 --  If so, this expression should also be marked as having a break
 traversalHelper expr _ (functionDecls, exprsWithBreak) =
   let subExpr = children expr
-      -- TODO: Remove the sub expression for cleaning?
       hasBreak = any (`Set.member` exprsWithBreak) subExpr
 
       exprsWithBreak' = if hasBreak then Set.insert expr exprsWithBreak else exprsWithBreak

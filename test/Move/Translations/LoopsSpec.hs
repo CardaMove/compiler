@@ -155,6 +155,70 @@ testTranslateWhilesToFunctionsInModule = describe "Tests for the function `trans
 
     translateWhilesToFunctionsInModule fromModule `shouldBe` toModule
 
+  it "Translates a while loop with break inside" $ do
+    let fromModuleStr = "module NamedAddr::TraversalUtilsSpec {\n" ++
+                        "public fun whileLoop(n: u64): u64 {\n" ++
+                        "let sum = 0;\n" ++
+                        "let i = 1;\n" ++
+                        "while (i <= n) {\n" ++
+                        "let inner = 42;\n" ++
+                        "sum = sum + i;\n" ++
+                        "if (i == 100) {\n" ++
+                        "break;\n" ++
+                        -- Useless, but other instructions can be added after a breaks
+                        "let a = 12;\n" ++
+                        "};\n" ++
+                        "if (n == 50) {\n" ++
+                        "break;\n" ++
+                        "};\n" ++
+                        "let (a, b): (u64, u64);\n" ++
+                        "inner + 1\n" ++
+                        "};\n" ++
+                        "sum\n" ++
+                        "}\n" ++
+                        "}"
+
+    let toModuleStr = "module NamedAddr::TraversalUtilsSpec {\n" ++
+                      "fun mapped_while_0(i: &mut u256, n: &mut u64, sum: &mut u256){\n" ++
+                      "if(*i <= *n){\n" ++
+                      "{\n" ++
+                      "let break_hit: bool = false;\n" ++
+                      "let inner = 42;\n" ++
+                      "*sum = *sum + *i;\n" ++
+                      "if (*i == 100) {\n" ++
+                      "break_hit = true;\n" ++
+                      "if (!break_hit){\n" ++
+                      "let a = 12;\n" ++
+                      "};\n" ++
+                      "};\n" ++
+                      "if (!break_hit){\n" ++
+                      "if (*n == 50) {\n" ++
+                      "break_hit = true;\n" ++
+                      "};\n" ++
+                      "if (!break_hit) {\n" ++
+                      "let (a, b): (u64, u64);\n" ++
+                      "};\n" ++
+                      "};\n" ++
+                      "inner + 1\n" ++
+                      "};\n" ++
+                      "if (!break_hit){\n" ++
+                      "mapped_while_0(i, n, sum)\n" ++
+                      "}\n" ++
+                      "}\n" ++
+                      "}\n" ++
+                      "public fun whileLoop(n: u64): u64 {\n" ++
+                      "let sum = 0;\n" ++
+                      "let i = 1;\n" ++
+                      "mapped_while_0(&mut i, &mut n, &mut sum);\n" ++
+                      "sum\n" ++
+                      "}\n" ++
+                      "}"
+
+    let fromModule = parse $ scan fromModuleStr
+    let toModule = parse $ scan toModuleStr
+
+    translateWhilesToFunctionsInModule fromModule `shouldBe` toModule
+
 spec :: Spec
 spec = do
   testLoopsToWhile
