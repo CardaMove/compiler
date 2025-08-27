@@ -7,3 +7,6 @@ lib/Move/Lexer.hs
 lib/Move/Parser.hs
 lib/Move/Parser.grammar
 lib/Move/Parser.info
+
+# vscode logs
+.vscode/phoityne.log

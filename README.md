@@ -36,6 +36,11 @@ The generated parser can also be loaded in **GHCI**:
 $ ghci -ilib lib/Move/Parser.hs`
 ```
 
+## Haskell debugger
+For VSCode, install [Haskell GHCi Debug Adapter Phoityne](https://marketplace.visualstudio.com/items?itemName=phoityne.phoityne-vscode)
+
+Run with configuration **haskell(stack)**
+
 ## Notes
 
 ### Move function bodies
