@@ -67,7 +67,23 @@ mapFreeVariableToFunctionParameter (ident, identType) =
 -- Also see `traversalHelper`
 mapWhileToFunction :: While -> [Scope] -> Bool -> Identifier -> (PositionalStructExprOrFunctionCall, Function)
 mapWhileToFunction (While {whileCondition, whileExpr}) scopes containsBreak functionName =
-  let -- Map both the condition expression and the body of the while
+  let -- Declaring flag variables
+      breakHitDecl =
+        SequenceItemBindExpr $
+          Bindings
+            { bindings = BindedSingle $ BindIdentifier $ Identifier "break_hit",
+              bindingsBindType = Just booleanType,
+              bindingsBindExpr = Just $ ValueLiteral $ Boolean False
+            }
+      continueHitDecl =
+        SequenceItemBindExpr $
+          Bindings
+            { bindings = BindedSingle $ BindIdentifier $ Identifier "continue_hit",
+              bindingsBindType = Just booleanType,
+              bindingsBindExpr = Just $ ValueLiteral $ Boolean False
+            }
+
+      -- Map both the condition expression and the body of the while
       (mappedConditionExpr, freeVarsInConditionExpr) = mapFreeVariablesToDerefsInExpr whileCondition
       -- Translations for break and continue here have already been handled since it's a post order traversal
       -- It is needed to add the bindings for break (and continue) variables
@@ -78,14 +94,8 @@ mapWhileToFunction (While {whileCondition, whileExpr}) scopes containsBreak func
               SequenceExpr $
                 currSeq
                   { sequenceItems =
-                      ( SequenceItemBindExpr $
-                          Bindings
-                            { bindings = BindedSingle $ BindIdentifier $ Identifier "break_hit",
-                              bindingsBindType = Just booleanType,
-                              bindingsBindExpr = Just $ ValueLiteral $ Boolean False
-                            }
-                      )
-                        : sequenceItems
+                      [breakHitDecl, continueHitDecl]
+                        ++ sequenceItems
                   }
             -- Is it possible that the while body is not a sequence, but still has a break in it
             --    Example: `while(a > b) a = a + if (a < b) break else 2`
@@ -94,24 +104,17 @@ mapWhileToFunction (While {whileCondition, whileExpr}) scopes containsBreak func
               SequenceExpr $
                 Sequence
                   { sequenceUses = [],
-                    sequenceItems =
-                      [ SequenceItemBindExpr $
-                          Bindings
-                            { bindings = BindedSingle $ BindIdentifier $ Identifier "break_hit",
-                              bindingsBindType = Just booleanType,
-                              bindingsBindExpr = Just $ ValueLiteral $ Boolean False
-                            }
-                      ],
+                    sequenceItems = [breakHitDecl, continueHitDecl],
                     sequenceEndExpr = Just expr
                   }
           else whileExpr
 
       (mappedBodyExpr, freeVarsInBodyExpr) = mapFreeVariablesToDerefsInExpr whileExprWithBreakBind
       --
-      -- If a break_hit flag is added to the body of the while, it needs to be pushed on the scope so that its type can be retrieved
+      -- If a break_hit (or continue_hit) flag is added to the body of the while, it needs to be pushed on the scope so that its type can be retrieved
       scopes' =
         if containsBreak
-          then Map.fromList [(Identifier "break_hit", Just booleanType)] : scopes
+          then Map.fromList [(Identifier "break_hit", Just booleanType), (Identifier "continue_hit", Just booleanType)] : scopes
           else scopes
 
       -- Get all the free variables with their type
@@ -154,6 +157,8 @@ mapWhileToFunction (While {whileCondition, whileExpr}) scopes containsBreak func
                               { sequenceUses = [],
                                 sequenceItems = [SequenceItemExpr mappedBodyExpr],
                                 -- If the while body contains breaks, wrap the recursion in a if(!break_hit) expression
+                                -- Note that this is the only difference between the translation of continue(s) and break(s),
+                                -- since this condition only checks for breaks
                                 sequenceEndExpr =
                                   if containsBreak
                                     then
@@ -197,14 +202,17 @@ mapWhileToFunction (While {whileCondition, whileExpr}) scopes containsBreak func
 --  - Each break is substituted with an assignment to the flag variable `break_hit`
 --    and the break expression is marked as having a break in it
 --
+--  - The same happens for a continue, that is replaced by a `continue_hit` flag
+--    a single state for expressions containing either a break or a continue is used
+--
 --  - As the traversal moves to the root, each parent expression that has at least an expression with a break
 --    is considered as having a break itself
---  - If a sequence is found an any of its sequence items (end expression excluded) have a break:
---  - - Wrap every subsequent sequence item inside an `if (!break_hit)`
+--  - If a sequence is found an any of its sequence items (end expression excluded) have a break (or a continue):
+--  - - Wrap every subsequent sequence item inside an `if (!break_hit && !continue_hit)`
 --  - - Eventually, wrap the ending expression
 --  - When a while is found, translate it into a function call and declaration where:
 --  - - All free variables in both the body and condition of the while are function parameters as references
---  - - If the while body is marked as having a break, declare the flag variable `break_hit` and wrap the recursive call in an if-then
+--  - - If the while body is marked as having a break, declare the flag variables `break_hit` and `continue_hit` and wrap the recursive call in an if-then
 traversalHelper :: (Expr -> [Scope] -> ([Function], Set.Set Expr) -> (Expr, ([Function], Set.Set Expr)))
 --
 --  When a while loop is found, translate it
@@ -225,10 +233,28 @@ traversalHelper Break _ (functionDecls, exprsWithBreak) =
       -- (in fact, this assignment will act as a break)
       (expr', (functionDecls, Set.insert expr' exprsWithBreak))
 --
+--  Similar when a continue is found
+traversalHelper Continue _ (functionDecls, exprsWithBreak) =
+  -- Replace it with an assignment `break_hit = true`
+  let expr' =
+        AssignmentExpr $
+          Assignment
+            { assignmentLeft = NameAccessChainExpr $ LocalNameAccessChain $ Identifier "continue_hit",
+              assignmentRight = ValueLiteral $ Boolean True
+            }
+   in (expr', (functionDecls, Set.insert expr' exprsWithBreak))
+--
 -- When a SequenceExpr is found
 traversalHelper (SequenceExpr Sequence {sequenceUses, sequenceItems, sequenceEndExpr}) _ (functionDecls, exprsWithBreak) =
-  -- Check if any of the inner sequence items contain a break. If so, all the subsequent items need to be inserted inside an if
-  let (mappedSequenceItems, anySeqItemHasBreak) = foldr mapSeqItem ([], False) sequenceItems
+  let -- Helper variable that represent the binary expression `!break_hit && !continue_hit` used in the translation logic
+      breakAndContinueGuardCondition =
+        BinaryOpExprExpr $
+          And
+            (UnaryOpExpr $ Negation $ NameAccessChainExpr $ LocalNameAccessChain $ Identifier "break_hit")
+            (UnaryOpExpr $ Negation $ NameAccessChainExpr $ LocalNameAccessChain $ Identifier "continue_hit")
+
+      -- Check if any of the inner sequence items contain a break (or a continue). If so, all the subsequent items need to be inserted inside an if
+      (mappedSequenceItems, anySeqItemHasBreak) = foldr mapSeqItem ([], False) sequenceItems
         where
           mapSeqItem seqItemExpr (subseqItems, anySeqItemHasBreak'') =
             -- Internal function that, given the expression inside a sequence item,
@@ -241,7 +267,7 @@ traversalHelper (SequenceExpr Sequence {sequenceUses, sequenceItems, sequenceEnd
                             SequenceItemExpr $
                               IfThenElseTerm $
                                 IfThenElse
-                                  { ifThenElseCondition = UnaryOpExpr $ Negation $ NameAccessChainExpr $ LocalNameAccessChain $ Identifier "break_hit",
+                                  { ifThenElseCondition = breakAndContinueGuardCondition,
                                     ifThenElseIfBranch =
                                       SequenceExpr $
                                         Sequence
@@ -261,7 +287,7 @@ traversalHelper (SequenceExpr Sequence {sequenceUses, sequenceItems, sequenceEnd
                   _ -> (seqItemExpr : subseqItems, anySeqItemHasBreak'')
 
       -- Then, handle the ending expression
-      -- This expression might be wrapped if any of the previous sequence items have a brek
+      -- This expression might be wrapped if any of the previous sequence items have a break (or a continue)
       -- And in any case, it might contain a break itself, that must be forwarded to the entire sequence
       (sequenceEndExpr', anySeqItemHasBreak') = case sequenceEndExpr of
         Nothing -> (sequenceEndExpr, anySeqItemHasBreak)
@@ -271,7 +297,7 @@ traversalHelper (SequenceExpr Sequence {sequenceUses, sequenceItems, sequenceEnd
               let newEndExpr =
                     IfThenElseTerm $
                       IfThenElse
-                        { ifThenElseCondition = UnaryOpExpr $ Negation $ NameAccessChainExpr $ LocalNameAccessChain $ Identifier "break_hit",
+                        { ifThenElseCondition = breakAndContinueGuardCondition,
                           ifThenElseIfBranch = sequenceEndExpr'',
                           ifThenElseElseBranch = Nothing
                         }

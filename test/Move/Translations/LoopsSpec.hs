@@ -159,7 +159,7 @@ testTranslateWhilesToFunctionsInModule = describe "Tests for the function `trans
 
     translateWhilesToFunctionsInModule fromModule `shouldBe` toModule
 
-  it "Translates a while loop with break inside" $ do
+  it "Translates a while loop with break and continue inside" $ do
     let fromModuleStr =
           "module NamedAddr::TraversalUtilsSpec {\n"
             ++ " public fun whileLoop(n: u64): u64 {\n"
@@ -175,7 +175,7 @@ testTranslateWhilesToFunctionsInModule = describe "Tests for the function `trans
             "       let a = 12;\n"
             ++ "     };\n"
             ++ "     if (n == 50) {\n"
-            ++ "       break;\n"
+            ++ "       continue;\n"
             ++ "     };\n"
             ++ "     let (a, b): (u64, u64);\n"
             ++ "     inner + 1\n"
@@ -190,25 +190,26 @@ testTranslateWhilesToFunctionsInModule = describe "Tests for the function `trans
             ++ "   if(*i <= *n){\n"
             ++ "     {\n"
             ++ "       let break_hit: bool = false;\n"
+            ++ "       let continue_hit: bool = false;\n"
             ++ "       let inner = 42;\n"
             ++ "       *sum = *sum + *i;\n"
             ++ "       if (*i == 100) {\n"
             ++ "         break_hit = true;\n"
-            ++ "         if (!break_hit){\n"
+            ++ "         if (!break_hit && !continue_hit){\n"
             ++ "           let a = 12;\n"
             ++ "         };\n"
             ++ "       };\n"
-            ++ "       if (!break_hit){\n"
+            ++ "       if (!break_hit && !continue_hit){\n"
             ++ "         if (*n == 50) {\n"
-            ++ "           break_hit = true;\n"
+            ++ "           continue_hit = true;\n"
             ++ "         };\n"
-            ++ "         if (!break_hit) {\n"
+            ++ "         if (!break_hit && !continue_hit) {\n"
             ++ "           let (a, b): (u64, u64);\n"
             ++ "         };\n"
             ++ "       };\n"
             ++
             -- This end expression of a sequence needs to be wrapped
-            "       if (!break_hit) inner + 1\n"
+            "       if (!break_hit && !continue_hit) inner + 1\n"
             ++ "     };\n"
             ++
             -- The recursive call needs to be wrapped in an if-then
