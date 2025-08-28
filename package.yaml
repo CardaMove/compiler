@@ -26,7 +26,7 @@ dependencies:
   - mtl
   - pretty-terminal
   - text == 2.0.2
-  - wide-word == 0.1.6.0
+  - wide-word >=0.1.6 && <0.2
   - uniplate
 
 build-tools:
