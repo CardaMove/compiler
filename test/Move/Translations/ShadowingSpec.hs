@@ -170,8 +170,8 @@ testRemoveShadowingInSequence = describe "Tests for the function `removeShadowin
 
     removeShadowingInSequence fromSequence [Map.empty] `shouldBe` toSequence
 
-testremoveShadowingInRoot :: Spec
-testremoveShadowingInRoot = describe "Tests for the function `removeShadowingInRoot`" $ do
+testRemoveShadowingInRoot :: Spec
+testRemoveShadowingInRoot = describe "Tests for the function `removeShadowingInRoot`" $ do
   it "Collects module constants, function parameters, and removes shadowing" $ do
     let fromModuleStr =
           "module NamedAddr::TestingLocalState {\n"
@@ -231,4 +231,4 @@ spec = do
   testGetUnshadowedName
   testGenerateUnshadowedName
   testRemoveShadowingInSequence
-  testremoveShadowingInRoot
+  testRemoveShadowingInRoot

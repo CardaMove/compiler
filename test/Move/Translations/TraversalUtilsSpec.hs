@@ -6,8 +6,8 @@ import Move.Parser (parse)
 import Move.Translations.TraversalUtils
 import Test.Hspec
 
-testtraverseRootPostOrder :: Spec
-testtraverseRootPostOrder = describe "Tests the function `traverseRootPostOrder`" $ do
+testTraverseRootPostOrder :: Spec
+testTraverseRootPostOrder = describe "Tests the function `traverseRootPostOrder`" $ do
   it "Replaces each literal numeric value with itself + 1" $ do
     let fromModuleStr =
           "module NamedAddr::TraversalUtilsSpec {\n"
@@ -48,4 +48,4 @@ testtraverseRootPostOrder = describe "Tests the function `traverseRootPostOrder`
 
 spec :: Spec
 spec = do
-  testtraverseRootPostOrder
+  testTraverseRootPostOrder

@@ -118,8 +118,8 @@ testLoopsToWhile = describe "Translating a loop into a while" $ do
                      }
                  )
 
-testtranslateWhilesToFunctionsInRoot :: Spec
-testtranslateWhilesToFunctionsInRoot = describe "Tests for the function `translateWhilesToFunctionsInRoot`" $ do
+testTranslateWhilesToFunctionsInRoot :: Spec
+testTranslateWhilesToFunctionsInRoot = describe "Tests for the function `translateWhilesToFunctionsInRoot`" $ do
   it "Translates a while loop into a function declaration" $ do
     let fromModuleStr =
           "module NamedAddr::TraversalUtilsSpec {\n"
@@ -232,4 +232,4 @@ testtranslateWhilesToFunctionsInRoot = describe "Tests for the function `transla
 spec :: Spec
 spec = do
   testLoopsToWhile
-  testtranslateWhilesToFunctionsInRoot
+  testTranslateWhilesToFunctionsInRoot
