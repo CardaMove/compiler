@@ -124,6 +124,12 @@ import Data.Data (Data, Typeable)
 --
 --
 
+-- | Root of the AST. Can either be a module or a script
+data Root
+  = RModule Module
+  | RScript Script
+  deriving (Eq, Show, Data, Typeable)
+
 -- | A module consists in an address, identifier and top level elements
 data Module
   = Module
@@ -133,6 +139,15 @@ data Module
     moduleTopLevels :: [TopLevel]
   }
   deriving (Eq, Show, Data, Typeable)
+
+-- | A script is similar to a Module, but without an identifier and with a subset of top levels allowed
+newtype Script
+  = Script
+  {
+    scriptTopLevels :: [TopLevel]
+  }
+  deriving (Eq, Show, Data, Typeable)
+
 
 -- | An identifier is a name of a variable or module
 newtype Identifier

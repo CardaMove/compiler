@@ -1,4 +1,4 @@
-module Move.Translations.Shadowing (removeShadowingInModule, removeShadowingInExpr, removeShadowingInSequence, getUnshadowedName, generateUnshadowedName) where
+module Move.Translations.Shadowing (removeShadowingInRoot, removeShadowingInExpr, removeShadowingInSequence, getUnshadowedName, generateUnshadowedName) where
 
 import Data.Generics.Uniplate.Data (Uniplate (descend))
 import Data.List (mapAccumL)
@@ -121,27 +121,30 @@ removeShadowingInSequence (Sequence {sequenceUses, sequenceItems, sequenceEndExp
         }
 
 -- |
--- Given a Module, first collects all identifiers belonging to constants declared in this module,
+-- Given a Module or a script, first collects all identifiers belonging to constants declared in this module or script,
 -- then proceeds by inspecting all function declarations to remove shadowings
 -- TODO: Should also the "use" be considered in the scope?
-removeShadowingInModule :: Module -> Module
-removeShadowingInModule currModule@Module {moduleTopLevels} =
-  -- All the constants declared in this module will act as a base scope for the module
-  let constantIdentifiers = [constantIdentifier | TopLevelConstant (Constant {constantIdentifier}) <- moduleTopLevels]
-
-      baseScope = Map.fromList $ map (\ident -> (ident, ident)) constantIdentifiers
-   in -- Then, proceed with unshadowing both the constants (right value only) and function declarations
-      currModule {moduleTopLevels = map (f [baseScope]) moduleTopLevels}
+removeShadowingInRoot :: Root -> Root
+removeShadowingInRoot root = case root of
+  RModule rModule@Module {moduleTopLevels} -> RModule $ rModule {moduleTopLevels = removeShadowingHelper moduleTopLevels}
+  RScript rScript@Script {scriptTopLevels} -> RScript $ rScript {scriptTopLevels = removeShadowingHelper scriptTopLevels}
   where
-    -- When encountering a function declaration:
-    f scopes (TopLevelFunction fun@Function {functionParameters, functionBody = Just bodySequence}) =
-      -- create a new local scope including the function parameters
-      let functionParametersIdentifiers = map parameterIdentifier functionParameters
-          scopes' = Map.fromList (map (\ident -> (ident, ident)) functionParametersIdentifiers) : scopes
-       in -- remove shadowings in the function body
-          TopLevelFunction $ fun {functionBody = Just $ removeShadowingInSequence bodySequence scopes'}
-    -- When encountering a constant, inspect its right value
-    f scopes (TopLevelConstant constant@Constant {constantExpression}) =
-      TopLevelConstant $ constant {constantExpression = removeShadowingInExpr constantExpression scopes}
-    --
-    f _ other = other
+    -- Proceed with unshadowing both the constants (right value only) and function declarations
+    removeShadowingHelper topLevels = map (f [baseScope]) topLevels
+      where
+        -- All the constants declared in this module will act as a base scope for the module
+        constantIdentifiers = [constantIdentifier | TopLevelConstant (Constant {constantIdentifier}) <- topLevels]
+        baseScope = Map.fromList $ map (\ident -> (ident, ident)) constantIdentifiers
+
+        -- When encountering a function declaration:
+        f scopes (TopLevelFunction fun@Function {functionParameters, functionBody = Just bodySequence}) =
+          -- create a new local scope including the function parameters
+          let functionParametersIdentifiers = map parameterIdentifier functionParameters
+              scopes' = Map.fromList (map (\ident -> (ident, ident)) functionParametersIdentifiers) : scopes
+           in -- remove shadowings in the function body
+              TopLevelFunction $ fun {functionBody = Just $ removeShadowingInSequence bodySequence scopes'}
+        -- When encountering a constant, inspect its right value
+        f scopes (TopLevelConstant constant@Constant {constantExpression}) =
+          TopLevelConstant $ constant {constantExpression = removeShadowingInExpr constantExpression scopes}
+        --
+        f _ other = other

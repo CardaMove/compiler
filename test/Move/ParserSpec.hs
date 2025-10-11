@@ -6,9 +6,8 @@ import Move.AST
 import Move.Lexer
 import Move.Parser
 import Test.Hspec
-import Move.AST (Binded(BindedSingle, BindedTuple))
 
-testScan :: String -> Module -> SpecWith ()
+testScan :: String -> Root -> SpecWith ()
 testScan str ast = it (filter (/= '\n') str) $ do
   let tokens = scan str
   -- print tokens
@@ -17,7 +16,7 @@ testScan str ast = it (filter (/= '\n') str) $ do
 testParseEmptyModule :: Spec
 testParseEmptyModule = describe "Parse an empty module" $ do
   -- Named address
-  testScan "module foo::bar {}" $
+  testScan "module foo::bar {}" $ RModule $
     Module
       { moduleAddress = NamedAddress $ Identifier "foo",
         moduleIdentifier = Identifier "bar",
@@ -25,7 +24,7 @@ testParseEmptyModule = describe "Parse an empty module" $ do
       }
 
   -- Numerical address hex
-  testScan "module 0xCAFFE::fizzbuzz {}" $
+  testScan "module 0xCAFFE::fizzbuzz {}" $ RModule $
     Module
       { moduleAddress = NumericalAddress $ LiteralIntHex "0xCAFFE",
         moduleIdentifier = Identifier "fizzbuzz",
@@ -33,7 +32,7 @@ testParseEmptyModule = describe "Parse an empty module" $ do
       }
 
   -- Numerical address decimal with separators
-  testScan "module 123_456u64::fizzbuzz {}" $
+  testScan "module 123_456u64::fizzbuzz {}" $ RModule $
     Module
       { moduleAddress = NumericalAddress $ LiteralIntDec 123456,
         moduleIdentifier = Identifier "fizzbuzz",
@@ -50,7 +49,7 @@ testParseModuleUse = describe "Parse a module with use keywords" $ do
         ++ "use std::vector::{push_back, length as len, pop_back};\n"
         ++ "}"
     )
-    $ Module
+    $ RModule $ Module
       { moduleAddress = NumericalAddress $ LiteralIntHex "0x42",
         moduleIdentifier = Identifier "answer",
         moduleTopLevels =
@@ -97,7 +96,7 @@ testParseModuleUse = describe "Parse a module with use keywords" $ do
 
 testParseModuleFriend :: Spec
 testParseModuleFriend = describe "Parse a module with friends" $ do
-  testScan "module 0x42::answer { friend 0x42::b; friend aliased_friend; }" $
+  testScan "module 0x42::answer { friend 0x42::b; friend aliased_friend; }" $ RModule $
     Module
       { moduleAddress = NumericalAddress $ LiteralIntHex "0x42",
         moduleIdentifier = Identifier "answer",
@@ -109,7 +108,7 @@ testParseModuleFriend = describe "Parse a module with friends" $ do
 
 testParseNamedStruct :: Spec
 testParseNamedStruct = describe "Parse module with named structs" $ do
-  testScan "module foo::baz { struct A has copy {} struct B<TypeParam>{x: u64, y: bool, c: TypeParam} } " $
+  testScan "module foo::baz { struct A has copy {} struct B<TypeParam>{x: u64, y: bool, c: TypeParam} } " $ RModule $
     Module
       { moduleAddress = NamedAddress $ Identifier "foo",
         moduleIdentifier = Identifier "baz",
@@ -146,7 +145,7 @@ testParseNamedStruct = describe "Parse module with named structs" $ do
 
 testParsePositionalStruct :: Spec
 testParsePositionalStruct = describe "Parse module with positional structs" $ do
-  testScan "module foo::baz { struct A<phantom TypeParam, TypeParam2> has copy; struct B(A, bool) has copy, drop; } " $
+  testScan "module foo::baz { struct A<phantom TypeParam, TypeParam2> has copy; struct B(A, bool) has copy, drop; } " $ RModule $
     Module
       { moduleAddress = NamedAddress $ Identifier "foo",
         moduleIdentifier = Identifier "baz",
@@ -183,7 +182,7 @@ testParseFunctionNoBody =
           ++ "public(friend) entry fun my_func<A, B>(a: A, b: B, c: u64): u64 acquires MyResource {}\n"
           ++ "native public fun empty<Element>(): vector<Element>;\n"
           ++ " }"
-    $ Module
+    $ RModule $ Module
       { moduleAddress = NamedAddress $ Identifier "foo",
         moduleIdentifier = Identifier "baz",
         moduleTopLevels =
@@ -232,7 +231,7 @@ testParseFunctionNoBody =
 
 testParseAbilities :: Spec
 testParseAbilities = describe "Parse structs with abilities and constraints" $ do
-  testScan "module foo::baz { struct K<phantom T1: copy + drop, T2> has key {} }" $
+  testScan "module foo::baz { struct K<phantom T1: copy + drop, T2> has key {} }" $ RModule $
     Module
       { moduleAddress = NamedAddress $ Identifier "foo",
         moduleIdentifier = Identifier "baz",
@@ -275,7 +274,7 @@ testParseConstants =
             ++ "const MY_POS: Pos = 0x42::another_module::Pos(12u64, false);\n" -- Not valid Move code, but test for expression
             ++ "}" -- Not valid Move code, but test for expression
         )
-    $ Module
+    $ RModule $ Module
       { moduleAddress = NamedAddress $ Identifier "foo",
         moduleIdentifier = Identifier "baz",
         moduleTopLevels =
@@ -391,7 +390,7 @@ testParseFunctionWithBody =
             ++ "inner\n"
             ++ "}\n}"
         )
-    $ Module
+    $ RModule $ Module
       { moduleAddress = NamedAddress $ Identifier "foo",
         moduleIdentifier = Identifier "baz",
         moduleTopLevels =
@@ -522,7 +521,7 @@ testParseStructExpr =
             ++ "let (PositionalStruct(twelve,..), another_42): (PositionalStruct, u64) = (positional, 42);\n"
             ++ "}\n}"
         )
-    $ Module
+    $ RModule $ Module
       { moduleAddress = NamedAddress $ Identifier "foo",
         moduleIdentifier = Identifier "baz",
         moduleTopLevels =

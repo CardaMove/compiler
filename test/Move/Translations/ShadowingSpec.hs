@@ -5,7 +5,7 @@ import Data.Map qualified as Map
 import Move.AST
 import Move.Lexer (scan)
 import Move.Parser (parse)
-import Move.Translations.Shadowing (generateUnshadowedName, getUnshadowedName, removeShadowingInModule, removeShadowingInSequence)
+import Move.Translations.Shadowing (generateUnshadowedName, getUnshadowedName, removeShadowingInRoot, removeShadowingInSequence)
 import Test.Hspec
 
 testGetUnshadowedName :: Spec
@@ -170,8 +170,8 @@ testRemoveShadowingInSequence = describe "Tests for the function `removeShadowin
 
     removeShadowingInSequence fromSequence [Map.empty] `shouldBe` toSequence
 
-testRemoveShadowingInModule :: Spec
-testRemoveShadowingInModule = describe "Tests for the function `removeShadowingInModule`" $ do
+testremoveShadowingInRoot :: Spec
+testremoveShadowingInRoot = describe "Tests for the function `removeShadowingInRoot`" $ do
   it "Collects module constants, function parameters, and removes shadowing" $ do
     let fromModuleStr =
           "module NamedAddr::TestingLocalState {\n"
@@ -224,11 +224,11 @@ testRemoveShadowingInModule = describe "Tests for the function `removeShadowingI
     let fromModule = parse $ scan fromModuleStr
     let toModule = parse $ scan toModuleStr
 
-    removeShadowingInModule fromModule `shouldBe` toModule
+    removeShadowingInRoot fromModule `shouldBe` toModule
 
 spec :: Spec
 spec = do
   testGetUnshadowedName
   testGenerateUnshadowedName
   testRemoveShadowingInSequence
-  testRemoveShadowingInModule
+  testremoveShadowingInRoot

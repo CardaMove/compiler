@@ -161,15 +161,24 @@ import Move.Token
 
 %%
 
+-- Root
+Root :: { Root }
+  : module Module               { RModule $2 }
+  | script Script               { RScript $2 }
+
 -- Module
 Module :: { Module }
-  : module Address '::' Identifier '{' TopLevels '}' {
+  : Address '::' Identifier '{' TopLevels '}' {
       Module {
-        moduleAddress = $2,
-        moduleIdentifier = $4,
-        moduleTopLevels = $6
+        moduleAddress = $1,
+        moduleIdentifier = $3,
+        moduleTopLevels = $5
       }
     }
+
+-- Script
+Script :: { Script }
+  : '{' TopLevels '}'       { Script { scriptTopLevels = $2 } }
 
 -- Wrapper for an identifier
 Identifier :: { Identifier }

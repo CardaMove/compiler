@@ -6,8 +6,8 @@ import Move.Parser (parse)
 import Move.Translations.TraversalUtils
 import Test.Hspec
 
-testTraverseModulePostOrder :: Spec
-testTraverseModulePostOrder = describe "Tests the function `traverseModulePostOrder`" $ do
+testtraverseRootPostOrder :: Spec
+testtraverseRootPostOrder = describe "Tests the function `traverseRootPostOrder`" $ do
   it "Replaces each literal numeric value with itself + 1" $ do
     let fromModuleStr =
           "module NamedAddr::TraversalUtilsSpec {\n"
@@ -39,7 +39,7 @@ testTraverseModulePostOrder = describe "Tests the function `traverseModulePostOr
     let toModule = parse $ scan toModuleStr
 
     -- The traversal function increments by 1 each literal decimal value and keeps track of how many modifications
-    let (traversedModule, finalState) = traverseModulePostOrder f fromModule 0
+    let (traversedModule, finalState) = traverseRootPostOrder f fromModule 0
           where
             f (ValueLiteral (Numerical (LiteralIntDec val))) _ state = (ValueLiteral $ Numerical $ LiteralIntDec $ val + 1, state + 1)
             f expr _ state = (expr, state)
@@ -48,4 +48,4 @@ testTraverseModulePostOrder = describe "Tests the function `traverseModulePostOr
 
 spec :: Spec
 spec = do
-  testTraverseModulePostOrder
+  testtraverseRootPostOrder

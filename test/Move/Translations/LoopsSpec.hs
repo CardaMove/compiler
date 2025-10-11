@@ -3,7 +3,7 @@ module Move.Translations.LoopsSpec (spec) where
 import Move.AST
 import Move.Lexer (scan)
 import Move.Parser (parse)
-import Move.Translations.Loops (translateLoopsToWhile, translateWhilesToFunctionsInModule)
+import Move.Translations.Loops (translateLoopsToWhile, translateWhilesToFunctionsInRoot)
 import Test.Hspec
 
 testLoopsToWhile :: Spec
@@ -118,8 +118,8 @@ testLoopsToWhile = describe "Translating a loop into a while" $ do
                      }
                  )
 
-testTranslateWhilesToFunctionsInModule :: Spec
-testTranslateWhilesToFunctionsInModule = describe "Tests for the function `translateWhilesToFunctionsInModule`" $ do
+testtranslateWhilesToFunctionsInRoot :: Spec
+testtranslateWhilesToFunctionsInRoot = describe "Tests for the function `translateWhilesToFunctionsInRoot`" $ do
   it "Translates a while loop into a function declaration" $ do
     let fromModuleStr =
           "module NamedAddr::TraversalUtilsSpec {\n"
@@ -135,10 +135,9 @@ testTranslateWhilesToFunctionsInModule = describe "Tests for the function `trans
     let toModuleStr =
           "module NamedAddr::TraversalUtilsSpec {\n"
             ++ " fun mapped_while_0(a: &mut u256, x: &mut u64) {\n"
-            ++
             -- The body of the while is inside a Sequence, with the end expression as the recursive call
             -- Note: a comparison between two different numeric types is not allowed in Move
-            "   if (*a < *x) {\n"
+            ++ "   if (*a < *x) {\n"
             ++ "     {\n"
             ++ "       let b = 9;\n"
             ++ "       *a = *a + b;\n"
@@ -157,7 +156,7 @@ testTranslateWhilesToFunctionsInModule = describe "Tests for the function `trans
     let fromModule = parse $ scan fromModuleStr
     let toModule = parse $ scan toModuleStr
 
-    translateWhilesToFunctionsInModule fromModule `shouldBe` toModule
+    translateWhilesToFunctionsInRoot fromModule `shouldBe` toModule
 
   it "Translates a while loop with break and continue inside" $ do
     let fromModuleStr =
@@ -228,9 +227,9 @@ testTranslateWhilesToFunctionsInModule = describe "Tests for the function `trans
     let fromModule = parse $ scan fromModuleStr
     let toModule = parse $ scan toModuleStr
 
-    translateWhilesToFunctionsInModule fromModule `shouldBe` toModule
+    translateWhilesToFunctionsInRoot fromModule `shouldBe` toModule
 
 spec :: Spec
 spec = do
   testLoopsToWhile
-  testTranslateWhilesToFunctionsInModule
+  testtranslateWhilesToFunctionsInRoot

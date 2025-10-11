@@ -1,4 +1,4 @@
-module Move.Translations.Loops (translateLoopsToWhile, translateWhilesToFunctions, translateWhilesToFunctionsInModule) where
+module Move.Translations.Loops (translateLoopsToWhile, translateWhilesToFunctions, translateWhilesToFunctionsInRoot) where
 
 -- Importing from Uniplate.Data allows to derive Biplate instances automatically from data types that derive Data
 
@@ -8,7 +8,7 @@ import Data.List (nub, sort)
 import Data.Map qualified as Map
 import Data.Set qualified as Set
 import Move.AST
-import Move.Translations.TraversalUtils (traverseExprPostOrder, traverseModulePostOrder)
+import Move.Translations.TraversalUtils (traverseExprPostOrder, traverseRootPostOrder)
 import Move.Translations.Utils (Scope, booleanType, getIdentifierTypeFromScope, getValueOrDefault, isIdentifierInScope, unknownType)
 
 -- |
@@ -194,7 +194,7 @@ mapWhileToFunction (While {whileCondition, whileExpr}) scopes containsBreak func
       )
 
 -- |
--- Helper function for both `translateWhilesToFunctions` and `translateWhilesToFunctionsInModule`.
+-- Helper function for both `translateWhilesToFunctions` and `translateWhilesToFunctionsInRoot`.
 --
 -- It is the function invoked during the post order traversal.
 -- The intended execution is the following:
@@ -337,12 +337,15 @@ translateWhilesToFunctions expr scopes =
    in (expr', functionDecls)
 
 -- |
--- Given a module, translates all while loops into function calls.
+-- Given a module or a script, translates all while loops into function calls.
 --
--- The corresponding function declarations are added inside the module
+-- The corresponding function declarations are added inside the module or script
 -- Also see documentation of `mapWhileToFunction`
-translateWhilesToFunctionsInModule :: Module -> Module
-translateWhilesToFunctionsInModule currModule =
-  let (translatedModule@Module {moduleTopLevels}, (functionDecls, _)) = traverseModulePostOrder traversalHelper currModule ([], Set.empty)
-      newTopLevels = map TopLevelFunction functionDecls
-   in translatedModule {moduleTopLevels = newTopLevels ++ moduleTopLevels}
+translateWhilesToFunctionsInRoot :: Root -> Root
+translateWhilesToFunctionsInRoot root = case traverseRootPostOrder traversalHelper root ([], Set.empty) of
+  (RModule translatedModule@Module {moduleTopLevels}, (functionDecls, _)) ->
+    let newTopLevels = map TopLevelFunction functionDecls
+     in RModule $ translatedModule {moduleTopLevels = newTopLevels ++ moduleTopLevels}
+  (RScript translatedScript@Script {scriptTopLevels}, (functionDecls, _)) ->
+    let newTopLevels = map TopLevelFunction functionDecls
+     in RScript $ translatedScript {scriptTopLevels = newTopLevels ++ scriptTopLevels}
