@@ -703,7 +703,7 @@ SequenceItem :: { SequenceItem }
 
 -- A binding can be done to either an identifier or to fields of a named struct
 Bind :: { Bind }
-  : Identifier                                                      { BindIdentifier $1 }
+  : Identifier                                                      { BindIdentifier $1 Nothing }
   | NameAccessChain OptionalTypeArgs '{' CommaBindedField '}'       { BindNamedStruct $ BindedNamedStruct {
     bnsNameAccessChain = $1,
     bnsTypeArgs = $2,

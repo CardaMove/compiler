@@ -43,7 +43,7 @@ updateBindWithUnshadowedIdentifiersHelper (BindedField {bindFieldIdentifier, bin
 -- Given a single bind, replaces its binded identifiers with the newly unshadowed names
 updateBindWithUnshadowedIdentifiers :: Bind -> [Scope] -> Bind
 --    For a single identifier, replace it
-updateBindWithUnshadowedIdentifiers (BindIdentifier ident) scopes = BindIdentifier $ getUnshadowedName ident scopes
+updateBindWithUnshadowedIdentifiers (BindIdentifier ident uuid) scopes = BindIdentifier (getUnshadowedName ident scopes) uuid
 --    For named structs, inspect its binded fields
 updateBindWithUnshadowedIdentifiers (BindNamedStruct struct@BindedNamedStruct {bnsFields = fields@BindedFields {bindedFields}}) scopes =
   BindNamedStruct $ struct {bnsFields = fields {bindedFields = map (`updateBindWithUnshadowedIdentifiersHelper` scopes) bindedFields}}

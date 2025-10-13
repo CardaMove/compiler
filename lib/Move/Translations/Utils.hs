@@ -16,6 +16,7 @@ booleanType = TypeConstructor (LocalNameAccessChain $ Identifier "bool") []
 numericType :: Type
 numericType = TypeConstructor (LocalNameAccessChain $ Identifier "u256") []
 
+-- | Represents a local scope
 type Scope = Map.Map Identifier (Maybe Type)
 
 -- |
@@ -67,7 +68,7 @@ getBindIdentifiers bind =
           f (BindedField {bindFieldIdentifier, bindFieldInnerBind = Nothing}) = [bindFieldIdentifier]
           f (BindedField {bindFieldInnerBind = Just innerBind}) = getBindIdentifiers innerBind
    in case bind of
-        (BindIdentifier ident) -> [ident]
+        (BindIdentifier ident _) -> [ident]
         (BindNamedStruct (BindedNamedStruct {bnsFields = BindedFields {bindedFields}})) -> getBindIdentifiersHelper bindedFields
         (BindPositionalStruct (BindedPositionalStruct {bpsFields = BindedFields {bindedFields}})) -> getBindIdentifiersHelper bindedFields
 
@@ -103,40 +104,40 @@ inferBindingsTypes (Bindings {bindings = BindedTuple _, bindingsBindType = Nothi
 -- Give a single bind and its corresponding type or expression, tries to infer the type of all the binded identifiers
 inferBindType :: Bind -> Maybe Type -> Maybe Expr -> [(Identifier, Maybe Type)]
 --  It is not possible to infer the type of an identifier alone (or in another way, it can be any type)
-inferBindType (BindIdentifier ident) Nothing Nothing = [(ident, Nothing)]
+inferBindType (BindIdentifier ident _) Nothing Nothing = [(ident, Nothing)]
 --  Identifier with type annotation
-inferBindType (BindIdentifier ident) identType@(Just _) _ = [(ident, identType)]
+inferBindType (BindIdentifier ident _) identType@(Just _) _ = [(ident, identType)]
 --  Identifier with corresponding binary expression
-inferBindType (BindIdentifier ident) Nothing (Just (BinaryOpExprExpr (Or _ _))) = [(ident, Just booleanType)]
-inferBindType (BindIdentifier ident) Nothing (Just (BinaryOpExprExpr (And _ _))) = [(ident, Just booleanType)]
-inferBindType (BindIdentifier ident) Nothing (Just (BinaryOpExprExpr (Eq _ _))) = [(ident, Just booleanType)]
-inferBindType (BindIdentifier ident) Nothing (Just (BinaryOpExprExpr (Neq _ _))) = [(ident, Just booleanType)]
-inferBindType (BindIdentifier ident) Nothing (Just (BinaryOpExprExpr (Lt _ _))) = [(ident, Just booleanType)]
-inferBindType (BindIdentifier ident) Nothing (Just (BinaryOpExprExpr (Gt _ _))) = [(ident, Just booleanType)]
-inferBindType (BindIdentifier ident) Nothing (Just (BinaryOpExprExpr (Leq _ _))) = [(ident, Just booleanType)]
-inferBindType (BindIdentifier ident) Nothing (Just (BinaryOpExprExpr (Geq _ _))) = [(ident, Just booleanType)]
-inferBindType (BindIdentifier ident) Nothing (Just (BinaryOpExprExpr (BitwiseOr _ _))) = [(ident, Just numericType)]
-inferBindType (BindIdentifier ident) Nothing (Just (BinaryOpExprExpr (BitwiseXor _ _))) = [(ident, Just numericType)]
-inferBindType (BindIdentifier ident) Nothing (Just (BinaryOpExprExpr (BitwiseAnd _ _))) = [(ident, Just numericType)]
-inferBindType (BindIdentifier ident) Nothing (Just (BinaryOpExprExpr (ShiftLeft _ _))) = [(ident, Just numericType)]
-inferBindType (BindIdentifier ident) Nothing (Just (BinaryOpExprExpr (ShiftRight _ _))) = [(ident, Just numericType)]
-inferBindType (BindIdentifier ident) Nothing (Just (BinaryOpExprExpr (Add _ _))) = [(ident, Just numericType)]
-inferBindType (BindIdentifier ident) Nothing (Just (BinaryOpExprExpr (Sub _ _))) = [(ident, Just numericType)]
-inferBindType (BindIdentifier ident) Nothing (Just (BinaryOpExprExpr (Mult _ _))) = [(ident, Just numericType)]
-inferBindType (BindIdentifier ident) Nothing (Just (BinaryOpExprExpr (Div _ _))) = [(ident, Just numericType)]
-inferBindType (BindIdentifier ident) Nothing (Just (BinaryOpExprExpr (Mod _ _))) = [(ident, Just numericType)]
+inferBindType (BindIdentifier ident _) Nothing (Just (BinaryOpExprExpr (Or _ _))) = [(ident, Just booleanType)]
+inferBindType (BindIdentifier ident _) Nothing (Just (BinaryOpExprExpr (And _ _))) = [(ident, Just booleanType)]
+inferBindType (BindIdentifier ident _) Nothing (Just (BinaryOpExprExpr (Eq _ _))) = [(ident, Just booleanType)]
+inferBindType (BindIdentifier ident _) Nothing (Just (BinaryOpExprExpr (Neq _ _))) = [(ident, Just booleanType)]
+inferBindType (BindIdentifier ident _) Nothing (Just (BinaryOpExprExpr (Lt _ _))) = [(ident, Just booleanType)]
+inferBindType (BindIdentifier ident _) Nothing (Just (BinaryOpExprExpr (Gt _ _))) = [(ident, Just booleanType)]
+inferBindType (BindIdentifier ident _) Nothing (Just (BinaryOpExprExpr (Leq _ _))) = [(ident, Just booleanType)]
+inferBindType (BindIdentifier ident _) Nothing (Just (BinaryOpExprExpr (Geq _ _))) = [(ident, Just booleanType)]
+inferBindType (BindIdentifier ident _) Nothing (Just (BinaryOpExprExpr (BitwiseOr _ _))) = [(ident, Just numericType)]
+inferBindType (BindIdentifier ident _) Nothing (Just (BinaryOpExprExpr (BitwiseXor _ _))) = [(ident, Just numericType)]
+inferBindType (BindIdentifier ident _) Nothing (Just (BinaryOpExprExpr (BitwiseAnd _ _))) = [(ident, Just numericType)]
+inferBindType (BindIdentifier ident _) Nothing (Just (BinaryOpExprExpr (ShiftLeft _ _))) = [(ident, Just numericType)]
+inferBindType (BindIdentifier ident _) Nothing (Just (BinaryOpExprExpr (ShiftRight _ _))) = [(ident, Just numericType)]
+inferBindType (BindIdentifier ident _) Nothing (Just (BinaryOpExprExpr (Add _ _))) = [(ident, Just numericType)]
+inferBindType (BindIdentifier ident _) Nothing (Just (BinaryOpExprExpr (Sub _ _))) = [(ident, Just numericType)]
+inferBindType (BindIdentifier ident _) Nothing (Just (BinaryOpExprExpr (Mult _ _))) = [(ident, Just numericType)]
+inferBindType (BindIdentifier ident _) Nothing (Just (BinaryOpExprExpr (Div _ _))) = [(ident, Just numericType)]
+inferBindType (BindIdentifier ident _) Nothing (Just (BinaryOpExprExpr (Mod _ _))) = [(ident, Just numericType)]
 --  An assignment has unit type
-inferBindType (BindIdentifier ident) Nothing (Just (AssignmentExpr _)) = [(ident, Just $ TypeTuple [])]
+inferBindType (BindIdentifier ident _) Nothing (Just (AssignmentExpr _)) = [(ident, Just $ TypeTuple [])]
 --  Identifier with unary expression
-inferBindType (BindIdentifier ident) Nothing (Just (UnaryOpExpr (Negation _))) = [(ident, Just numericType)]
+inferBindType (BindIdentifier ident _) Nothing (Just (UnaryOpExpr (Negation _))) = [(ident, Just numericType)]
 --  Identifier with a typed expression or a casting
-inferBindType (BindIdentifier ident) Nothing (Just (TypedExprTerm (TypedExpr {typedExprType}))) = [(ident, Just typedExprType)]
-inferBindType (BindIdentifier ident) Nothing (Just (CastingTerm (Casting {castingType}))) = [(ident, Just castingType)]
+inferBindType (BindIdentifier ident _) Nothing (Just (TypedExprTerm (TypedExpr {typedExprType}))) = [(ident, Just typedExprType)]
+inferBindType (BindIdentifier ident _) Nothing (Just (CastingTerm (Casting {castingType}))) = [(ident, Just castingType)]
 -- while loops have unit type
-inferBindType (BindIdentifier ident) Nothing (Just (WhileTerm _)) = [(ident, Just $ TypeTuple [])]
+inferBindType (BindIdentifier ident _) Nothing (Just (WhileTerm _)) = [(ident, Just $ TypeTuple [])]
 -- Basic inference with literal values
-inferBindType (BindIdentifier ident) Nothing (Just (ValueLiteral (Numerical _))) = [(ident, Just numericType)]
-inferBindType (BindIdentifier ident) Nothing (Just (ValueLiteral (Address _))) = [(ident, Just $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [])]
-inferBindType (BindIdentifier ident) Nothing (Just (ValueLiteral (Boolean _))) = [(ident, Just booleanType)]
+inferBindType (BindIdentifier ident _) Nothing (Just (ValueLiteral (Numerical _))) = [(ident, Just numericType)]
+inferBindType (BindIdentifier ident _) Nothing (Just (ValueLiteral (Address _))) = [(ident, Just $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [])]
+inferBindType (BindIdentifier ident _) Nothing (Just (ValueLiteral (Boolean _))) = [(ident, Just booleanType)]
 -- For all other expressions, either is it needed to know the scope or have any type
 inferBindType bind _ _ = map (,Nothing) (getBindIdentifiers bind)

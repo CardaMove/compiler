@@ -20,7 +20,7 @@ testGetBindIdentifiers = describe "Tests the function `getBindIdentifiers`" $ do
                     { hasPartialPattern = False,
                       bindedFields =
                         [ BindedField {bindFieldIdentifier = Identifier "a", bindFieldInnerBind = Nothing},
-                          BindedField {bindFieldIdentifier = Identifier "b", bindFieldInnerBind = Just $ BindIdentifier $ Identifier "b_alias"}
+                          BindedField {bindFieldIdentifier = Identifier "b", bindFieldInnerBind = Just $ BindIdentifier (Identifier "b_alias") Nothing}
                         ]
                     }
               }

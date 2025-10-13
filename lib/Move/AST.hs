@@ -511,7 +511,7 @@ data Binded = BindedSingle Bind | BindedTuple [Bind]
 -- | It can either bind an identifier, or perform pattern matching to bind labels of a struct.
 -- | Examples: `let a = 12`, `let MyStruct(a, b) = ...`
 data Bind
-  = BindIdentifier Identifier
+  = BindIdentifier Identifier (Maybe Int)
   | BindNamedStruct BindedNamedStruct
   | BindPositionalStruct BindedPositionalStruct
   deriving (Eq, Show, Data, Typeable, Ord)

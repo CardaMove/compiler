@@ -420,7 +420,7 @@ testParseFunctionWithBody =
                             [ -- let a = ...
                               SequenceItemBindExpr $
                                 Bindings
-                                  { bindings = BindedSingle $ BindIdentifier $ Identifier "a",
+                                  { bindings = BindedSingle $ BindIdentifier (Identifier "a") Nothing,
                                     bindingsBindType = Just $ TypeConstructor (LocalNameAccessChain $ Identifier "u64") [],
                                     bindingsBindExpr =
                                       Just $
@@ -432,7 +432,7 @@ testParseFunctionWithBody =
                               -- let sum =
                               SequenceItemBindExpr $
                                 Bindings
-                                  { bindings = BindedSingle $ BindIdentifier $ Identifier "sum",
+                                  { bindings = BindedSingle $ BindIdentifier (Identifier "sum") Nothing,
                                     bindingsBindType = Nothing,
                                     bindingsBindExpr =
                                       Just $
@@ -444,7 +444,7 @@ testParseFunctionWithBody =
                               -- let inner =
                               SequenceItemBindExpr $
                                 Bindings
-                                  { bindings = BindedSingle $ BindIdentifier $ Identifier "inner",
+                                  { bindings = BindedSingle $ BindIdentifier (Identifier "inner") Nothing,
                                     bindingsBindType = Nothing,
                                     bindingsBindExpr =
                                       Just $
@@ -573,14 +573,14 @@ testParseStructExpr =
                               -- let c = 0
                               SequenceItemBindExpr $
                                 Bindings
-                                  { bindings = BindedSingle $ BindIdentifier $ Identifier "c",
+                                  { bindings = BindedSingle $ BindIdentifier (Identifier "c") Nothing,
                                     bindingsBindType = Nothing,
                                     bindingsBindExpr = Just $ ValueLiteral $ Numerical $ LiteralIntDec 0
                                   },
                               -- let foo =
                               SequenceItemBindExpr $
                                 Bindings
-                                  { bindings = BindedSingle $ BindIdentifier $ Identifier "foo",
+                                  { bindings = BindedSingle $ BindIdentifier (Identifier "foo") Nothing,
                                     bindingsBindType = Nothing,
                                     -- C<bool> {..
                                     bindingsBindExpr =
@@ -624,7 +624,7 @@ testParseStructExpr =
                                                         BindedField
                                                           { bindFieldIdentifier = Identifier "a",
                                                             -- _ is parsed as an identifier
-                                                            bindFieldInnerBind = Just $ BindIdentifier $ Identifier "_"
+                                                            bindFieldInnerBind = Just $ BindIdentifier (Identifier "_") Nothing
                                                           },
                                                         -- b: B<bool> ...
                                                         BindedField
@@ -643,7 +643,7 @@ testParseStructExpr =
                                                                               [ -- b: my_b
                                                                                 BindedField
                                                                                   { bindFieldIdentifier = Identifier "b",
-                                                                                    bindFieldInnerBind = Just $ BindIdentifier $ Identifier "my_b"
+                                                                                    bindFieldInnerBind = Just $ BindIdentifier (Identifier "my_b") Nothing
                                                                                   }
                                                                               ]
                                                                           }
@@ -652,7 +652,7 @@ testParseStructExpr =
                                                         -- c: _
                                                         BindedField
                                                           { bindFieldIdentifier = Identifier "c",
-                                                            bindFieldInnerBind = Just $ BindIdentifier $ Identifier "_"
+                                                            bindFieldInnerBind = Just $ BindIdentifier (Identifier "_") Nothing
                                                           }
                                                       ]
                                                   }
@@ -665,7 +665,7 @@ testParseStructExpr =
                               -- let c_ref: &u64 ...
                               SequenceItemBindExpr $
                                 Bindings
-                                  { bindings = BindedSingle $ BindIdentifier $ Identifier "c_ref",
+                                  { bindings = BindedSingle $ BindIdentifier (Identifier "c_ref") Nothing,
                                     bindingsBindType = Just $ TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "u64") [],
                                     -- = &foo.c
                                     bindingsBindExpr =
@@ -704,7 +704,7 @@ testParseStructExpr =
                               -- let positional = ...
                               SequenceItemBindExpr $
                                 Bindings
-                                  { bindings = BindedSingle $ BindIdentifier $ Identifier "positional",
+                                  { bindings = BindedSingle $ BindIdentifier (Identifier "positional") Nothing,
                                     bindingsBindType = Nothing,
                                     -- = PositionalStruct(12, 24)
                                     bindingsBindExpr =
@@ -765,7 +765,7 @@ testParseStructExpr =
                                                       [ -- a: my_a
                                                         BindedField
                                                           { bindFieldIdentifier = Identifier "a",
-                                                            bindFieldInnerBind = Just $ BindIdentifier $ Identifier "my_a"
+                                                            bindFieldInnerBind = Just $ BindIdentifier (Identifier "my_a") Nothing
                                                           }
                                                       ]
                                                   }
@@ -793,7 +793,7 @@ testParseStructExpr =
                                                   }
                                             },
                                         -- another_42)
-                                        BindIdentifier $ Identifier "another_42"
+                                        BindIdentifier (Identifier "another_42") Nothing
                                       ],
                                     -- : (PositionalSttruct, u64)
                                     bindingsBindType =

@@ -71,14 +71,14 @@ mapWhileToFunction (While {whileCondition, whileExpr}) scopes containsBreak func
       breakHitDecl =
         SequenceItemBindExpr $
           Bindings
-            { bindings = BindedSingle $ BindIdentifier $ Identifier "break_hit",
+            { bindings = BindedSingle $ BindIdentifier (Identifier "break_hit") Nothing,
               bindingsBindType = Just booleanType,
               bindingsBindExpr = Just $ ValueLiteral $ Boolean False
             }
       continueHitDecl =
         SequenceItemBindExpr $
           Bindings
-            { bindings = BindedSingle $ BindIdentifier $ Identifier "continue_hit",
+            { bindings = BindedSingle $ BindIdentifier (Identifier "continue_hit") Nothing,
               bindingsBindType = Just booleanType,
               bindingsBindExpr = Just $ ValueLiteral $ Boolean False
             }

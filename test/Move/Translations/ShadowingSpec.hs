@@ -66,7 +66,7 @@ testRemoveShadowingInSequence = describe "Tests for the function `removeShadowin
               sequenceItems =
                 [ SequenceItemBindExpr $
                     Bindings
-                      { bindings = BindedSingle $ BindIdentifier $ Identifier "x",
+                      { bindings = BindedSingle $ BindIdentifier (Identifier "x") Nothing,
                         bindingsBindType = Nothing,
                         bindingsBindExpr = Nothing
                       },
@@ -78,7 +78,7 @@ testRemoveShadowingInSequence = describe "Tests for the function `removeShadowin
                           sequenceItems =
                             [ SequenceItemBindExpr $
                                 Bindings
-                                  { bindings = BindedSingle $ BindIdentifier $ Identifier "x",
+                                  { bindings = BindedSingle $ BindIdentifier (Identifier "x") Nothing,
                                     bindingsBindType = Nothing,
                                     bindingsBindExpr =
                                       Just $
@@ -120,7 +120,7 @@ testRemoveShadowingInSequence = describe "Tests for the function `removeShadowin
               sequenceItems =
                 [ SequenceItemBindExpr $
                     Bindings
-                      { bindings = BindedSingle $ BindIdentifier $ Identifier "x",
+                      { bindings = BindedSingle $ BindIdentifier (Identifier "x") Nothing,
                         bindingsBindType = Nothing,
                         bindingsBindExpr = Nothing
                       },
@@ -132,7 +132,7 @@ testRemoveShadowingInSequence = describe "Tests for the function `removeShadowin
                           sequenceItems =
                             [ SequenceItemBindExpr $
                                 Bindings
-                                  { bindings = BindedSingle $ BindIdentifier $ Identifier "x_inner",
+                                  { bindings = BindedSingle $ BindIdentifier (Identifier "x_inner") Nothing,
                                     bindingsBindType = Nothing,
                                     bindingsBindExpr =
                                       Just $
