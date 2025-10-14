@@ -769,8 +769,8 @@ CommaBindedField_ :: { BindedFields }
 -- A field that is being binded is an identifier with optional inner bind
 BindedField ::  { Maybe BindedField }
   : '..'                                              { Nothing }
-  | Identifier                                        { Just $ BindedField { bindFieldIdentifier = $1, bindFieldInnerBind = Nothing } }
-  | Identifier ':' Bind                               { Just $ BindedField { bindFieldIdentifier = $1, bindFieldInnerBind = Just $3 } }
+  | Identifier                                        { Just $ BindedField { bindFieldIdentifier = $1, bindFieldInnerBind = Nothing, bindedFieldUUID = Nothing } }
+  | Identifier ':' Bind                               { Just $ BindedField { bindFieldIdentifier = $1, bindFieldInnerBind = Just $3, bindedFieldUUID = Nothing } }
 
 
 {

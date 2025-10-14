@@ -624,7 +624,8 @@ testParseStructExpr =
                                                         BindedField
                                                           { bindFieldIdentifier = Identifier "a",
                                                             -- _ is parsed as an identifier
-                                                            bindFieldInnerBind = Just $ BindIdentifier (Identifier "_") Nothing
+                                                            bindFieldInnerBind = Just $ BindIdentifier (Identifier "_") Nothing,
+                                                            bindedFieldUUID = Nothing
                                                           },
                                                         -- b: B<bool> ...
                                                         BindedField
@@ -643,16 +644,19 @@ testParseStructExpr =
                                                                               [ -- b: my_b
                                                                                 BindedField
                                                                                   { bindFieldIdentifier = Identifier "b",
-                                                                                    bindFieldInnerBind = Just $ BindIdentifier (Identifier "my_b") Nothing
+                                                                                    bindFieldInnerBind = Just $ BindIdentifier (Identifier "my_b") Nothing,
+                                                                                    bindedFieldUUID = Nothing
                                                                                   }
                                                                               ]
                                                                           }
-                                                                    }
+                                                                    },
+                                                            bindedFieldUUID = Nothing
                                                           },
                                                         -- c: _
                                                         BindedField
                                                           { bindFieldIdentifier = Identifier "c",
-                                                            bindFieldInnerBind = Just $ BindIdentifier (Identifier "_") Nothing
+                                                            bindFieldInnerBind = Just $ BindIdentifier (Identifier "_") Nothing,
+                                                            bindedFieldUUID = Nothing
                                                           }
                                                       ]
                                                   }
@@ -734,12 +738,14 @@ testParseStructExpr =
                                                       [ -- _
                                                         BindedField
                                                           { bindFieldIdentifier = Identifier "_",
-                                                            bindFieldInnerBind = Nothing
+                                                            bindFieldInnerBind = Nothing,
+                                                            bindedFieldUUID = Nothing
                                                           },
                                                         -- twenty_four
                                                         BindedField
                                                           { bindFieldIdentifier = Identifier "twenty_four",
-                                                            bindFieldInnerBind = Nothing
+                                                            bindFieldInnerBind = Nothing,
+                                                            bindedFieldUUID = Nothing
                                                           }
                                                       ]
                                                   }
@@ -765,7 +771,8 @@ testParseStructExpr =
                                                       [ -- a: my_a
                                                         BindedField
                                                           { bindFieldIdentifier = Identifier "a",
-                                                            bindFieldInnerBind = Just $ BindIdentifier (Identifier "my_a") Nothing
+                                                            bindFieldInnerBind = Just $ BindIdentifier (Identifier "my_a") Nothing,
+                                                            bindedFieldUUID = Nothing
                                                           }
                                                       ]
                                                   }
@@ -788,7 +795,7 @@ testParseStructExpr =
                                                 BindedFields
                                                   { hasPartialPattern = True,
                                                     bindedFields =
-                                                      [ BindedField {bindFieldIdentifier = Identifier "twelve", bindFieldInnerBind = Nothing}
+                                                      [ BindedField {bindFieldIdentifier = Identifier "twelve", bindFieldInnerBind = Nothing, bindedFieldUUID = Nothing}
                                                       ]
                                                   }
                                             },

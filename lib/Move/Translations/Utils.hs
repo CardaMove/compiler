@@ -1,5 +1,11 @@
 module Move.Translations.Utils where
 
+import Control.Monad.State
+  ( MonadState (get, put),
+    State,
+    evalState,
+  )
+import Data.Generics.Uniplate.Data (transformBiM)
 import Data.Map qualified as Map
 import Move.AST
 
@@ -141,3 +147,37 @@ inferBindType (BindIdentifier ident _) Nothing (Just (ValueLiteral (Address _)))
 inferBindType (BindIdentifier ident _) Nothing (Just (ValueLiteral (Boolean _))) = [(ident, Just booleanType)]
 -- For all other expressions, either is it needed to know the scope or have any type
 inferBindType bind _ _ = map (,Nothing) (getBindIdentifiers bind)
+
+-- |
+-- Given an AST, adds a unique identifier to all bindings
+--
+-- Note that existing UUIDs will be overwritten
+annotateBindingsWithUUID :: Root -> Root
+annotateBindingsWithUUID root = evalState (transformBiM f root) 0
+  where
+    f :: Bind -> State Int Bind
+    f (BindIdentifier ident _) = do
+      curr <- get
+      put $ curr + 1
+      return $ BindIdentifier ident (Just curr)
+    f other = case other of
+      BindNamedStruct str@BindedNamedStruct {bnsFields} -> do
+        mappedFields <- helper bnsFields
+        return $ BindNamedStruct $ str {bnsFields = mappedFields}
+      BindPositionalStruct str@BindedPositionalStruct {bpsFields} -> do
+        mappedFields <- helper bpsFields
+        return $ BindPositionalStruct $ str {bpsFields = mappedFields}
+      where
+        helper :: BindedFields -> State Int BindedFields
+        helper bindedFs@BindedFields {bindedFields} = do
+          mappedFields <- mapM mapper bindedFields
+          return bindedFs {bindedFields = mappedFields}
+          where
+            mapper :: BindedField -> State Int BindedField
+            -- A BindedField should have a UUID only if it has no inner binding.
+            -- This is because if an inner binding is present, this identifier is not added to the scope
+            mapper bindedField@BindedField{bindFieldInnerBind = Nothing} = do
+              curr <- get
+              put $ curr + 1
+              return bindedField {bindedFieldUUID = Just curr}
+            mapper other' = return other'

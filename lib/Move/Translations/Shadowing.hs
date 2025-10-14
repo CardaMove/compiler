@@ -35,9 +35,10 @@ generateUnshadowedName ident outerScopes = foldr f ident outerScopes
 
 -- |
 -- Helper for `updateBindWithUnshadowedIdentifiers`. Works on fields of any struct
+-- FIXME: Updates a bind name but does not update uuid
 updateBindWithUnshadowedIdentifiersHelper :: BindedField -> [Scope] -> BindedField
-updateBindWithUnshadowedIdentifiersHelper (BindedField {bindFieldIdentifier, bindFieldInnerBind = Nothing}) scopes = BindedField {bindFieldIdentifier = getUnshadowedName bindFieldIdentifier scopes, bindFieldInnerBind = Nothing}
-updateBindWithUnshadowedIdentifiersHelper (BindedField {bindFieldIdentifier, bindFieldInnerBind = Just bindFieldInnerBind}) scopes = BindedField {bindFieldIdentifier, bindFieldInnerBind = Just $ updateBindWithUnshadowedIdentifiers bindFieldInnerBind scopes}
+updateBindWithUnshadowedIdentifiersHelper (BindedField {bindFieldIdentifier, bindFieldInnerBind = Nothing, bindedFieldUUID}) scopes = BindedField {bindFieldIdentifier = getUnshadowedName bindFieldIdentifier scopes, bindFieldInnerBind = Nothing, bindedFieldUUID}
+updateBindWithUnshadowedIdentifiersHelper (BindedField {bindFieldIdentifier, bindFieldInnerBind = Just bindFieldInnerBind, bindedFieldUUID}) scopes = BindedField {bindFieldIdentifier, bindFieldInnerBind = Just $ updateBindWithUnshadowedIdentifiers bindFieldInnerBind scopes, bindedFieldUUID}
 
 -- |
 -- Given a single bind, replaces its binded identifiers with the newly unshadowed names
