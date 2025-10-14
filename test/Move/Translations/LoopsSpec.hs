@@ -35,88 +35,15 @@ testLoopsToWhile = describe "Translating a loop into a while" $ do
                  )
 
   it "Translates nested Loop expressions" $ do
-    let innerLoopBody =
-          SequenceExpr $
-            Sequence
-              { sequenceUses = [],
-                sequenceItems = [],
-                -- a = a + 1
-                sequenceEndExpr =
-                  Just $
-                    AssignmentExpr $
-                      Assignment
-                        { assignmentLeft = NameAccessChainExpr $ LocalNameAccessChain $ Identifier "a",
-                          assignmentRight =
-                            BinaryOpExprExpr $
-                              Add
-                                (NameAccessChainExpr $ LocalNameAccessChain $ Identifier "a")
-                                (ValueLiteral $ Numerical $ LiteralIntDec 1)
-                        }
-              }
+    fromFunctionBodyStr <- readFile "test/Move/Translations/files/LoopsSpec_4.txt"
+    toFunctionBodyStr <- readFile "test/Move/Translations/files/LoopsSpec_5.txt"
 
-    let functionBody =
-          Sequence
-            { sequenceUses = [],
-              sequenceItems = [],
-              -- outer loop
-              sequenceEndExpr =
-                Just $
-                  Loop $
-                    SequenceExpr $
-                      Sequence
-                        { sequenceUses = [],
-                          sequenceItems =
-                            [ -- let a = 10
-                              SequenceItemBindExpr $
-                                Bindings
-                                  { bindings = BindedSingle $ BindIdentifier (Identifier "a") Nothing,
-                                    bindingsBindType = Nothing,
-                                    bindingsBindExpr = Just $ ValueLiteral $ Numerical $ LiteralIntDec 10
-                                  },
-                              -- inner loop
-                              SequenceItemExpr $ Loop $ innerLoopBody
-                            ],
-                          -- return a
-                          sequenceEndExpr = Just $ Return $ Just $ NameAccessChainExpr $ LocalNameAccessChain $ Identifier "a"
-                        }
-            }
+    let fromFunctionBody = read fromFunctionBodyStr :: Sequence
+    let toFunctionBody = read toFunctionBodyStr :: Sequence
 
-    translateLoopsToWhile functionBody
-      `shouldBe` ( Sequence
-                     { sequenceUses = [],
-                       sequenceItems = [],
-                       -- outer loop remapped in while
-                       sequenceEndExpr =
-                         Just $
-                           WhileTerm $
-                             While
-                               { whileCondition = ValueLiteral $ Boolean True,
-                                 whileExpr =
-                                   SequenceExpr $
-                                     Sequence
-                                       { sequenceUses = [],
-                                         sequenceItems =
-                                           [ -- let a = 10
-                                             SequenceItemBindExpr $
-                                               Bindings
-                                                 { bindings = BindedSingle $ BindIdentifier (Identifier "a") Nothing,
-                                                   bindingsBindType = Nothing,
-                                                   bindingsBindExpr = Just $ ValueLiteral $ Numerical $ LiteralIntDec 10
-                                                 },
-                                             -- inner loop remapped in while
-                                             SequenceItemExpr $
-                                               WhileTerm $
-                                                 While
-                                                   { whileCondition = ValueLiteral $ Boolean True,
-                                                     whileExpr = innerLoopBody
-                                                   }
-                                           ],
-                                         -- return a
-                                         sequenceEndExpr = Just $ Return $ Just $ NameAccessChainExpr $ LocalNameAccessChain $ Identifier "a"
-                                       }
-                               }
-                     }
-                 )
+
+    translateLoopsToWhile fromFunctionBody
+      `shouldBe` toFunctionBody
 
 testTranslateWhilesToFunctionsInRoot :: Spec
 testTranslateWhilesToFunctionsInRoot = describe "Tests for the function `translateWhilesToFunctionsInRoot`" $ do
