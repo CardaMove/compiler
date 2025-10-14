@@ -276,7 +276,8 @@ data TypeParameter
 data Parameter
   = Parameter
   { parameterIdentifier :: Identifier,
-    parameterType :: Type
+    parameterType :: Type,
+    parameterUUID :: Maybe Int
   }
   deriving (Eq, Show, Read, Data, Typeable)
 

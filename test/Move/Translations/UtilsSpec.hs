@@ -1,5 +1,10 @@
 module Move.Translations.UtilsSpec (spec) where
 
+import Control.Monad.State
+  ( MonadState (get, put),
+    State,
+    evalState,
+  )
 import Move.AST
 import Move.Translations.Utils ( getBindIdentifiers, annotateBindingsWithUUID )
 import Test.Hspec
@@ -39,7 +44,9 @@ testAnnotateBindingsWithUUID = describe "Tests the function `annotateBindingsWit
     let fromModule = parse $ scan fromModuleStr
     let toModule = read toModuleStr :: Root
 
-    annotateBindingsWithUUID fromModule `shouldBe` toModule
+    let annotated = evalState (annotateBindingsWithUUID fromModule) 0
+
+    annotated `shouldBe` toModule
 
 spec :: Spec
 spec = do

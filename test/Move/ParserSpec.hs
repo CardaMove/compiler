@@ -197,9 +197,9 @@ testParseFunctionNoBody =
                       TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "B", typeConstraints = []}
                     ],
                   functionParameters =
-                    [ Parameter {parameterIdentifier = Identifier "a", parameterType = TypeConstructor (LocalNameAccessChain $ Identifier "A") []},
-                      Parameter {parameterIdentifier = Identifier "b", parameterType = TypeConstructor (LocalNameAccessChain $ Identifier "B") []},
-                      Parameter {parameterIdentifier = Identifier "c", parameterType = TypeConstructor (LocalNameAccessChain $ Identifier "u64") []}
+                    [ Parameter {parameterIdentifier = Identifier "a", parameterType = TypeConstructor (LocalNameAccessChain $ Identifier "A") [], parameterUUID = Nothing},
+                      Parameter {parameterIdentifier = Identifier "b", parameterType = TypeConstructor (LocalNameAccessChain $ Identifier "B") [], parameterUUID = Nothing},
+                      Parameter {parameterIdentifier = Identifier "c", parameterType = TypeConstructor (LocalNameAccessChain $ Identifier "u64") [], parameterUUID = Nothing}
                     ],
                   functionReturnType = Just $ TypeConstructor (LocalNameAccessChain $ Identifier "u64") [],
                   functionAcquires =
@@ -401,7 +401,7 @@ testParseFunctionWithBody =
                   functionHasEntryModifier = False,
                   functionName = Identifier "my_func",
                   functionTypeParameters = [],
-                  functionParameters = [Parameter {parameterIdentifier = Identifier "b", parameterType = TypeConstructor (LocalNameAccessChain $ Identifier "u64") []}],
+                  functionParameters = [Parameter {parameterIdentifier = Identifier "b", parameterType = TypeConstructor (LocalNameAccessChain $ Identifier "u64") [], parameterUUID = Nothing}],
                   functionReturnType = Just $ TypeConstructor (LocalNameAccessChain $ Identifier "u64") [],
                   functionAcquires = [],
                   functionBody =
@@ -532,7 +532,7 @@ testParseStructExpr =
                   functionHasEntryModifier = False,
                   functionName = Identifier "my_func2",
                   functionTypeParameters = [],
-                  functionParameters = [Parameter {parameterIdentifier = Identifier "b", parameterType = TypeMutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "B") [TypeConstructor (LocalNameAccessChain $ Identifier "bool") []]}],
+                  functionParameters = [Parameter {parameterIdentifier = Identifier "b", parameterType = TypeMutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "B") [TypeConstructor (LocalNameAccessChain $ Identifier "bool") []], parameterUUID = Nothing}],
                   functionReturnType = Nothing,
                   functionAcquires = [],
                   functionBody =

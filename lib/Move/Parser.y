@@ -432,7 +432,8 @@ FunctionParameter :: { Parameter }
   : Identifier ':' Type             {
     Parameter {
       parameterIdentifier = $1,
-      parameterType = $3      
+      parameterType = $3,
+      parameterUUID = Nothing
     }
   }
 

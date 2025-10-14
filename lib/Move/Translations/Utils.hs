@@ -3,7 +3,6 @@ module Move.Translations.Utils where
 import Control.Monad.State
   ( MonadState (get, put),
     State,
-    evalState,
   )
 import Data.Generics.Uniplate.Data (transformBiM)
 import Data.Map qualified as Map
@@ -152,32 +151,74 @@ inferBindType bind _ _ = map (,Nothing) (getBindIdentifiers bind)
 -- Given an AST, adds a unique identifier to all bindings
 --
 -- Note that existing UUIDs will be overwritten
-annotateBindingsWithUUID :: Root -> Root
-annotateBindingsWithUUID root = evalState (transformBiM f root) 0
+annotateBindingsWithUUID :: Root -> State Int Root
+annotateBindingsWithUUID root = do
+  -- First, handle both a Module and a Script
+  case root of
+    RModule rModule@Module {moduleTopLevels} -> do
+      mappedTopLevels <- handleTopLevels moduleTopLevels
+      return $ RModule $ rModule {moduleTopLevels = mappedTopLevels}
+    RScript rScript@Script {scriptTopLevels} -> do
+      mappedTopLevels <- handleTopLevels scriptTopLevels
+      return $ RScript $ rScript {scriptTopLevels = mappedTopLevels}
   where
-    f :: Bind -> State Int Bind
-    f (BindIdentifier ident _) = do
-      curr <- get
-      put $ curr + 1
-      return $ BindIdentifier ident (Just curr)
-    f other = case other of
-      BindNamedStruct str@BindedNamedStruct {bnsFields} -> do
-        mappedFields <- helper bnsFields
-        return $ BindNamedStruct $ str {bnsFields = mappedFields}
-      BindPositionalStruct str@BindedPositionalStruct {bpsFields} -> do
-        mappedFields <- helper bpsFields
-        return $ BindPositionalStruct $ str {bpsFields = mappedFields}
+    -- Each top level function should be annotated both in its parameters and function body
+    handleTopLevels :: [TopLevel] -> State Int [TopLevel]
+    handleTopLevels topLevels = do mapM topLevelAnnotator topLevels
       where
-        helper :: BindedFields -> State Int BindedFields
-        helper bindedFs@BindedFields {bindedFields} = do
-          mappedFields <- mapM mapper bindedFields
-          return bindedFs {bindedFields = mappedFields}
+        topLevelAnnotator :: TopLevel -> State Int TopLevel
+        topLevelAnnotator (TopLevelFunction topLFunction@Function {functionParameters, functionBody}) = do
+          -- Annotate the parameters of the function
+          annotatedParameters <-
+            mapM
+              ( \param -> do
+                  curr <- get
+                  put $ curr + 1
+                  return $ param {parameterUUID = Just curr}
+              )
+              functionParameters
+          -- Annotate the body with the helper function
+          annotatedBody <- mapM (transformBiM functionBodyAnnotator) functionBody
+
+          -- Return the annotated function
+          return $
+            TopLevelFunction $
+              topLFunction
+                { functionParameters = annotatedParameters,
+                  functionBody = annotatedBody
+                }
           where
-            mapper :: BindedField -> State Int BindedField
-            -- A BindedField should have a UUID only if it has no inner binding.
-            -- This is because if an inner binding is present, this identifier is not added to the scope
-            mapper bindedField@BindedField{bindFieldInnerBind = Nothing} = do
+            -- Annotates all the bindings in the function body
+            functionBodyAnnotator :: Bind -> State Int Bind
+            -- Single bind
+            functionBodyAnnotator (BindIdentifier ident _) = do
               curr <- get
               put $ curr + 1
-              return bindedField {bindedFieldUUID = Just curr}
-            mapper other' = return other'
+              return $ BindIdentifier ident (Just curr)
+            functionBodyAnnotator other = case other of
+              -- Handle pattern matching on named structs
+              BindNamedStruct str@BindedNamedStruct {bnsFields} -> do
+                mappedFields <- bindedFieldsAnnotator bnsFields
+                return $ BindNamedStruct $ str {bnsFields = mappedFields}
+              -- Handle pattern matching on positional structs
+              BindPositionalStruct str@BindedPositionalStruct {bpsFields} -> do
+                mappedFields <- bindedFieldsAnnotator bpsFields
+                return $ BindPositionalStruct $ str {bpsFields = mappedFields}
+              where
+                -- Helper function to annotate pattern matched fields
+                bindedFieldsAnnotator :: BindedFields -> State Int BindedFields
+                bindedFieldsAnnotator bindedFs@BindedFields {bindedFields} = do
+                  mappedFields <- mapM bindFldAnnotator bindedFields
+                  return bindedFs {bindedFields = mappedFields}
+                  where
+                    -- Helper function to annotate a single matched field
+                    bindFldAnnotator :: BindedField -> State Int BindedField
+                    -- A BindedField should have a UUID only if it has no inner binding.
+                    -- This is because if an inner binding is present, this identifier is not added to the scope
+                    bindFldAnnotator bindedField@BindedField {bindFieldInnerBind = Nothing} = do
+                      curr <- get
+                      put $ curr + 1
+                      return bindedField {bindedFieldUUID = Just curr}
+                    bindFldAnnotator other' = return other'
+        -- Every other top level node is ignored
+        topLevelAnnotator otherTL = return otherTL

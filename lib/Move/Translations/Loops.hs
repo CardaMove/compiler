@@ -48,7 +48,8 @@ mapFreeVariableToFunctionParameter :: (Identifier, Maybe Type) -> Parameter
 mapFreeVariableToFunctionParameter (ident, identType) =
   Parameter
     { parameterIdentifier = ident,
-      parameterType = TypeMutableRef $ getValueOrDefault identType unknownType
+      parameterType = TypeMutableRef $ getValueOrDefault identType unknownType,
+      parameterUUID = Nothing
     }
 
 -- |

@@ -1,5 +1,5 @@
 module NamedAddr::UtilsSpc {
-    fun testFun() {
+    fun testFun(x: u64) {
         let a = 1;
         let (b, c) = (True, 2);
 
