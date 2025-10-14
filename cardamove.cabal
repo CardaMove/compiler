@@ -31,7 +31,6 @@ library
       Move.Parser
       Move.Token
       Move.Translations.Loops
-      Move.Translations.Shadowing
       Move.Translations.TraversalUtils
       Move.Translations.Utils
   other-modules:
@@ -88,7 +87,6 @@ test-suite cardamove-test
       Move.LexerSpec
       Move.ParserSpec
       Move.Translations.LoopsSpec
-      Move.Translations.ShadowingSpec
       Move.Translations.TraversalUtilsSpec
       Move.Translations.UtilsSpec
       Paths_cardamove
