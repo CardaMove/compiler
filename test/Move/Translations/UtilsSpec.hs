@@ -6,13 +6,13 @@ import Control.Monad.State
     evalState,
   )
 import Move.AST
-import Move.Translations.Utils ( extractVariableFromSingleBind, annotateBindingsWithUUID, VariableAnnotations (VariableAnnotations) )
+import Move.Translations.Utils ( extractVariablesFromSingleBind, annotateBindingsWithUUID, VariableAnnotations (VariableAnnotations) )
 import Test.Hspec
 import Move.Parser (parse)
 import Move.Lexer (scan)
 
-testExtractVariableFromSingleBind :: Spec
-testExtractVariableFromSingleBind = describe "Tests the function `extractVariableFromSingleBind`" $ do
+testExtractVariablesFromSingleBind :: Spec
+testExtractVariablesFromSingleBind = describe "Tests the function `extractVariablesFromSingleBind`" $ do
   it "Returns all the binded identifiers given a single bind, along with their UUID and Type" $ do
     {- Code as follows:
       let MyStruct{a, b: b_alias} = e
@@ -32,7 +32,7 @@ testExtractVariableFromSingleBind = describe "Tests the function `extractVariabl
                     }
               }
 
-    extractVariableFromSingleBind bind Nothing Nothing [] `shouldBe` [(Identifier "a", VariableAnnotations (Just 0) TypeUnknown), (Identifier "b_alias", VariableAnnotations (Just 1) TypeUnknown)]
+    extractVariablesFromSingleBind bind Nothing Nothing [] `shouldBe` [(Identifier "a", VariableAnnotations (Just 0) TypeUnknown), (Identifier "b_alias", VariableAnnotations (Just 1) TypeUnknown)]
 
 
 testAnnotateBindingsWithUUID :: Spec
@@ -50,5 +50,5 @@ testAnnotateBindingsWithUUID = describe "Tests the function `annotateBindingsWit
 
 spec :: Spec
 spec = do
-  testExtractVariableFromSingleBind
+  testExtractVariablesFromSingleBind
   testAnnotateBindingsWithUUID

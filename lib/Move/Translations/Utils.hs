@@ -71,57 +71,50 @@ getUseIdentifiers use = case use of
 -- Given a binding, returns a list with every binded identifier along with its type, if it could be inferred
 extractVariablesFromBindings :: Bindings -> [Scope] -> [(Identifier, VariableAnnotations)]
 --  For a single bind, infer its type
-extractVariablesFromBindings (Bindings {bindings = BindedSingle bind, bindingsBindType, bindingsBindExpr}) scopes = extractVariableFromSingleBind bind bindingsBindType bindingsBindExpr scopes
---  For a tuple bind, if neither types nor expression is specified, types can not be inferred
+extractVariablesFromBindings (Bindings {bindings = BindedSingle bind, bindingsBindType, bindingsBindExpr}) scopes = extractVariablesFromSingleBind bind bindingsBindType bindingsBindExpr scopes
+--  For a tuple bind, if neither types nor right value is specified, types can not be inferred
 extractVariablesFromBindings (Bindings {bindings = BindedTuple binds, bindingsBindType = Nothing, bindingsBindExpr = Nothing}) scopes =
-  concatMap (\bind -> extractVariableFromSingleBind bind Nothing Nothing scopes) binds
---  For a tuple bind, if types are specified, they must be a tuple of types
+  concatMap (\bind -> extractVariablesFromSingleBind bind Nothing Nothing scopes) binds
+--  For a tuple bind, if types are specified, they must be a tuple of types. No need to look for the right value
 extractVariablesFromBindings (Bindings {bindings = BindedTuple binds, bindingsBindType = Just (TypeTuple types)}) scopes =
   if length binds /= length types
-    then error ("When inferring binding types: number of bindings is different from number of types. " ++ show binds ++ ", " ++ show types)
-    else concatMap (\(bind, t) -> extractVariableFromSingleBind bind (Just t) Nothing scopes) (zip binds types)
---  If instead types are not specified, they must be inferred from the expression, which should be a tuple
-extractVariablesFromBindings (Bindings {bindings = BindedTuple binds, bindingsBindType = Nothing, bindingsBindExpr = Just (CommaExpr exprs)}) scopes =
-  if length binds /= length exprs
-    then error ("When inferring binding types: number of bindings is different from number of expression. " ++ show binds ++ ", " ++ show exprs)
-    else concatMap (\(bind, expr) -> extractVariableFromSingleBind bind Nothing (Just expr) scopes) (zip binds exprs)
---  A tuple bind can destructure a function result. TODO: This is not currently inferred
-extractVariablesFromBindings (Bindings {bindings = BindedTuple binds, bindingsBindType = Nothing, bindingsBindExpr = Just (PositionalStructExprOrFunctionCallExpr _)}) scopes =
-  concatMap (\bind -> extractVariableFromSingleBind bind Nothing Nothing scopes) binds
---  It is not possible to specify a non-tuple types for a tuple binding
+    then error ("When inferring binding types: different tuple arity. " ++ show binds ++ ", " ++ show types)
+    else concatMap (\(bind, t) -> extractVariablesFromSingleBind bind (Just t) Nothing scopes) (zip binds types)
+--  If instead types are not specified, they must be inferred from the right value
+extractVariablesFromBindings (Bindings {bindings = BindedTuple binds, bindingsBindType = Nothing, bindingsBindExpr = Just bindingsBindExpr}) scopes =
+  case inferExprType bindingsBindExpr scopes of
+    TypeUnknown -> concatMap (\bind -> extractVariablesFromSingleBind bind (Just TypeUnknown) Nothing scopes) binds
+    -- The right value should resolve to a tuple type with same arity
+    TypeTuple types ->
+      if length binds /= length types
+        then error ("When inferring binding types: different tuple arity. " ++ show binds ++ ", " ++ show types)
+        else concatMap (\(bind, t) -> extractVariablesFromSingleBind bind (Just t) Nothing scopes) (zip binds types)
+    _ -> error "Can not pattern match a non-tuple value against a tuple"
+--  It is not possible to specify a non-tuple type for a tuple binding
 extractVariablesFromBindings (Bindings {bindings = BindedTuple _, bindingsBindType = Just _}) _ = error "Found a tuple binding typed with a non-tuple type"
--- A tuple bind with any other expression is invalid
-extractVariablesFromBindings (Bindings {bindings = BindedTuple _, bindingsBindType = Nothing, bindingsBindExpr = Just _}) scopes = error "Found a tuple binding assigned with a non-tuple expression"
 
 -- |
 -- Give a single bind and its corresponding type or expression, tries to infer the type of all the binded identifiers
-extractVariableFromSingleBind :: Bind -> Maybe Type -> Maybe Expr -> [Scope] -> [(Identifier, VariableAnnotations)]
-extractVariableFromSingleBind (BindIdentifier ident maybeUUID) maybeType maybeExpr scopes =
-  let inferredType :: Type =
-        case (maybeType, maybeExpr, scopes) of
-          --  It is not possible to infer the type of an identifier alone (or in another way, it can be any type)
-          (Nothing, Nothing, _) -> TypeUnknown
-          --  Identifier with type annotation
-          (Just t, _, _) -> t
-          -- When an expression is provided, try to infer it
-          (Nothing, Just expr, _) -> inferExprType expr scopes
-   in [(ident, VariableAnnotations maybeUUID inferredType)]
--- TODO: For all other expressions, either is it needed to know the scope or have any type
-extractVariableFromSingleBind bind _ _ _ = map (,VariableAnnotations Nothing TypeUnknown) (getBindIdentifiers bind)
+extractVariablesFromSingleBind :: Bind -> Maybe Type -> Maybe Expr -> [Scope] -> [(Identifier, VariableAnnotations)]
+extractVariablesFromSingleBind bind maybeType maybeExpr scopes =
+  case bind of
+    (BindIdentifier ident maybeUUID) ->
+      let inferredType :: Type = case (maybeType, maybeExpr, scopes) of
+            --  It is not possible to infer the type of an identifier alone (or in another way, it can be any type)
+            (Nothing, Nothing, _) -> TypeUnknown
+            --  Identifier with type annotation
+            (Just t, _, _) -> t
+            -- When an expression is provided, try to infer it
+            (Nothing, Just expr, _) -> inferExprType expr scopes
+       in [(ident, VariableAnnotations maybeUUID inferredType)]
+    (BindNamedStruct (BindedNamedStruct {bnsFields = BindedFields {bindedFields}})) -> concatMap getBindIdentifiersHelper bindedFields
+    (BindPositionalStruct (BindedPositionalStruct {bpsFields = BindedFields {bindedFields}})) -> concatMap getBindIdentifiersHelper bindedFields
   where
-    -- \|
-    -- Given a single bind, returns all its binded identifiers as they are named in the AST
-    getBindIdentifiers :: Bind -> [Identifier]
-    getBindIdentifiers bind' =
-      let getBindIdentifiersHelper :: [BindedField] -> [Identifier]
-          getBindIdentifiersHelper = concatMap f
-            where
-              f (BindedField {bindFieldIdentifier, bindFieldInnerBind = Nothing}) = [bindFieldIdentifier]
-              f (BindedField {bindFieldInnerBind = Just innerBind}) = getBindIdentifiers innerBind
-       in case bind' of
-            (BindIdentifier ident _) -> [ident]
-            (BindNamedStruct (BindedNamedStruct {bnsFields = BindedFields {bindedFields}})) -> getBindIdentifiersHelper bindedFields
-            (BindPositionalStruct (BindedPositionalStruct {bpsFields = BindedFields {bindedFields}})) -> getBindIdentifiersHelper bindedFields
+    getBindIdentifiersHelper :: BindedField -> [(Identifier, VariableAnnotations)]
+    -- TODO: Type of the field can be inferred by looking at the type definition (and expression in case of generic type)
+    getBindIdentifiersHelper (BindedField {bindFieldIdentifier, bindFieldInnerBind = Nothing, bindedFieldUUID}) = [(bindFieldIdentifier, VariableAnnotations bindedFieldUUID TypeUnknown)]
+    -- TODO: Can be refined by passing the sub-expression to the recursive call
+    getBindIdentifiersHelper (BindedField {bindFieldInnerBind = Just innerBind}) = extractVariablesFromSingleBind innerBind Nothing Nothing scopes
 
 -- |
 -- Given an AST, adds a unique identifier to all bindings
