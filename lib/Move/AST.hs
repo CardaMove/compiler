@@ -143,11 +143,9 @@ data Module
 -- | A script is similar to a Module, but without an identifier and with a subset of top levels allowed
 newtype Script
   = Script
-  {
-    scriptTopLevels :: [TopLevel]
+  { scriptTopLevels :: [TopLevel]
   }
   deriving (Eq, Show, Read, Data, Typeable)
-
 
 -- | An identifier is a name of a variable or module
 newtype Identifier
@@ -232,11 +230,13 @@ newtype PositionalField = PositionalField Type
 
 -- | Represents any type: type constructow with arguments, reference types, tuple types
 -- See grammar comment for Type
+-- Also includes a special `TypeUnknown` to be used when the type can not be inferred
 data Type
   = TypeConstructor NameAccessChain [Type]
   | TypeImmutableRef Type
   | TypeMutableRef Type
   | TypeTuple [Type]
+  | TypeUnknown
   deriving (Eq, Show, Read, Data, Typeable, Ord)
 
 -- | A function declaration
@@ -267,7 +267,7 @@ data VisibilityModifier
 data TypeParameter
   = TypeParameter
   { typeParameterIsPhantom :: Bool,
-    typeIdentifier :: Identifier, -- Not using Type since here we have just an indentifier
+    typeIdentifier :: Identifier, -- Not using Type since here we have just an identifier
     typeConstraints :: [Ability]
   }
   deriving (Eq, Show, Read, Data, Typeable)
@@ -277,7 +277,7 @@ data Parameter
   = Parameter
   { parameterIdentifier :: Identifier,
     parameterType :: Type,
-    parameterUUID :: Maybe Int
+    parameterUUID :: Maybe AnnotatedUUID
   }
   deriving (Eq, Show, Read, Data, Typeable)
 
@@ -297,19 +297,19 @@ data Constant
 -- | Also other control flow keywords such as return, abort, break and continue are considered expressions
 -- | A chain of expressions enclosed by braces {...} are called a Sequence. See related type definition
 data Expr
-  = BinaryOpExprExpr BinaryOpExpr                 -- e1 <op> e2
-  | AssignmentExpr Assignment                     -- e1 = e2
-  | UnaryOpExpr UnaryExpr                         -- <op> e1
-  | DotOrIndexChainExpr DotOrIndexChain           -- e1.a.b
-  | ValueLiteral ValueLiteral                     -- 42
-  | CommaExpr [Expr]                              -- (e1, .., en)
-  | TypedExprTerm TypedExpr                       -- (e1 : t1)
-  | CastingTerm Casting                           -- (e1 as t1)
-  | NamedStructExprExpr NamedStructExpr           -- MyStruct{..}
-  | PositionalStructExprOrFunctionCallExpr PositionalStructExprOrFunctionCall   -- Foo(..)
-  | FunctionBangCallExpr FunctionBangCall         -- assert!(..)
-  | NameAccessChainExpr NameAccessChain           -- myVariable
-  | SequenceExpr Sequence                         -- { e1; e2; let ..; e3 }
+  = BinaryOpExprExpr BinaryOpExpr -- e1 <op> e2
+  | AssignmentExpr Assignment -- e1 = e2
+  | UnaryOpExpr UnaryExpr -- <op> e1
+  | DotOrIndexChainExpr DotOrIndexChain -- e1.a.b
+  | ValueLiteral ValueLiteral -- 42
+  | CommaExpr [Expr] -- (e1, .., en)
+  | TypedExprTerm TypedExpr -- (e1 : t1)
+  | CastingTerm Casting -- (e1 as t1)
+  | NamedStructExprExpr NamedStructExpr -- MyStruct{..}
+  | PositionalStructExprOrFunctionCallExpr PositionalStructExprOrFunctionCall -- Foo(..)
+  | FunctionBangCallExpr FunctionBangCall -- assert!(..)
+  | NameAccessChainExpr NameAccessChain -- myVariable
+  | SequenceExpr Sequence -- { e1; e2; let ..; e3 }
   | IfThenElseTerm IfThenElse
   | WhileTerm While
   | Loop Expr
@@ -512,7 +512,7 @@ data Binded = BindedSingle Bind | BindedTuple [Bind]
 -- | It can either bind an identifier, or perform pattern matching to bind labels of a struct.
 -- | Examples: `let a = 12`, `let MyStruct(a, b) = ...`
 data Bind
-  = BindIdentifier Identifier (Maybe Int)
+  = BindIdentifier Identifier (Maybe AnnotatedUUID)
   | BindNamedStruct BindedNamedStruct
   | BindPositionalStruct BindedPositionalStruct
   deriving (Eq, Show, Read, Data, Typeable, Ord)
@@ -555,6 +555,8 @@ data BindedField
   = BindedField
   { bindFieldIdentifier :: Identifier,
     bindFieldInnerBind :: Maybe Bind,
-    bindedFieldUUID :: Maybe Int
+    bindedFieldUUID :: Maybe AnnotatedUUID
   }
   deriving (Eq, Show, Read, Data, Typeable, Ord)
+
+type AnnotatedUUID = Int

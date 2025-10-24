@@ -9,7 +9,7 @@ import Data.Map qualified as Map
 import Data.Set qualified as Set
 import Move.AST
 import Move.Translations.TraversalUtils (traverseExprPostOrder, traverseRootPostOrder)
-import Move.Translations.Utils (Scope, booleanType, getIdentifierTypeFromScope, getValueOrDefault, isIdentifierInScope, unknownType)
+import Move.Translations.Utils (Scope, VariableAnnotations (VariableAnnotations), booleanType, getIdentifierFromScopes, isIdentifierInScope)
 
 -- |
 -- Translates all `loop expr` expressions into `while(true) expr`.
@@ -44,12 +44,12 @@ mapFreeVariablesToDerefsInExpr expr = traverseExprPostOrder f expr [] []
 -- The parameter will be a mutable or immutable reference depending if the input variable is mutable or not.
 --
 -- If the type of the variable is known, it will be used as type argument for the reference, otherwise a dummy type will be returned
-mapFreeVariableToFunctionParameter :: (Identifier, Maybe Type) -> Parameter
-mapFreeVariableToFunctionParameter (ident, identType) =
+mapFreeVariableToFunctionParameter :: Identifier -> VariableAnnotations -> Parameter
+mapFreeVariableToFunctionParameter ident (VariableAnnotations identUUID identType) =
   Parameter
     { parameterIdentifier = ident,
-      parameterType = TypeMutableRef $ getValueOrDefault identType unknownType,
-      parameterUUID = Nothing
+      parameterType = TypeMutableRef identType,
+      parameterUUID = identUUID
     }
 
 -- |
@@ -113,18 +113,19 @@ mapWhileToFunction (While {whileCondition, whileExpr}) scopes containsBreak func
       (mappedBodyExpr, freeVarsInBodyExpr) = mapFreeVariablesToDerefsInExpr whileExprWithBreakBind
       --
       -- If a break_hit (or continue_hit) flag is added to the body of the while, it needs to be pushed on the scope so that its type can be retrieved
+      -- Note: These new variables will not have any UUID
       scopes' =
         if containsBreak
-          then Map.fromList [(Identifier "break_hit", Just booleanType), (Identifier "continue_hit", Just booleanType)] : scopes
+          then Map.fromList [(Identifier "break_hit", VariableAnnotations Nothing booleanType), (Identifier "continue_hit", VariableAnnotations Nothing booleanType)] : scopes
           else scopes
 
       -- Get all the free variables with their type
       -- Note that variables are sorted so to avoid confusion when testing
       allFreeVars = sort $ nub (freeVarsInConditionExpr ++ freeVarsInBodyExpr)
-      freeVarsWithType = map (\ident -> (ident, getIdentifierTypeFromScope ident scopes')) allFreeVars
+      freeVarsWithType = map (\ident -> (ident, getIdentifierFromScopes ident scopes')) allFreeVars
       --
       -- For each free variable, create a function parameter as a mutable reference
-      functionParameters = map mapFreeVariableToFunctionParameter freeVarsWithType
+      functionParameters = map (uncurry mapFreeVariableToFunctionParameter) freeVarsWithType
       -- For the invocation from the original function, dereference the variables with the same name
       functionCallArguments = map (UnaryOpExpr . MutableReference . NameAccessChainExpr . LocalNameAccessChain) allFreeVars
       --

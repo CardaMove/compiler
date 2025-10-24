@@ -6,7 +6,11 @@ import Data.List (mapAccumL)
 import Data.Map qualified as Map
 import Move.AST
 import Move.Translations.Utils
-    ( getUseIdentifiers, inferBindingsTypes, Scope )
+  ( Scope,
+    VariableAnnotations (VariableAnnotations),
+    extractVariablesFromBindings,
+    getUseIdentifiers,
+  )
 
 type TraverseExprMapper state = Expr -> [Scope] -> state -> (Expr, state)
 
@@ -40,8 +44,9 @@ traverseSequencePostOrder :: TraverseExprMapper state -> Sequence -> [Scope] -> 
 traverseSequencePostOrder _ _ [] _ = error "Cannot traverse Sequence with no scopes"
 traverseSequencePostOrder f (Sequence {sequenceUses, sequenceItems, sequenceEndExpr}) (localScope : outerScopes) state =
   -- First, add the uses to the local scope
+  -- TODO: They will not have any UUID nor type
   let usesIdentifiers = concatMap getUseIdentifiers sequenceUses
-      usesScope = Map.fromList (map (,Nothing) usesIdentifiers)
+      usesScope :: Scope = Map.fromList (map (,VariableAnnotations Nothing TypeUnknown) usesIdentifiers)
       scopesBeforeSeqItems = Map.union usesScope localScope : outerScopes
       -- Then, recursively traverse the sequence items, and collect the new scope and state
       ((scopesAfterSeqItems, stateAfterSeqItems), sequenceItems') = mapAccumL fAcc (scopesBeforeSeqItems, state) sequenceItems
@@ -62,7 +67,7 @@ traverseSequencePostOrder f (Sequence {sequenceUses, sequenceItems, sequenceEndE
                      in (Just mappedBindExpr, state')
                 -- Note: here should be called any function that would map the binding
                 -- Then, add the binded identifiers to the local scope
-                bindScopes = Map.fromList $ inferBindingsTypes bindings
+                bindScopes = Map.fromList $ extractVariablesFromBindings bindings scopesBeforeBind
                 localScopeAfterBind = Map.union bindScopes localScopeBeforeBind
              in ( (localScopeAfterBind : outerScopesBeforeBind, stateAfterTraversingBindExpr),
                   SequenceItemBindExpr $
@@ -100,16 +105,16 @@ traverseRootPostOrder f root state = case root of
   where
     traversalHelper topLevels =
       -- Since top level identifiers are never renamed, add all of them to the module scope before starting to traverse
-      let identifiersAndType = concatMap topLevelMap topLevels
+      let topLevelIdentifiersAnnotated = concatMap topLevelMap topLevels
             where
-              topLevelMap (TopLevelUse use) = map (,Nothing) (getUseIdentifiers use)
+              -- TODO: Structs, function declarations and uses for now do not have a type
+              topLevelMap (TopLevelUse use) = map (,VariableAnnotations Nothing TypeUnknown) (getUseIdentifiers use)
               topLevelMap (TopLevelFriend _) = []
-              -- TODO: Structs and function declarations for now do not have a type
-              topLevelMap (TopLevelNamedStruct (NamedStruct {namedStructIdentifier})) = [(namedStructIdentifier, Nothing)]
-              topLevelMap (TopLevelPositionalStruct (PositionalStruct {positionalStructIdentifier})) = [(positionalStructIdentifier, Nothing)]
-              topLevelMap (TopLevelFunction (Function {functionName})) = [(functionName, Nothing)]
-              topLevelMap (TopLevelConstant (Constant {constantIdentifier, constantType})) = [(constantIdentifier, Just constantType)]
-          moduleScope = Map.fromList identifiersAndType
+              topLevelMap (TopLevelNamedStruct (NamedStruct {namedStructIdentifier})) = [(namedStructIdentifier, VariableAnnotations Nothing TypeUnknown)]
+              topLevelMap (TopLevelPositionalStruct (PositionalStruct {positionalStructIdentifier})) = [(positionalStructIdentifier, VariableAnnotations Nothing TypeUnknown)]
+              topLevelMap (TopLevelFunction (Function {functionName})) = [(functionName, VariableAnnotations Nothing TypeUnknown)]
+              topLevelMap (TopLevelConstant (Constant {constantIdentifier, constantType})) = [(constantIdentifier, VariableAnnotations Nothing constantType)]
+          moduleScope :: Scope = Map.fromList topLevelIdentifiersAnnotated
 
           (stateAfterTraversal, mappedTopLevels) = mapAccumL topLevelMap state topLevels
             where
@@ -122,7 +127,7 @@ traverseRootPostOrder f root state = case root of
               -- Each function will have an additional scope for both the parameters and the body
               topLevelMap state' (TopLevelFunction function@Function {functionParameters, functionBody = Just bodySequence}) =
                 -- Create a new local scope including the function parameters
-                let functionParametersScope = Map.fromList $ map (\(Parameter {parameterIdentifier, parameterType}) -> (parameterIdentifier, Just parameterType)) functionParameters
+                let functionParametersScope :: Scope = Map.fromList $ map (\(Parameter {parameterIdentifier, parameterType, parameterUUID}) -> (parameterIdentifier, VariableAnnotations parameterUUID parameterType)) functionParameters
                     (mappedSequence, state'') = traverseSequencePostOrder f bodySequence [functionParametersScope, moduleScope] state'
                  in (state'', TopLevelFunction $ function {functionBody = Just mappedSequence})
               -- Otherwise do nothing

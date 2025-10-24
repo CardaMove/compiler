@@ -6,11 +6,12 @@ import Control.Monad.State
   )
 import Data.Generics.Uniplate.Data (transformBiM)
 import Data.Map qualified as Map
+import Data.Maybe (fromMaybe)
 import Move.AST
 
--- | Dummy type representing any type that is not possible to infer
-unknownType :: Type
-unknownType = TypeConstructor (LocalNameAccessChain $ Identifier "UNKNOWN_TYPE") []
+-- | Unity type ()
+unitType :: Type
+unitType = TypeTuple []
 
 -- | bool type
 booleanType :: Type
@@ -21,8 +22,17 @@ booleanType = TypeConstructor (LocalNameAccessChain $ Identifier "bool") []
 numericType :: Type
 numericType = TypeConstructor (LocalNameAccessChain $ Identifier "u256") []
 
+-- | Address type
+addressType :: Type
+addressType = TypeConstructor (LocalNameAccessChain $ Identifier "address") []
+
+-- |
+-- Annotations such as UUID and Type assigned to each identifier in the scope
+data VariableAnnotations = VariableAnnotations (Maybe AnnotatedUUID) Type
+  deriving (Eq, Show)
+
 -- | Represents a local scope
-type Scope = Map.Map Identifier (Maybe Type)
+type Scope = Map.Map Identifier VariableAnnotations
 
 -- |
 -- Checks if the identifier is present in any of the input scopes
@@ -31,22 +41,16 @@ isIdentifierInScope _ [] = False
 isIdentifierInScope ident (x : xs) = Map.member ident x || isIdentifierInScope ident xs
 
 -- |
--- Returns the inferred type of an identifier present in the scope.
+-- Returns the UUID and inferred type of an identifier present in the scope.
 --
 -- Throws an error if the identifier is not present in the scope
-getIdentifierTypeFromScope :: Identifier -> [Scope] -> Maybe Type
-getIdentifierTypeFromScope ident [] = error ("Cannot get identifier type. Not in scope: " ++ show ident)
-getIdentifierTypeFromScope ident (x : xs) = case Map.lookup ident x of
+getIdentifierFromScopes :: Identifier -> [Scope] -> VariableAnnotations
+getIdentifierFromScopes ident [] = error ("Cannot get identifier type. Not in scope: " ++ show ident)
+getIdentifierFromScopes ident (x : xs) = case Map.lookup ident x of
   -- The identifier is not in this scope, proceed recursively
-  Nothing -> getIdentifierTypeFromScope ident xs
-  -- The identifier is in this scope, return its type (if available)
-  Just maybeType -> maybeType
-
--- |
--- Utility function. Given a Maybe value, return that value of not Nothing, or a default one otherwise
-getValueOrDefault :: Maybe val -> val -> val
-getValueOrDefault Nothing def = def
-getValueOrDefault (Just val) _ = val
+  Nothing -> getIdentifierFromScopes ident xs
+  -- The identifier is in this scope, return its UUID and type (if available)
+  Just res -> res
 
 -- |
 -- Given a Use, returns all the alias identifiers.
@@ -64,88 +68,60 @@ getUseIdentifiers use = case use of
     getIdentifier (Just ident) _ = ident
 
 -- |
--- Given a single bind, returns all its binded identifiers as they are named in the AST
-getBindIdentifiers :: Bind -> [Identifier]
-getBindIdentifiers bind =
-  let getBindIdentifiersHelper :: [BindedField] -> [Identifier]
-      getBindIdentifiersHelper = concatMap f
-        where
-          f (BindedField {bindFieldIdentifier, bindFieldInnerBind = Nothing}) = [bindFieldIdentifier]
-          f (BindedField {bindFieldInnerBind = Just innerBind}) = getBindIdentifiers innerBind
-   in case bind of
-        (BindIdentifier ident _) -> [ident]
-        (BindNamedStruct (BindedNamedStruct {bnsFields = BindedFields {bindedFields}})) -> getBindIdentifiersHelper bindedFields
-        (BindPositionalStruct (BindedPositionalStruct {bpsFields = BindedFields {bindedFields}})) -> getBindIdentifiersHelper bindedFields
-
--- |
 -- Given a binding, returns a list with every binded identifier along with its type, if it could be inferred
-inferBindingsTypes :: Bindings -> [(Identifier, Maybe Type)]
+extractVariablesFromBindings :: Bindings -> [Scope] -> [(Identifier, VariableAnnotations)]
 --  For a single bind, infer its type
-inferBindingsTypes (Bindings {bindings = BindedSingle bind, bindingsBindType, bindingsBindExpr}) = inferBindType bind bindingsBindType bindingsBindExpr
+extractVariablesFromBindings (Bindings {bindings = BindedSingle bind, bindingsBindType, bindingsBindExpr}) scopes = extractVariableFromSingleBind bind bindingsBindType bindingsBindExpr scopes
 --  For a tuple bind, if neither types nor expression is specified, types can not be inferred
-inferBindingsTypes (Bindings {bindings = BindedTuple binds, bindingsBindType = Nothing, bindingsBindExpr = Nothing}) =
-  let bindsIdentifiers = concatMap getBindIdentifiers binds
-   in map (,Nothing) bindsIdentifiers
+extractVariablesFromBindings (Bindings {bindings = BindedTuple binds, bindingsBindType = Nothing, bindingsBindExpr = Nothing}) scopes =
+  concatMap (\bind -> extractVariableFromSingleBind bind Nothing Nothing scopes) binds
 --  For a tuple bind, if types are specified, they must be a tuple of types
-inferBindingsTypes (Bindings {bindings = BindedTuple binds, bindingsBindType = Just (TypeTuple types)}) =
+extractVariablesFromBindings (Bindings {bindings = BindedTuple binds, bindingsBindType = Just (TypeTuple types)}) scopes =
   if length binds /= length types
     then error ("When inferring binding types: number of bindings is different from number of types. " ++ show binds ++ ", " ++ show types)
-    else concatMap (\(bind, t) -> inferBindType bind (Just t) Nothing) (zip binds types)
+    else concatMap (\(bind, t) -> extractVariableFromSingleBind bind (Just t) Nothing scopes) (zip binds types)
 --  If instead types are not specified, they must be inferred from the expression, which should be a tuple
-inferBindingsTypes (Bindings {bindings = BindedTuple binds, bindingsBindType = Nothing, bindingsBindExpr = Just (CommaExpr exprs)}) =
+extractVariablesFromBindings (Bindings {bindings = BindedTuple binds, bindingsBindType = Nothing, bindingsBindExpr = Just (CommaExpr exprs)}) scopes =
   if length binds /= length exprs
     then error ("When inferring binding types: number of bindings is different from number of expression. " ++ show binds ++ ", " ++ show exprs)
-    else concatMap (\(bind, expr) -> inferBindType bind Nothing (Just expr)) (zip binds exprs)
---  A tuple bind can destructure a function result. This is not currently inferred
-inferBindingsTypes (Bindings {bindings = BindedTuple binds, bindingsBindType = Nothing, bindingsBindExpr = Just (PositionalStructExprOrFunctionCallExpr _)}) =
-  let bindsIdentifiers = concatMap getBindIdentifiers binds
-   in map (,Nothing) bindsIdentifiers
+    else concatMap (\(bind, expr) -> extractVariableFromSingleBind bind Nothing (Just expr) scopes) (zip binds exprs)
+--  A tuple bind can destructure a function result. TODO: This is not currently inferred
+extractVariablesFromBindings (Bindings {bindings = BindedTuple binds, bindingsBindType = Nothing, bindingsBindExpr = Just (PositionalStructExprOrFunctionCallExpr _)}) scopes =
+  concatMap (\bind -> extractVariableFromSingleBind bind Nothing Nothing scopes) binds
 --  It is not possible to specify a non-tuple types for a tuple binding
-inferBindingsTypes (Bindings {bindings = BindedTuple _, bindingsBindType = Just _}) = error "Found a tuple binding typed with a non-tuple type"
+extractVariablesFromBindings (Bindings {bindings = BindedTuple _, bindingsBindType = Just _}) _ = error "Found a tuple binding typed with a non-tuple type"
 -- A tuple bind with any other expression is invalid
-inferBindingsTypes (Bindings {bindings = BindedTuple _, bindingsBindType = Nothing, bindingsBindExpr = Just _}) = error "Found a tuple binding assigned with a non-tuple expression"
+extractVariablesFromBindings (Bindings {bindings = BindedTuple _, bindingsBindType = Nothing, bindingsBindExpr = Just _}) scopes = error "Found a tuple binding assigned with a non-tuple expression"
 
 -- |
 -- Give a single bind and its corresponding type or expression, tries to infer the type of all the binded identifiers
-inferBindType :: Bind -> Maybe Type -> Maybe Expr -> [(Identifier, Maybe Type)]
---  It is not possible to infer the type of an identifier alone (or in another way, it can be any type)
-inferBindType (BindIdentifier ident _) Nothing Nothing = [(ident, Nothing)]
---  Identifier with type annotation
-inferBindType (BindIdentifier ident _) identType@(Just _) _ = [(ident, identType)]
---  Identifier with corresponding binary expression
-inferBindType (BindIdentifier ident _) Nothing (Just (BinaryOpExprExpr (Or _ _))) = [(ident, Just booleanType)]
-inferBindType (BindIdentifier ident _) Nothing (Just (BinaryOpExprExpr (And _ _))) = [(ident, Just booleanType)]
-inferBindType (BindIdentifier ident _) Nothing (Just (BinaryOpExprExpr (Eq _ _))) = [(ident, Just booleanType)]
-inferBindType (BindIdentifier ident _) Nothing (Just (BinaryOpExprExpr (Neq _ _))) = [(ident, Just booleanType)]
-inferBindType (BindIdentifier ident _) Nothing (Just (BinaryOpExprExpr (Lt _ _))) = [(ident, Just booleanType)]
-inferBindType (BindIdentifier ident _) Nothing (Just (BinaryOpExprExpr (Gt _ _))) = [(ident, Just booleanType)]
-inferBindType (BindIdentifier ident _) Nothing (Just (BinaryOpExprExpr (Leq _ _))) = [(ident, Just booleanType)]
-inferBindType (BindIdentifier ident _) Nothing (Just (BinaryOpExprExpr (Geq _ _))) = [(ident, Just booleanType)]
-inferBindType (BindIdentifier ident _) Nothing (Just (BinaryOpExprExpr (BitwiseOr _ _))) = [(ident, Just numericType)]
-inferBindType (BindIdentifier ident _) Nothing (Just (BinaryOpExprExpr (BitwiseXor _ _))) = [(ident, Just numericType)]
-inferBindType (BindIdentifier ident _) Nothing (Just (BinaryOpExprExpr (BitwiseAnd _ _))) = [(ident, Just numericType)]
-inferBindType (BindIdentifier ident _) Nothing (Just (BinaryOpExprExpr (ShiftLeft _ _))) = [(ident, Just numericType)]
-inferBindType (BindIdentifier ident _) Nothing (Just (BinaryOpExprExpr (ShiftRight _ _))) = [(ident, Just numericType)]
-inferBindType (BindIdentifier ident _) Nothing (Just (BinaryOpExprExpr (Add _ _))) = [(ident, Just numericType)]
-inferBindType (BindIdentifier ident _) Nothing (Just (BinaryOpExprExpr (Sub _ _))) = [(ident, Just numericType)]
-inferBindType (BindIdentifier ident _) Nothing (Just (BinaryOpExprExpr (Mult _ _))) = [(ident, Just numericType)]
-inferBindType (BindIdentifier ident _) Nothing (Just (BinaryOpExprExpr (Div _ _))) = [(ident, Just numericType)]
-inferBindType (BindIdentifier ident _) Nothing (Just (BinaryOpExprExpr (Mod _ _))) = [(ident, Just numericType)]
---  An assignment has unit type
-inferBindType (BindIdentifier ident _) Nothing (Just (AssignmentExpr _)) = [(ident, Just $ TypeTuple [])]
---  Identifier with unary expression
-inferBindType (BindIdentifier ident _) Nothing (Just (UnaryOpExpr (Negation _))) = [(ident, Just numericType)]
---  Identifier with a typed expression or a casting
-inferBindType (BindIdentifier ident _) Nothing (Just (TypedExprTerm (TypedExpr {typedExprType}))) = [(ident, Just typedExprType)]
-inferBindType (BindIdentifier ident _) Nothing (Just (CastingTerm (Casting {castingType}))) = [(ident, Just castingType)]
--- while loops have unit type
-inferBindType (BindIdentifier ident _) Nothing (Just (WhileTerm _)) = [(ident, Just $ TypeTuple [])]
--- Basic inference with literal values
-inferBindType (BindIdentifier ident _) Nothing (Just (ValueLiteral (Numerical _))) = [(ident, Just numericType)]
-inferBindType (BindIdentifier ident _) Nothing (Just (ValueLiteral (Address _))) = [(ident, Just $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [])]
-inferBindType (BindIdentifier ident _) Nothing (Just (ValueLiteral (Boolean _))) = [(ident, Just booleanType)]
--- For all other expressions, either is it needed to know the scope or have any type
-inferBindType bind _ _ = map (,Nothing) (getBindIdentifiers bind)
+extractVariableFromSingleBind :: Bind -> Maybe Type -> Maybe Expr -> [Scope] -> [(Identifier, VariableAnnotations)]
+extractVariableFromSingleBind (BindIdentifier ident maybeUUID) maybeType maybeExpr scopes =
+  let inferredType :: Type =
+        case (maybeType, maybeExpr, scopes) of
+          --  It is not possible to infer the type of an identifier alone (or in another way, it can be any type)
+          (Nothing, Nothing, _) -> TypeUnknown
+          --  Identifier with type annotation
+          (Just t, _, _) -> t
+          -- When an expression is provided, try to infer it
+          (Nothing, Just expr, _) -> inferExprType expr scopes
+   in [(ident, VariableAnnotations maybeUUID inferredType)]
+-- TODO: For all other expressions, either is it needed to know the scope or have any type
+extractVariableFromSingleBind bind _ _ _ = map (,VariableAnnotations Nothing TypeUnknown) (getBindIdentifiers bind)
+  where
+    -- \|
+    -- Given a single bind, returns all its binded identifiers as they are named in the AST
+    getBindIdentifiers :: Bind -> [Identifier]
+    getBindIdentifiers bind' =
+      let getBindIdentifiersHelper :: [BindedField] -> [Identifier]
+          getBindIdentifiersHelper = concatMap f
+            where
+              f (BindedField {bindFieldIdentifier, bindFieldInnerBind = Nothing}) = [bindFieldIdentifier]
+              f (BindedField {bindFieldInnerBind = Just innerBind}) = getBindIdentifiers innerBind
+       in case bind' of
+            (BindIdentifier ident _) -> [ident]
+            (BindNamedStruct (BindedNamedStruct {bnsFields = BindedFields {bindedFields}})) -> getBindIdentifiersHelper bindedFields
+            (BindPositionalStruct (BindedPositionalStruct {bpsFields = BindedFields {bindedFields}})) -> getBindIdentifiersHelper bindedFields
 
 -- |
 -- Given an AST, adds a unique identifier to all bindings
@@ -222,3 +198,93 @@ annotateBindingsWithUUID root = do
       put $ curr + 1
       return bindedField {bindedFieldUUID = Just curr}
     bindFldAnnotator other' = return other'
+
+-- |
+-- Given any expression and the accumulated scopes, tries to infer the type of the expression
+inferExprType :: Expr -> [Scope] -> Type
+-- Binary expressions
+inferExprType (BinaryOpExprExpr (Or _ _)) _ = booleanType
+inferExprType (BinaryOpExprExpr (And _ _)) _ = booleanType
+inferExprType (BinaryOpExprExpr (Eq _ _)) _ = booleanType
+inferExprType (BinaryOpExprExpr (Neq _ _)) _ = booleanType
+inferExprType (BinaryOpExprExpr (Lt _ _)) _ = booleanType
+inferExprType (BinaryOpExprExpr (Gt _ _)) _ = booleanType
+inferExprType (BinaryOpExprExpr (Leq _ _)) _ = booleanType
+inferExprType (BinaryOpExprExpr (Geq _ _)) _ = booleanType
+inferExprType (BinaryOpExprExpr (BitwiseOr _ _)) _ = numericType
+inferExprType (BinaryOpExprExpr (BitwiseXor _ _)) _ = numericType
+inferExprType (BinaryOpExprExpr (BitwiseAnd _ _)) _ = numericType
+inferExprType (BinaryOpExprExpr (ShiftLeft _ _)) _ = numericType
+inferExprType (BinaryOpExprExpr (ShiftRight _ _)) _ = numericType
+inferExprType (BinaryOpExprExpr (Add _ _)) _ = numericType
+inferExprType (BinaryOpExprExpr (Sub _ _)) _ = numericType
+inferExprType (BinaryOpExprExpr (Mult _ _)) _ = numericType
+inferExprType (BinaryOpExprExpr (Div _ _)) _ = numericType
+inferExprType (BinaryOpExprExpr (Mod _ _)) _ = numericType
+--  An assignment has unit type
+inferExprType (AssignmentExpr _) _ = unitType
+-- Unary expressions
+inferExprType (UnaryOpExpr (Negation _)) _ = booleanType
+-- TODO: Consider about extending other references via &my_ref.b.c
+inferExprType (UnaryOpExpr (MutableReference ref)) scopes = TypeMutableRef $ inferExprType ref scopes
+inferExprType (UnaryOpExpr (ImmutableReference ref)) scopes = TypeImmutableRef $ inferExprType ref scopes
+inferExprType (UnaryOpExpr (Dereference expr)) scopes =
+  case inferExprType expr scopes of
+    (TypeMutableRef refType) -> refType
+    (TypeImmutableRef refType) -> refType
+    _ -> error "Dereferencing non-ref type"
+inferExprType (UnaryOpExpr (MoveExpr expr)) scopes = inferExprType (NameAccessChainExpr $ LocalNameAccessChain expr) scopes
+inferExprType (UnaryOpExpr (CopyExpr expr)) scopes = inferExprType (NameAccessChainExpr $ LocalNameAccessChain expr) scopes
+-- Dot or index chain TODO:
+inferExprType (DotOrIndexChainExpr (DotAccess {dotAccessLeft, dotAccessRight})) scopes =
+  case inferExprType dotAccessLeft scopes of
+    TypeConstructor typeCons typeArgs -> TypeUnknown
+    TypeImmutableRef refType -> TypeUnknown -- Should be a TypeImmutableRef itself
+    TypeMutableRef refType -> TypeUnknown -- Should be a TypeMutableRef itself
+    _ -> error "Dot access to non-struct type"
+-- Literal values
+inferExprType (ValueLiteral (Address _)) _ = addressType
+inferExprType (ValueLiteral (Boolean _)) _ = booleanType
+inferExprType (ValueLiteral (Numerical _)) _ = numericType
+-- Comma expression
+inferExprType (CommaExpr exprs) scopes = TypeTuple $ map (`inferExprType` scopes) exprs
+-- Typed expression
+inferExprType (TypedExprTerm (TypedExpr {typedExprType})) _ = typedExprType
+-- Casting
+inferExprType (CastingTerm (Casting {castingType})) _ = castingType
+-- Named struct expression TODO:
+inferExprType (NamedStructExprExpr (NamedStructExpr {nseNameAccessChain})) scopes = TypeUnknown
+-- Positional struct expression or function call TODO:
+inferExprType (PositionalStructExprOrFunctionCallExpr (PositionalStructExprOrFunctionCall {pseofcNameAccessChain})) scopes = TypeUnknown
+-- Function bang call has unit type
+inferExprType (FunctionBangCallExpr _) _ = unitType
+-- Name access chain
+inferExprType (NameAccessChainExpr (LocalNameAccessChain ident)) scopes =
+  let VariableAnnotations _ maybeType = getIdentifierFromScopes ident scopes
+   in maybeType
+-- TODO: resolve alias
+inferExprType (NameAccessChainExpr (AliasedNameAccessChain address ident)) scopes = TypeUnknown
+-- TODO: resolve alias
+inferExprType (NameAccessChainExpr (UnaliasedNameAccessChain address ident1 ident2)) scopes = TypeUnknown
+-- Sequence
+inferExprType (SequenceExpr (Sequence {sequenceEndExpr})) scopes =
+  case sequenceEndExpr of
+    Nothing -> unitType
+    Just expr -> inferExprType expr scopes
+-- If then else
+inferExprType (IfThenElseTerm (IfThenElse {ifThenElseIfBranch})) scopes = inferExprType ifThenElseIfBranch scopes
+-- While
+inferExprType (WhileTerm _) _ = unitType
+-- Loop
+inferExprType (Loop _) _ = TypeUnknown
+-- Return
+inferExprType (Return expr) scopes =
+  case expr of
+    Nothing -> unitType
+    Just expr' -> inferExprType expr' scopes
+-- Abort
+inferExprType (Abort expr) scopes = inferExprType expr scopes
+-- Break
+inferExprType Break _ = TypeUnknown
+-- Continue
+inferExprType Continue _ = TypeUnknown
