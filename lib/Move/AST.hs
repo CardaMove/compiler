@@ -185,7 +185,8 @@ newtype Friend = Friend NameAccessChain
   deriving (Eq, Show, Read, Data, Typeable)
 
 -- | Definition of a struct type
--- | Example: `struct MyStruct<...>{ field1: type1, field2: type2 }`
+--
+-- Example: `struct MyStruct<...>{ field1: type1, field2: type2 }`
 data NamedStruct
   = NamedStruct
   { namedStructIdentifier :: Identifier,
@@ -196,7 +197,8 @@ data NamedStruct
   deriving (Eq, Show, Read, Data, Typeable)
 
 -- | Definition of a positional struct
--- | Example: `struct MyPositionalStruct<...>(type1, type2);`
+--
+-- Example: `struct MyPositionalStruct<...>(type1, type2);`
 data PositionalStruct
   = PositionalStruct
   { positionalStructIdentifier :: Identifier,
@@ -215,7 +217,8 @@ data Ability
   deriving (Eq, Show, Read, Data, Typeable)
 
 -- | Named fields are field definitions inside a "normal" (named) struct
--- | Example: `struct MyStruct<...>{ field1: type1, field2: type2 }`
+--
+-- Example: `struct MyStruct<...>{ field1: type1, field2: type2 }`
 data NamedField
   = NamedField
   { fieldIdentifier :: Identifier,
@@ -224,12 +227,15 @@ data NamedField
   deriving (Eq, Show, Read, Data, Typeable)
 
 -- | Positional fields are field definitions inside a positional struct
--- | Example: `struct MyPositionalStruct<...>(type1, type2);`
+--
+-- Example: `struct MyPositionalStruct<...>(type1, type2);`
 newtype PositionalField = PositionalField Type
   deriving (Eq, Show, Read, Data, Typeable)
 
 -- | Represents any type: type constructow with arguments, reference types, tuple types
+--
 -- See grammar comment for Type
+--
 -- Also includes a special `TypeUnknown` to be used when the type can not be inferred
 data Type
   = TypeConstructor NameAccessChain [Type]
@@ -240,7 +246,8 @@ data Type
   deriving (Eq, Show, Read, Data, Typeable, Ord)
 
 -- | A function declaration
--- | Example: `public entry my_func<...>(a: A, b: B): u64 acquires B {...}`
+--
+-- Example: `public entry my_func<...>(a: A, b: B): u64 acquires B {...}`
 data Function
   = Function
   { functionHasNativeModifier :: Bool,
@@ -263,7 +270,8 @@ data VisibilityModifier
   deriving (Eq, Show, Read, Data, Typeable)
 
 -- | A Type parameter in any declaration (struct, function)
--- | Example: `struct MyStruct<TypeParam1 : copy + drop, phantom TypeParam2>{...}`
+--
+-- Example: `struct MyStruct<TypeParam1 : copy + drop, phantom TypeParam2>{...}`
 data TypeParameter
   = TypeParameter
   { typeParameterIsPhantom :: Bool,
@@ -282,7 +290,8 @@ data Parameter
   deriving (Eq, Show, Read, Data, Typeable)
 
 -- | A top level constant
--- | Example: `const MY_CONSTANT: u64 = 3;`
+--
+-- Example: `const MY_CONSTANT: u64 = 3;`
 data Constant
   = Constant
   { constantIdentifier :: Identifier,
@@ -292,10 +301,14 @@ data Constant
   deriving (Eq, Show, Read, Data, Typeable)
 
 -- | Represents any expression.
--- | Assignments are considered expressions, but not bindings
--- | Control flow constructs such as if-then-else and loops are considered expressions
--- | Also other control flow keywords such as return, abort, break and continue are considered expressions
--- | A chain of expressions enclosed by braces {...} are called a Sequence. See related type definition
+--
+-- Assignments are considered expressions, but not bindings
+--
+-- Control flow constructs such as if-then-else and loops are considered expressions
+--
+-- Also other control flow keywords such as return, abort, break and continue are considered expressions
+--
+-- A chain of expressions enclosed by braces {...} are called a Sequence. See related type definition
 data Expr
   = BinaryOpExprExpr BinaryOpExpr -- e1 <op> e2
   | AssignmentExpr Assignment -- e1 = e2
@@ -350,7 +363,8 @@ data Assignment
   deriving (Eq, Show, Read, Data, Typeable, Ord)
 
 -- | A unary expression involves a single expression or identifier
--- | References and dereferences are considered unary expressions
+--
+-- References and dereferences are considered unary expressions
 data UnaryExpr
   = Negation Expr
   | MutableReference Expr
@@ -361,8 +375,10 @@ data UnaryExpr
   deriving (Eq, Show, Read, Data, Typeable, Ord)
 
 -- | A dot chain is a serie of accesses via dot notation
--- | Example `my_obj.inner.a`
--- | Note: The data type name includes index chains, but they are present only in the Move specification language
+--
+-- Example `my_obj.inner.a`
+--
+-- Note: The data type name includes index chains, but they are present only in the Move specification language
 data DotOrIndexChain
   = DotAccess
   { dotAccessLeft :: Expr,
@@ -423,7 +439,8 @@ data Numerical
   deriving (Eq, Show, Read, Data, Typeable, Ord)
 
 -- | A literal named struct, used as expression
--- | Example: `MyStruct<...>{a: 12, b: 24}`
+--
+-- Example: `MyStruct<...>{a: 12, b: 24}`
 data NamedStructExpr
   = NamedStructExpr
   { nseNameAccessChain :: NameAccessChain,
@@ -433,8 +450,10 @@ data NamedStructExpr
   deriving (Eq, Show, Read, Data, Typeable, Ord)
 
 -- | A field of a named struct is composed by an identifier (the label of the struct), and the related expression.
--- | If the expression is the same identifier of the label, it can be omitted as a suger syntax
--- | Example: `...{a: 12 + 3, b}`
+--
+-- If the expression is the same identifier of the label, it can be omitted as a suger syntax
+--
+-- Example: `...{a: 12 + 3, b}`
 data NamedStructExprField
   = NamedStructExprField
   { nsefIdentifier :: Identifier,
@@ -443,7 +462,8 @@ data NamedStructExprField
   deriving (Eq, Show, Read, Data, Typeable, Ord)
 
 -- | A name access chain is an access to a variable, struct or function that might be declared on the current module or another one
--- | Examples: `my_local_variable`, `friendModule::my_struct`, `moduleAddress::moduleIdentifier::my_function`
+--
+-- Examples: `my_local_variable`, `friendModule::my_struct`, `moduleAddress::moduleIdentifier::my_function`
 data NameAccessChain
   = LocalNameAccessChain Identifier
   | AliasedNameAccessChain Address Identifier
@@ -451,9 +471,10 @@ data NameAccessChain
   deriving (Eq, Show, Read, Data, Typeable, Ord)
 
 -- | The following can either be a function call or a positional struct used as an expression.
--- | It's not possible to distinguish a positional struct wrt a function call just by parsing.
--- | Example:
--- |   `let a = GuessWhoAmI(42, "unknown");`
+--
+-- It's not possible to distinguish a positional struct wrt a function call just by parsing.
+--
+-- Example: `let a = GuessWhoAmI(42, "unknown");`
 data PositionalStructExprOrFunctionCall
   = PositionalStructExprOrFunctionCall
   { pseofcNameAccessChain :: NameAccessChain,
@@ -471,9 +492,10 @@ data FunctionBangCall
   deriving (Eq, Show, Read, Data, Typeable, Ord)
 
 -- | A Sequence starts and ends with braces {...} and it's a serie of use declarations separated by ';',
--- | followed by a serie of expressions or bindings separated by ';',
--- | and an optional final expression without ';'
--- | Example: `{ use ...; use ...; let a = 12; a = 23; a + 1 }`
+-- followed by a serie of expressions or bindings separated by ';',
+-- and an optional final expression without ';'
+--
+-- Example: `{ use ...; use ...; let a = 12; a = 23; a + 1 }`
 data Sequence
   = Sequence
   { sequenceUses :: [Use],
@@ -483,14 +505,16 @@ data Sequence
   deriving (Eq, Show, Read, Data, Typeable, Ord)
 
 -- | A sequence item can either be an expression or a binding. Always ends with a ';'
--- | Examples: `let a: u64 = 12;`, `a + 2;`
+--
+-- Examples: `let a: u64 = 12;`, `a + 2;`
 data SequenceItem
   = SequenceItemExpr Expr
   | SequenceItemBindExpr Bindings
   deriving (Eq, Show, Read, Data, Typeable, Ord)
 
 -- | A let can bind a single variable or multiple ones via tuple notation
--- | Example: `let (a, b): (u64, bool) = (12, true);`
+--
+-- Example: `let (a, b): (u64, bool) = (12, true);`
 data Bindings
   = Bindings
   { bindings :: Binded,
@@ -500,6 +524,7 @@ data Bindings
   deriving (Eq, Show, Read, Data, Typeable, Ord)
 
 -- | A binding can either be a single bind, or multiple
+--
 -- Note that multiple bindings also include the case of a one-element tuple
 --
 -- Example of single bind: `let x = ...`
@@ -509,8 +534,10 @@ data Binded = BindedSingle Bind | BindedTuple [Bind]
   deriving (Eq, Show, Read, Data, Typeable, Ord)
 
 -- | A single binding (left side of the '=').
--- | It can either bind an identifier, or perform pattern matching to bind labels of a struct.
--- | Examples: `let a = 12`, `let MyStruct(a, b) = ...`
+--
+-- It can either bind an identifier, or perform pattern matching to bind labels of a struct.
+--
+-- Examples: `let a = 12`, `let MyStruct(a, b) = ...`
 data Bind
   = BindIdentifier Identifier (Maybe AnnotatedUUID)
   | BindNamedStruct BindedNamedStruct
@@ -518,8 +545,10 @@ data Bind
   deriving (Eq, Show, Read, Data, Typeable, Ord)
 
 -- | A bind consisting in a pattern matching with a named struct
--- | This binding can specify a partial pattern via '..'
--- | Example: `let MyStruct<...>{a: my_a, b, ..} = ...`
+--
+-- This binding can specify a partial pattern via '..'
+--
+-- Example: `let MyStruct<...>{a: my_a, b, ..} = ...`
 data BindedNamedStruct
   = BindedNamedStruct
   { bnsNameAccessChain :: NameAccessChain,
@@ -529,8 +558,10 @@ data BindedNamedStruct
   deriving (Eq, Show, Read, Data, Typeable, Ord)
 
 -- | A bind consisting in a pattern matching with a positional struct
--- | This binding can specify a partial pattern via '..'
--- | Example: `let MyStruct<...>(a, b, ..) = ...`
+--
+-- This binding can specify a partial pattern via '..'
+--
+-- Example: `let MyStruct<...>(a, b, ..) = ...`
 data BindedPositionalStruct
   = BindedPositionalStruct
   { bpsNameAccessChain :: NameAccessChain,
@@ -540,7 +571,8 @@ data BindedPositionalStruct
   deriving (Eq, Show, Read, Data, Typeable, Ord)
 
 -- | Fields in a binding via pattern match, either named or positional struct
--- | Additionally, a partial pattern can be used to skip fields
+--
+-- Additionally, a partial pattern can be used to skip fields
 data BindedFields
   = BindedFields
   { hasPartialPattern :: Bool,
@@ -549,8 +581,10 @@ data BindedFields
   deriving (Eq, Show, Read, Data, Typeable, Ord)
 
 -- | A single field that is being binded via pattern matching
--- | Optionally, it can have an inner bind to it
--- | Examples: `let ...{...a: {...inner: inner_a}} = ...`, `let ...{b} = ...`
+--
+-- Optionally, it can have an inner bind to it
+--
+-- Examples: `let ...{...a: {...inner: inner_a}} = ...`, `let ...{b} = ...`
 data BindedField
   = BindedField
   { bindFieldIdentifier :: Identifier,
