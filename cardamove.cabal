@@ -31,6 +31,7 @@ library
       Move.Parser
       Move.Token
       Move.Translations.Loops
+      Move.Translations.Mutation
       Move.Translations.TraversalUtils
       Move.Translations.Utils
   other-modules:

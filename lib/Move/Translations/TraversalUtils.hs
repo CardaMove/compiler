@@ -1,4 +1,4 @@
-module Move.Translations.TraversalUtils (traverseExprPostOrder, traverseRootPostOrder) where
+module Move.Translations.TraversalUtils (traverseExprPostOrder, traverseRootPostOrder, TraverseExprMapper) where
 
 import Control.Monad.State qualified as State
 import Data.Generics.Uniplate.Data (descendM)
@@ -94,7 +94,7 @@ traverseSequencePostOrder f (Sequence {sequenceUses, sequenceItems, sequenceEndE
 --
 -- Invokes a function for each encountered expression (see `traverseExprPostOrder`), and returns the resulting Module and state
 -- TODO: Should probably be rewritten so to pass scopes coming from other modules
-traverseRootPostOrder :: (Expr -> [Scope] -> state -> (Expr, state)) -> Root -> state -> (Root, state)
+traverseRootPostOrder :: TraverseExprMapper state -> Root -> state -> (Root, state)
 traverseRootPostOrder f root state = case root of
   RModule rModule@Module {moduleTopLevels} ->
     let (mappedTopLevels, stateAfterTraversal) = traversalHelper moduleTopLevels

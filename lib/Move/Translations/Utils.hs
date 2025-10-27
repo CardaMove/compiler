@@ -6,7 +6,6 @@ import Control.Monad.State
   )
 import Data.Generics.Uniplate.Data (transformBiM)
 import Data.Map qualified as Map
-import Data.Maybe (fromMaybe)
 import Move.AST
 
 -- | Unity type ()
