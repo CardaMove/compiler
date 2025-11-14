@@ -18,11 +18,10 @@ testMarkMutabilityInRoot = describe "Tests the function `markMutabilityInRoot`" 
 
     let annotated = evalState (annotateBindingsWithUUID parsed) 0
 
-    print annotated
-
     case markMutabilityInRoot annotated of
       MutabilityResult{mutatedVars, assignedToKey, mutatedRefs} -> do
         mutatedVars `shouldBe` Set.fromList [0, 1]
+        -- TODO: Should include let bindings
         assignedToKey `shouldBe` Map.fromList [(1, Set.singleton 1), (3, Set.singleton 4)]
         mutatedRefs `shouldBe` Set.singleton 3
 

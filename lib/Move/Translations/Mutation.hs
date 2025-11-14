@@ -5,7 +5,7 @@ import Data.Map qualified as Map
 import Data.Set qualified as Set
 import Data.Maybe (fromMaybe)
 import Move.AST (AnnotatedUUID, Assignment (Assignment, assignmentLeft, assignmentRight), DotOrIndexChain (DotAccess, dotAccessLeft), Expr (AssignmentExpr, DotOrIndexChainExpr, NameAccessChainExpr, UnaryOpExpr), Identifier, NameAccessChain (LocalNameAccessChain), Root, UnaryExpr (MutableReference), Type (TypeImmutableRef, TypeMutableRef))
-import Move.Translations.TraversalUtils (TraverseExprMapper, traverseRootPostOrder)
+import Move.Translations.TraversalUtils (TraversalMapper, traverseRootPostOrder)
 import Move.Translations.Utils (VariableAnnotations (VariableAnnotations), getIdentifierFromScopes, inferExprType)
 
 -- |
@@ -24,18 +24,18 @@ data MutabilityResult
 -- Given a module or script, inspects all the variables and marks the one that are (or could be) mutated in any way,
 -- thus needing to be handled with a separate state variable
 markMutabilityInRoot :: Root -> MutabilityResult
-markMutabilityInRoot root = snd $ traverseRootPostOrder f root emptyRes
+markMutabilityInRoot root = snd $ traverseRootPostOrder exprMapper bindsMapper root emptyRes
   where
     emptyRes = MutabilityResult {mutatedVars = Set.empty, assignedToKey = Map.empty, mutatedRefs = Set.empty}
-    f :: TraverseExprMapper MutabilityResult
+    exprMapper :: TraversalMapper Expr MutabilityResult
     -- If `&mut a` is found, mark `a` as (possibly) mutated
-    f expr@(UnaryOpExpr (MutableReference (NameAccessChainExpr (LocalNameAccessChain ident)))) scopes mutRes@MutabilityResult {mutatedVars} =
+    exprMapper expr@(UnaryOpExpr (MutableReference (NameAccessChainExpr (LocalNameAccessChain ident)))) scopes mutRes@MutabilityResult {mutatedVars} =
       case getIdentifierFromScopes ident scopes of
         VariableAnnotations (Just identUUID) _ -> (expr, mutRes {mutatedVars = Set.insert identUUID mutatedVars})
         -- Throw an error if the identifier is 
         _ -> error $ "Found identifier in right value without annotations when performing mutability analysis: " ++ show ident
     -- If `a.[b.c] = ...` is found, mark `a` as mutated, and every identifier on the right side as assigned to `a`
-    f expr@(AssignmentExpr (Assignment {assignmentLeft, assignmentRight})) scopes MutabilityResult {mutatedVars, assignedToKey, mutatedRefs} =
+    exprMapper expr@(AssignmentExpr (Assignment {assignmentLeft, assignmentRight})) scopes MutabilityResult {mutatedVars, assignedToKey, mutatedRefs} =
       let leftmostIdent :: Identifier = pickLeft assignmentLeft
             where
               pickLeft :: Expr -> Identifier
@@ -77,6 +77,8 @@ markMutabilityInRoot root = snd $ traverseRootPostOrder f root emptyRes
                in MutabilityResult {mutatedVars = mutatedVars', assignedToKey = Map.insert leftmostUUID' (Set.union assignedTo existingAssignedTo) assignedToKey, mutatedRefs = mutatedRefs'}
             Nothing -> error $ "Found leftmost identifier in left value without annotations when performing mutability analysis: " ++ show leftmostIdent
        in (expr, mutRes')
-    -- TODO: Should also update "assignedTo" for the let bindings
     -- TODO: If the right value is a reference to an expression, handle it during update of AST
-    f expr _ mutRes = (expr, mutRes)
+    exprMapper expr _ mutRes = (expr, mutRes)
+
+    -- TODO: Should also update "assignedTo" for the let bindings
+    bindsMapper bindings _ mutRes = (bindings, mutRes)

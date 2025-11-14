@@ -1,10 +1,6 @@
 module Move.Translations.UtilsSpec (spec) where
 
-import Control.Monad.State
-  ( MonadState (get, put),
-    State,
-    evalState,
-  )
+import Control.Monad.State (evalState)
 import Move.AST
 import Move.Translations.Utils ( extractVariablesFromSingleBind, annotateBindingsWithUUID, VariableAnnotations (VariableAnnotations) )
 import Test.Hspec

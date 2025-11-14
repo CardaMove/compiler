@@ -1,4 +1,4 @@
-module Move.Translations.TraversalUtils (traverseExprPostOrder, traverseRootPostOrder, TraverseExprMapper) where
+module Move.Translations.TraversalUtils (traverseExprPostOrder, traverseRootPostOrder, TraversalMapper,traversalBindingsIdentity) where
 
 import Control.Monad.State qualified as State
 import Data.Generics.Uniplate.Data (descendM)
@@ -12,37 +12,45 @@ import Move.Translations.Utils
     getUseIdentifiers,
   )
 
-type TraverseExprMapper state = Expr -> [Scope] -> state -> (Expr, state)
+type TraversalMapper node state = node -> [Scope] -> state -> (node, state)
+
+-- |
+-- Used to traverse a `let` bind without producing any effet,
+-- acting as a sort of identity for both the node and the state
+traversalBindingsIdentity :: TraversalMapper Bindings state
+traversalBindingsIdentity binds _ state = (binds, state)
 
 -- |
 -- Performs a post-order traversal of a tree of expressions.
 --
 -- Accepts as input a function that takes the current expression, all the accumulated scopes at that node,
 -- and a custom state. The function should return an expression to substitute and a new state
-traverseExprPostOrder :: TraverseExprMapper state -> Expr -> [Scope] -> state -> (Expr, state)
+--
+-- As its second version, includes another function to map `let` bindings found in inner sequences
+traverseExprPostOrder :: TraversalMapper Expr state -> TraversalMapper Bindings state -> Expr -> [Scope] -> state -> (Expr, state)
 --      When a sequence is found, call the specific traversal for it and then invoke f on the resulting Sequence
 --      Note that outside of a SequenceExpr, the scope is not modified
-traverseExprPostOrder f (SequenceExpr sequence') scopes state =
-  let (sequence'', state') = traverseSequencePostOrder f sequence' (Map.empty : scopes) state
-   in f (SequenceExpr sequence'') scopes state'
+traverseExprPostOrder exprMapper bindsMapper (SequenceExpr sequence') scopes state =
+  let (sequence'', state') = traverseSequencePostOrder exprMapper bindsMapper sequence' (Map.empty : scopes) state
+   in exprMapper (SequenceExpr sequence'') scopes state'
 --      When any other expression is found, recursively descend with `descendM` to keep the state
-traverseExprPostOrder f expr scopes state =
+traverseExprPostOrder exprMapper bindsMapper expr scopes state =
   let (expr''', state''') = State.runState (descendM fDesc expr) state
         where
           fDesc expr' = do
             state' <- State.get
-            let (expr'', state'') = traverseExprPostOrder f expr' scopes state'
+            let (expr'', state'') = traverseExprPostOrder exprMapper bindsMapper expr' scopes state'
             State.put state''
             return expr''
-   in f expr''' scopes state'''
+   in exprMapper expr''' scopes state'''
 
 -- |
 -- Similar to `traverseExprPostOrder` but restricted to a Sequence
 
 -- The topmost scope is considered the local one, so at least one must be provided
-traverseSequencePostOrder :: TraverseExprMapper state -> Sequence -> [Scope] -> state -> (Sequence, state)
-traverseSequencePostOrder _ _ [] _ = error "Cannot traverse Sequence with no scopes"
-traverseSequencePostOrder f (Sequence {sequenceUses, sequenceItems, sequenceEndExpr}) (localScope : outerScopes) state =
+traverseSequencePostOrder :: TraversalMapper Expr state -> TraversalMapper Bindings state -> Sequence -> [Scope] -> state -> (Sequence, state)
+traverseSequencePostOrder _ _ _ [] _ = error "Cannot traverse Sequence with no scopes"
+traverseSequencePostOrder exprMapper bindsMapper (Sequence {sequenceUses, sequenceItems, sequenceEndExpr}) (localScope : outerScopes) state =
   -- First, add the uses to the local scope
   -- TODO: They will not have any UUID nor type
   let usesIdentifiers = concatMap getUseIdentifiers sequenceUses
@@ -54,7 +62,7 @@ traverseSequencePostOrder f (Sequence {sequenceUses, sequenceItems, sequenceEndE
           fAcc ([], _) _ = error "Cannot traverse SequenceItem with no scopes"
           -- When an expression is encountered, traverse it
           fAcc (scopesBeforeExpr, stateBeforeExpr) (SequenceItemExpr expr) =
-            let (expr', stateAfterTraversingExpr) = traverseExprPostOrder f expr scopesBeforeExpr stateBeforeExpr
+            let (expr', stateAfterTraversingExpr) = traverseExprPostOrder exprMapper bindsMapper expr scopesBeforeExpr stateBeforeExpr
              in -- It can be noticed that traversing an expression has not changed the scope
                 ((scopesBeforeExpr, stateAfterTraversingExpr), SequenceItemExpr expr')
           -- When a binding is encountered in the sequence:
@@ -63,22 +71,24 @@ traverseSequencePostOrder f (Sequence {sequenceUses, sequenceItems, sequenceEndE
             let (traversedBindExpr, stateAfterTraversingBindExpr) = case bindingsBindExpr of
                   Nothing -> (Nothing, stateBeforeBind)
                   Just bindExpr ->
-                    let (mappedBindExpr, state') = traverseExprPostOrder f bindExpr scopesBeforeBind stateBeforeBind
+                    let (mappedBindExpr, state') = traverseExprPostOrder exprMapper bindsMapper bindExpr scopesBeforeBind stateBeforeBind
                      in (Just mappedBindExpr, state')
-                -- Note: here should be called any function that would map the binding
+                -- Then, call the mapped function for the bindings, passing the scope before this binding,
+                -- but the state after traversing the right value
+                -- Also note that it is passed the mapped right value, not the original one
+                (mappedBindings, stateAfterTraversingBindings) = bindsMapper bindings{bindingsBindExpr = traversedBindExpr} scopesBeforeBind stateAfterTraversingBindExpr
                 -- Then, add the binded identifiers to the local scope
-                bindScopes = Map.fromList $ extractVariablesFromBindings bindings scopesBeforeBind
+                bindScopes = Map.fromList $ extractVariablesFromBindings mappedBindings scopesBeforeBind
                 localScopeAfterBind = Map.union bindScopes localScopeBeforeBind
-             in ( (localScopeAfterBind : outerScopesBeforeBind, stateAfterTraversingBindExpr),
-                  SequenceItemBindExpr $
-                    bindings {bindingsBindExpr = traversedBindExpr}
+             in ( (localScopeAfterBind : outerScopesBeforeBind, stateAfterTraversingBindings),
+                  SequenceItemBindExpr mappedBindings
                 )
 
       -- Then, traverse the ending expression
       (sequenceEndExpr', stateAfterEndExpr) = case sequenceEndExpr of
         Nothing -> (Nothing, stateAfterSeqItems)
         Just endExpr ->
-          let (mappedEndExpr, state') = traverseExprPostOrder f endExpr scopesAfterSeqItems stateAfterSeqItems
+          let (mappedEndExpr, state') = traverseExprPostOrder exprMapper bindsMapper endExpr scopesAfterSeqItems stateAfterSeqItems
            in (Just mappedEndExpr, state')
    in -- Finally, return the Sequence with updated expressions and a new state
       ( Sequence
@@ -93,9 +103,12 @@ traverseSequencePostOrder f (Sequence {sequenceUses, sequenceItems, sequenceEndE
 -- Performs a post-order traversal of an entire module or script.
 --
 -- Invokes a function for each encountered expression (see `traverseExprPostOrder`), and returns the resulting Module and state
+--
+-- As its second version, also includes a function to map `let` bindings
+--
 -- TODO: Should probably be rewritten so to pass scopes coming from other modules
-traverseRootPostOrder :: TraverseExprMapper state -> Root -> state -> (Root, state)
-traverseRootPostOrder f root state = case root of
+traverseRootPostOrder :: TraversalMapper Expr state -> TraversalMapper Bindings state -> Root -> state -> (Root, state)
+traverseRootPostOrder exprMapper bindsMapper root state = case root of
   RModule rModule@Module {moduleTopLevels} ->
     let (mappedTopLevels, stateAfterTraversal) = traversalHelper moduleTopLevels
      in (RModule $ rModule {moduleTopLevels = mappedTopLevels}, stateAfterTraversal)
@@ -121,14 +134,14 @@ traverseRootPostOrder f root state = case root of
               -- Traverse the constant expressions
               -- Note that the scope is unchanged, only the state is forwarded
               topLevelMap state' (TopLevelConstant constant@Constant {constantExpression}) =
-                let (mappedExpr, state'') = traverseExprPostOrder f constantExpression [moduleScope] state'
+                let (mappedExpr, state'') = traverseExprPostOrder exprMapper bindsMapper constantExpression [moduleScope] state'
                  in (state'', TopLevelConstant $ constant {constantExpression = mappedExpr})
               -- Traverse the function declarations that have a body.
               -- Each function will have an additional scope for both the parameters and the body
               topLevelMap state' (TopLevelFunction function@Function {functionParameters, functionBody = Just bodySequence}) =
                 -- Create a new local scope including the function parameters
                 let functionParametersScope :: Scope = Map.fromList $ map (\(Parameter {parameterIdentifier, parameterType, parameterUUID}) -> (parameterIdentifier, VariableAnnotations parameterUUID parameterType)) functionParameters
-                    (mappedSequence, state'') = traverseSequencePostOrder f bodySequence [functionParametersScope, moduleScope] state'
+                    (mappedSequence, state'') = traverseSequencePostOrder exprMapper bindsMapper bodySequence [functionParametersScope, moduleScope] state'
                  in (state'', TopLevelFunction $ function {functionBody = Just mappedSequence})
               -- Otherwise do nothing
               topLevelMap state' topLevel = (state', topLevel)
