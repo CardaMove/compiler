@@ -88,6 +88,7 @@ test-suite cardamove-test
       Move.LexerSpec
       Move.ParserSpec
       Move.Translations.LoopsSpec
+      Move.Translations.MutationSpec
       Move.Translations.TraversalUtilsSpec
       Move.Translations.UtilsSpec
       Paths_cardamove
