@@ -86,6 +86,7 @@ markMutabilityInRoot root = snd $ traverseRootPostOrder exprMapper bindsMapper r
 
       in (expr, mutRes')
     -- The right value might be a reference to an inline expression, but it will be handled during the update phase
+    -- TODO: What happens if the left side is a tuple?
     exprMapper expr _ mutRes = (expr, mutRes)
 
     -- Analysis on let bindings
