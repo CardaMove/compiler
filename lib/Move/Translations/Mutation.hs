@@ -4,19 +4,19 @@ import Data.Generics.Uniplate.Data (children)
 import Data.Map qualified as Map
 import Data.Set qualified as Set
 import Data.Maybe (fromMaybe)
-import Move.AST (AnnotatedUUID, Assignment (Assignment, assignmentLeft, assignmentRight), DotOrIndexChain (DotAccess, dotAccessLeft), Expr (AssignmentExpr, DotOrIndexChainExpr, NameAccessChainExpr, UnaryOpExpr), Identifier, NameAccessChain (LocalNameAccessChain), Root, UnaryExpr (MutableReference), Type (TypeImmutableRef, TypeMutableRef))
+import Move.AST (AnnotatedUUID, Assignment (Assignment, assignmentLeft, assignmentRight), DotOrIndexChain (DotAccess, dotAccessLeft), Expr (AssignmentExpr, DotOrIndexChainExpr, NameAccessChainExpr, UnaryOpExpr), Identifier, NameAccessChain (LocalNameAccessChain), Root, UnaryExpr (MutableReference), Type (TypeImmutableRef, TypeMutableRef), Binded (..), Bindings (..))
 import Move.Translations.TraversalUtils (TraversalMapper, traverseRootPostOrder)
-import Move.Translations.Utils (VariableAnnotations (VariableAnnotations), getIdentifierFromScopes, inferExprType)
+import Move.Translations.Utils (VariableAnnotations (VariableAnnotations), getIdentifierFromScopes, inferExprType, extractVariablesFromBindings, Scope)
 
 -- |
 -- Results of the function `markMutabilityInRoot`
 --
 -- Contains the (UUIDs of the) variables that are (or might be) mutated,
--- which variables are assigned to each mutated variable
+-- which variables are assigned to each reference
 data MutabilityResult
   = MutabilityResult
   { mutatedVars :: Set.Set AnnotatedUUID,
-    assignedToKey :: Map.Map AnnotatedUUID (Set.Set AnnotatedUUID),
+    assignedToRef :: Map.Map AnnotatedUUID (Set.Set AnnotatedUUID),
     mutatedRefs :: Set.Set AnnotatedUUID
   }
 
@@ -26,7 +26,33 @@ data MutabilityResult
 markMutabilityInRoot :: Root -> MutabilityResult
 markMutabilityInRoot root = snd $ traverseRootPostOrder exprMapper bindsMapper root emptyRes
   where
-    emptyRes = MutabilityResult {mutatedVars = Set.empty, assignedToKey = Map.empty, mutatedRefs = Set.empty}
+    -- Like `concatMap` but on sets
+    concatSet :: Ord b => (a -> Set.Set b) -> [a] -> Set.Set b
+    concatSet _ [] = Set.empty
+    concatSet mapper (x:xs) = Set.union (mapper x) $ concatSet mapper xs
+
+    -- Given an expression, returns a set with all UUIDs present in it
+    findUUIDsInExpr :: Expr -> [Scope] -> Set.Set AnnotatedUUID
+    findUUIDsInExpr (NameAccessChainExpr (LocalNameAccessChain ident)) scopes =
+      case getIdentifierFromScopes ident scopes of
+        VariableAnnotations (Just identUUID) _ -> Set.singleton identUUID
+        _ -> Set.empty
+    findUUIDsInExpr expr' scopes = concatSet (`findUUIDsInExpr` scopes) (children expr')
+
+    -- Given an expression, adds all UUIDs inside as assigned to a left value UUID
+    -- Returns the updated map
+    insertUUIDsAssignedTo :: AnnotatedUUID -> Expr -> [Scope] -> Map.Map AnnotatedUUID (Set.Set AnnotatedUUID) -> Map.Map AnnotatedUUID (Set.Set AnnotatedUUID)
+    insertUUIDsAssignedTo leftValueUUID rightValueExpr scopes assignedToRef =
+      let existingAssignedTo :: Set.Set AnnotatedUUID = fromMaybe Set.empty $ Map.lookup leftValueUUID assignedToRef
+          assignedTo :: Set.Set AnnotatedUUID = findUUIDsInExpr rightValueExpr scopes
+      in
+        Map.insert leftValueUUID (Set.union assignedTo existingAssignedTo) assignedToRef
+
+    -- Starting value for the analysis
+    emptyRes = MutabilityResult {mutatedVars = Set.empty, assignedToRef = Map.empty, mutatedRefs = Set.empty}
+    
+    -- Analysis on an expression
+    -- TODO: What happens if the right side is a function? also for let bindings
     exprMapper :: TraversalMapper Expr MutabilityResult
     -- If `&mut a` is found, mark `a` as (possibly) mutated
     exprMapper expr@(UnaryOpExpr (MutableReference (NameAccessChainExpr (LocalNameAccessChain ident)))) scopes mutRes@MutabilityResult {mutatedVars} =
@@ -34,8 +60,10 @@ markMutabilityInRoot root = snd $ traverseRootPostOrder exprMapper bindsMapper r
         VariableAnnotations (Just identUUID) _ -> (expr, mutRes {mutatedVars = Set.insert identUUID mutatedVars})
         -- Throw an error if the identifier is 
         _ -> error $ "Found identifier in right value without annotations when performing mutability analysis: " ++ show ident
-    -- If `a.[b.c] = ...` is found, mark `a` as mutated, and every identifier on the right side as assigned to `a`
-    exprMapper expr@(AssignmentExpr (Assignment {assignmentLeft, assignmentRight})) scopes MutabilityResult {mutatedVars, assignedToKey, mutatedRefs} =
+    -- If `a.[b.c] = ...` is found, mark `a` as mutated,
+    -- and the right value a reference, mark every identifier on the right side as assigned to `a`
+    -- (it is not correct checking if `a` is a reference, since it's `c` that is assigned)
+    exprMapper expr@(AssignmentExpr (Assignment {assignmentLeft, assignmentRight})) scopes mutRes@MutabilityResult {mutatedVars, assignedToRef, mutatedRefs} =
       let leftmostIdent :: Identifier = pickLeft assignmentLeft
             where
               pickLeft :: Expr -> Identifier
@@ -47,38 +75,30 @@ markMutabilityInRoot root = snd $ traverseRootPostOrder exprMapper bindsMapper r
           leftmostUUID :: Maybe AnnotatedUUID = case getIdentifierFromScopes leftmostIdent scopes of
             VariableAnnotations maybeUUID _ -> maybeUUID
 
-          mutRes' = case leftmostUUID of
-            -- If a UUID is found, updated the results
-            Just leftmostUUID' ->
-              -- Find all the UUIDs assigned to `a` and add them to the results
-              let existingAssignedTo :: Set.Set AnnotatedUUID = fromMaybe Set.empty $ Map.lookup leftmostUUID' assignedToKey
-                  assignedTo :: Set.Set AnnotatedUUID = findUUIDsInRightValue assignmentRight
-                    where
-                      concatSet :: Ord b => (a -> Set.Set b) -> [a] -> Set.Set b
-                      concatSet _ [] = Set.empty
-                      concatSet mapper (x:xs) = Set.union (mapper x) $ concatSet mapper xs
+          -- Then, add `a` to mutated variables (or references) and, if it's a reference,
+          -- also consider the "assigned_to" variables
+          -- No need to track variables assigned to non-references
+          mutRes' = case (leftmostUUID, inferExprType assignmentRight scopes) of
+            (Just leftmostUUID', TypeImmutableRef _) -> mutRes{mutatedRefs = Set.insert leftmostUUID' mutatedRefs, assignedToRef = insertUUIDsAssignedTo leftmostUUID' assignmentRight scopes assignedToRef}
+            (Just leftmostUUID', TypeMutableRef _) -> mutRes{mutatedRefs = Set.insert leftmostUUID' mutatedRefs, assignedToRef = insertUUIDsAssignedTo leftmostUUID' assignmentRight scopes assignedToRef}
+            (Just leftmostUUID', _) -> mutRes{mutatedVars = Set.insert leftmostUUID' mutatedVars}
+            (Nothing, _) -> error $ "Found leftmost identifier in left value without annotations when performing mutability analysis: " ++ show leftmostIdent
 
-                      findUUIDsInRightValue :: Expr -> Set.Set AnnotatedUUID
-                      findUUIDsInRightValue (NameAccessChainExpr (LocalNameAccessChain ident)) =
-                        case getIdentifierFromScopes ident scopes of
-                          VariableAnnotations (Just identUUID) _ -> Set.singleton identUUID
-                          _ -> Set.empty
-                      findUUIDsInRightValue expr' = concatSet findUUIDsInRightValue (children expr')
-
-                    -- If the whole right value is not a reference, consider `a` as a mutated variable,
-                    -- otherwise, consider it as a mutated reference
-                    -- The distinction is useful so to modify the AST without the need of performing a custom type inference on let bindings
-                    -- since the type of the left value is already known (or better, it is known if it is a reference or not)
-                  (mutatedVars', mutatedRefs') = case inferExprType assignmentRight scopes of
-                      TypeImmutableRef _ -> (mutatedVars, Set.insert leftmostUUID' mutatedRefs)
-                      TypeMutableRef _ -> (mutatedVars, Set.insert leftmostUUID' mutatedRefs)
-                      _ -> (Set.insert leftmostUUID' mutatedVars, mutatedRefs)
-
-               in MutabilityResult {mutatedVars = mutatedVars', assignedToKey = Map.insert leftmostUUID' (Set.union assignedTo existingAssignedTo) assignedToKey, mutatedRefs = mutatedRefs'}
-            Nothing -> error $ "Found leftmost identifier in left value without annotations when performing mutability analysis: " ++ show leftmostIdent
-       in (expr, mutRes')
-    -- TODO: If the right value is a reference to an expression, handle it during update of AST
+      in (expr, mutRes')
+    -- The right value might be a reference to an inline expression, but it will be handled during the update phase
     exprMapper expr _ mutRes = (expr, mutRes)
 
-    -- TODO: Should also update "assignedTo" for the let bindings
-    bindsMapper bindings _ mutRes = (bindings, mutRes)
+    -- Analysis on let bindings
+    -- In case of `let` bindings, first consider the bind of a single reference
+    bindsMapper binds@Bindings{bindings = BindedSingle _, bindingsBindExpr = Just bindingsBindExpr'} scopes mutRes@MutabilityResult{assignedToRef} = 
+      case extractVariablesFromBindings binds scopes of
+        -- TODO: Throw error if UUID is Nothing
+        [(_, VariableAnnotations (Just bindedUUID) (TypeImmutableRef _))] -> (binds, mutRes{assignedToRef = insertUUIDsAssignedTo bindedUUID bindingsBindExpr' scopes assignedToRef})
+        [(_, VariableAnnotations (Just bindedUUID) (TypeMutableRef _))] -> (binds, mutRes{assignedToRef = insertUUIDsAssignedTo bindedUUID bindingsBindExpr' scopes assignedToRef})
+        -- It is not possible to declare structs that have references as fields
+        -- so other cases can be safely ignored
+        _ -> (binds, mutRes)        
+    -- TODO: Handle tuple bindings
+    -- NOTE: Should be handled carefully since we can have situations such `let (a, b): (u64, &u64) = (my_var, &another_var)`
+    -- or `let (a, b): (u64, &u64) = my_function()`
+    bindsMapper binds _scopes mutRes = (binds, mutRes)
