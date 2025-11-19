@@ -280,3 +280,6 @@ inferExprType (Abort expr) scopes = inferExprType expr scopes
 inferExprType Break _ = TypeUnknown
 -- Continue
 inferExprType Continue _ = TypeUnknown
+-- Intermediate AST expressions
+inferExprType (IntermediateExprExpr (IntermediateReferenceLocalState _ exprType)) _ = exprType
+inferExprType (IntermediateExprExpr (IntermediateDereferenceLocalState _ exprType)) _ = exprType

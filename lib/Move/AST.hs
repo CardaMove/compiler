@@ -330,6 +330,7 @@ data Expr
   | Abort Expr
   | Break
   | Continue
+  | IntermediateExprExpr IntermediateExpr
   deriving (Eq, Show, Read, Data, Typeable, Ord)
 
 -- | Binary operators involve two expressions
@@ -594,3 +595,8 @@ data BindedField
   deriving (Eq, Show, Read, Data, Typeable, Ord)
 
 type AnnotatedUUID = Int
+
+data IntermediateExpr
+  = IntermediateReferenceLocalState [Identifier] Type
+  | IntermediateDereferenceLocalState Expr Type
+  deriving (Eq, Show, Read, Data, Typeable, Ord)
