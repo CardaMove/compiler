@@ -40,6 +40,8 @@ testAnnotateBindingsWithUUID = describe "Tests the function `annotateBindingsWit
     let fromModule = parse $ scan fromModuleStr
     let toModule = read toModuleStr :: Root
 
+    -- TODO: Seems that transformBiM performs an in-order traversal
+    -- Check order of UUIDs when nested code blocks
     let annotated = evalState (annotateBindingsWithUUID fromModule) 0
 
     annotated `shouldBe` toModule

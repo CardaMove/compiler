@@ -7,5 +7,7 @@ module NamedAddr::TraversalUtilsSpec {
         let r = &mut a; // UUID is 3
         let c: &mut u64 = &mut x; // UUID is 4
         r = c;
+
+        let r2 = if (x > 10) { &mut a }; // UUID is 5
     }
 }
