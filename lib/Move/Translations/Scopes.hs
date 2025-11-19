@@ -2,12 +2,9 @@ module Move.Translations.Scopes where
 
 import Data.Set qualified as Set
 import Move.AST
-import Move.Translations.TraversalUtils (TraversalMapper, traverseRootPostOrder, traversalBindingsIdentity)
+import Move.Translations.TraversalUtils (TraversalMapper, traversalBindingsIdentity, traverseRootPostOrder)
 import Move.Translations.Utils (Scope, VariableAnnotations (VariableAnnotations), getIdentifierFromScopes, inferExprType)
 
-newtype LocalScopeAnalysis = LocalScopeAnalysis
-  { markedVars :: Set.Set (AnnotatedUUID, Type)
-  }
 
 -- TODO: Rewrite to return LocalScopeAnalysis
 markVariablesForLocalScope :: Root -> Set.Set AnnotatedUUID
@@ -41,9 +38,8 @@ markVariablesForLocalScope root = snd $ traverseRootPostOrder exprMapper bindsMa
     -- They should be added only if mutated themselves, like normal variables
     bindsMapper binds _scopes mutRes = (binds, mutRes)
 
-
-addLocalScopeInRoot :: Root -> LocalScopeAnalysis -> Root
-addLocalScopeInRoot root LocalScopeAnalysis {markedVars} =
+addLocalScopeInRoot :: Root -> Set.Set AnnotatedUUID -> Root
+addLocalScopeInRoot root markedVars =
   let -- Given either a local identifier or a dot access chain `&[mut] a[.b.c]`,
       -- rewrites the node as an high level reference on the state, also preserving the resulting type
       mapRightValueRef :: Expr -> Type -> Expr
@@ -62,7 +58,6 @@ addLocalScopeInRoot root LocalScopeAnalysis {markedVars} =
       -- This passage is mainly used to preserve the resulting type, that would not be inferrable anymore after the AST rewrite
       mapRightValueDeref :: Expr -> Type -> Expr
       mapRightValueDeref expr exprType = IntermediateExprExpr $ IntermediateDereferenceLocalState expr exprType
-
 
       -- First pass: rewrite assignments (only left value) as pseudo let binding
       -- "pseudo" is due to the fact that are still expressions rather than `let` bindings in the AST,
