@@ -4,6 +4,7 @@ import Data.Set qualified as Set
 import Move.AST
 import Move.Translations.TraversalUtils (TraversalMapper, traversalIdentity, traverseRootPostOrder)
 import Move.Translations.Utils (Scope, VariableAnnotations (VariableAnnotations), getIdentifierFromScopes, inferExprType)
+import Data.Generics.Uniplate.Data (transformBi)
 
 -- |
 -- Given the AST, marks all the variables that need to be inserted in the explicit local scope
@@ -43,26 +44,50 @@ markVariablesForLocalScope root = snd $ traverseRootPostOrder exprMapper bindsMa
 -- rewrites the usages of those variables with (intermediate) AST nodes that act on the explicit local scope
 addLocalScopeInRoot :: Root -> Set.Set AnnotatedUUID -> Root
 addLocalScopeInRoot root markedVars =
-  let -- Given a reference to either a local identifier or a dot access chain `&[mut] a[.b.c]`,
+  let 
+      scopeIdentifier = Identifier "scopes"
+      scopeUUID :: AnnotatedUUID = -1
+
+      -- Given an expression `a[.b.c]`, returns the chain of identifiers ["a", "b", "c"] in left-to-right order
+      getDotAccessChain :: Expr -> [Identifier]
+      getDotAccessChain = reverse . getDotAccessChain'
+        where
+          getDotAccessChain' (NameAccessChainExpr (LocalNameAccessChain ident)) = [ident]
+          getDotAccessChain' (DotOrIndexChainExpr DotAccess {dotAccessLeft, dotAccessRight}) = dotAccessRight : getDotAccessChain' dotAccessLeft
+          -- TODO: For now, only simple dot access chains like `a[.b.c]` are supported, but they might be inline values
+          getDotAccessChain' expr' = error $ "More complex dot access chain not supported: " ++ show expr'
+
+      -- Given a reference to either a local identifier or a dot access chain `&[mut] a[.b.c]`,
       -- rewrites the node as an high level reference on the state, also preserving the resulting type
       mapRightValueRef :: Expr -> Type -> Expr
       mapRightValueRef (NameAccessChainExpr (LocalNameAccessChain ident)) identType = IntermediateExprExpr $ IntermediateReferenceLocalState [ident] identType
       mapRightValueRef expr@(DotOrIndexChainExpr _) identType = IntermediateExprExpr $ IntermediateReferenceLocalState (getDotAccessChain expr) identType
-        where
-          getDotAccessChain :: Expr -> [Identifier]
-          getDotAccessChain (NameAccessChainExpr (LocalNameAccessChain ident)) = [ident]
-          getDotAccessChain (DotOrIndexChainExpr DotAccess {dotAccessLeft, dotAccessRight}) = dotAccessRight : getDotAccessChain dotAccessLeft
-          -- TODO: For now, only simple dot access chains like `a[.b.c]` are supported, but they might be inline values
-          getDotAccessChain expr' = error $ "More complex dot access chain not supported: " ++ show expr'
       -- TODO: Similarly, only references to variables or dot access are supported, but can be inline values
       mapRightValueRef expr _ = error $ "More complex reference not supported: " ++ show expr
 
-      -- First pass: rewrite assignments (only left value) as pseudo let binding
-      -- "pseudo" is due to the fact that are still expressions rather than `let` bindings in the AST,
-      -- So this intermediate AST will be malformed
-      -- TODO: Solve by using a custom traversal that works on Sequence items and produces actual let bindings
-      rewriteAssignments :: TraversalMapper Expr ()
-      rewriteAssignments expr scopes state = error "TODO:"
+      -- First pass: rewrite assignments (only left value) as let binding.
+      -- It uses a custom traversal so to allow converting an expression into a let binding inside the sequence
+      --    As a very picky comment, this will not match assignments that are inserted inside bigger expressions on right value,
+      --    such as `... (a = 1) ...`, but cases like this should never be present anyway
+      -- Possible assignment are `a[.b.c] = ...`, tuple destructuring `(a, b[.c]) = ...` or dereferences `*a`
+      rewriteAssignments :: Root -> Root
+      rewriteAssignments = transformBi f
+        where
+          -- `let a = ...`
+          f (SequenceItemExpr (AssignmentExpr (Assignment{assignmentLeft = NameAccessChainExpr (LocalNameAccessChain ident), assignmentRight}))) = SequenceItemBindExpr Bindings{
+                bindings = BindedSingle $ BindIdentifier scopeIdentifier $ Just scopeUUID,
+                bindingsBindType = Nothing,
+                bindingsBindExpr = Just $ IntermediateExprExpr $ IntermediatePutLocalState [ident] assignmentRight
+              }
+          -- `let a[.b.c]`, note about syntactic sugar for references few comments below
+          f (SequenceItemExpr (AssignmentExpr (Assignment{assignmentLeft = dotAccess@(DotOrIndexChainExpr _), assignmentRight}))) = SequenceItemBindExpr Bindings{
+                bindings = BindedSingle $ BindIdentifier scopeIdentifier $ Just scopeUUID,
+                bindingsBindType = Nothing,
+                bindingsBindExpr = Just $ IntermediateExprExpr $ IntermediatePutLocalState (getDotAccessChain dotAccess) assignmentRight
+              }
+          -- TODO: tuple bindings
+          f expr@(SequenceItemExpr _) = expr
+          f bind = bind
 
       -- Second pass: rewrite references on right value as getters
       -- (must be called after rewriting assignment to prevent updating derefs on left value)
@@ -71,7 +96,7 @@ addLocalScopeInRoot root markedVars =
       rewriteRefs expr@(UnaryOpExpr (MutableReference referencedExpr)) scopes state = (mapRightValueRef referencedExpr $ inferExprType expr scopes, state)
       -- Also rewrite dereferences on right value
       -- This passage is mainly used to preserve the resulting type, that would not be inferrable anymore after the AST rewrite
-      rewriteRefs expr@(UnaryOpExpr (Dereference dereferencedExpr)) scopes state = (IntermediateExprExpr $ IntermediateDereferenceLocalState dereferencedExpr $ inferExprType expr scopes, state)
+      rewriteRefs expr@(UnaryOpExpr (Dereference dereferencedExpr)) scopes state = (IntermediateExprExpr $ IntermediateGetDereferenceLocalState dereferencedExpr $ inferExprType expr scopes, state)
       rewriteRefs expr _scopes state = (expr, state)
 
       -- Third pass: rewrite variables on right value, such as `a[.b.c]`
@@ -92,10 +117,16 @@ addLocalScopeInRoot root markedVars =
       -- Fourth pass: rewrite `let` bindings
       -- (must be done as last so to preserve type inference)
       -- TODO: also, only for variables that need to be inserted in the local scope
+      -- TODO: also, ignore let bindings regarding the scope
       rewriteLetBinds :: TraversalMapper Bindings ()
       rewriteLetBinds binds _scopes state = (binds, state)
 
-      firstPass :: Root = fst $ traverseRootPostOrder rewriteAssignments traversalIdentity root ()
+      -- TODO: NOTE: the dot chain can be used as a syntactic sugar for references, both on the left value and right value:
+      -- `ref.a.b` is in fact identical to `(*ref).a.b`
+      -- To support this, the runtime function to Get and Put LocalState need to check if the leftmost value is a reference,
+      -- and if the access path is longer than one element, it means its actually a dot access so it mas meant to dereference the variabler
+
+      firstPass :: Root = rewriteAssignments root
       secondPass :: Root = fst $ traverseRootPostOrder rewriteRefs traversalIdentity firstPass ()
       thirdPass :: Root = fst $ traverseRootPostOrder rewriteVars traversalIdentity secondPass ()
       fourthPass :: Root = fst $ traverseRootPostOrder traversalIdentity rewriteLetBinds thirdPass ()

@@ -598,6 +598,7 @@ type AnnotatedUUID = Int
 
 data IntermediateExpr
   = IntermediateReferenceLocalState [Identifier] Type
-  | IntermediateDereferenceLocalState Expr Type
+  | IntermediateGetDereferenceLocalState Expr Type
   | IntermediateGetLocalState [Identifier] Type
+  | IntermediatePutLocalState [Identifier] Expr
   deriving (Eq, Show, Read, Data, Typeable, Ord)
