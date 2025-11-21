@@ -8,7 +8,7 @@ import Data.List (nub, sort)
 import Data.Map qualified as Map
 import Data.Set qualified as Set
 import Move.AST
-import Move.Translations.TraversalUtils (traverseExprPostOrder, traverseRootPostOrder, traversalBindingsIdentity)
+import Move.Translations.TraversalUtils (traverseExprPostOrder, traverseRootPostOrder, traversalIdentity)
 import Move.Translations.Utils (Scope, VariableAnnotations (VariableAnnotations), booleanType, getIdentifierFromScopes, isIdentifierInScope)
 
 -- |
@@ -30,7 +30,7 @@ translateLoopsToWhile = transformBi f
 -- Given an expression tree, maps all free variables in it, meaning the variables that are not declared in this scope or inner scopes,
 -- with a corresponding dereference, and returns both the updated tree and the modified free variables
 mapFreeVariablesToDerefsInExpr :: Expr -> (Expr, [Identifier])
-mapFreeVariablesToDerefsInExpr expr = traverseExprPostOrder f traversalBindingsIdentity expr [] []
+mapFreeVariablesToDerefsInExpr expr = traverseExprPostOrder f traversalIdentity expr [] []
   where
     f expr'@(NameAccessChainExpr (LocalNameAccessChain ident)) scopes state =
       if isIdentifierInScope ident scopes
@@ -335,7 +335,7 @@ traversalHelper expr _ (functionDecls, exprsWithBreak) =
 -- Also see documentation of `mapWhileToFunction`
 translateWhilesToFunctions :: Expr -> [Scope] -> (Expr, [Function])
 translateWhilesToFunctions expr scopes =
-  let (expr', (functionDecls, _)) = traverseExprPostOrder traversalHelper traversalBindingsIdentity expr scopes ([], Set.empty)
+  let (expr', (functionDecls, _)) = traverseExprPostOrder traversalHelper traversalIdentity expr scopes ([], Set.empty)
    in (expr', functionDecls)
 
 -- |
@@ -344,7 +344,7 @@ translateWhilesToFunctions expr scopes =
 -- The corresponding function declarations are added inside the module or script
 -- Also see documentation of `mapWhileToFunction`
 translateWhilesToFunctionsInRoot :: Root -> Root
-translateWhilesToFunctionsInRoot root = case traverseRootPostOrder traversalHelper traversalBindingsIdentity root ([], Set.empty) of
+translateWhilesToFunctionsInRoot root = case traverseRootPostOrder traversalHelper traversalIdentity root ([], Set.empty) of
   (RModule translatedModule@Module {moduleTopLevels}, (functionDecls, _)) ->
     let newTopLevels = map TopLevelFunction functionDecls
      in RModule $ translatedModule {moduleTopLevels = newTopLevels ++ moduleTopLevels}

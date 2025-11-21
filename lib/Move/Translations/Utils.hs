@@ -283,3 +283,4 @@ inferExprType Continue _ = TypeUnknown
 -- Intermediate AST expressions
 inferExprType (IntermediateExprExpr (IntermediateReferenceLocalState _ exprType)) _ = exprType
 inferExprType (IntermediateExprExpr (IntermediateDereferenceLocalState _ exprType)) _ = exprType
+inferExprType (IntermediateExprExpr (IntermediateGetLocalState _ exprType)) _ = exprType

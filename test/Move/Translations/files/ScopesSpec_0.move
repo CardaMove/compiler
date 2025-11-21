@@ -1,4 +1,4 @@
-module NamedAddr::TraversalUtilsSpec {
+module NamedAddr::TestingModule {
     public fun test(x: u64) { // UUID is 0
         let a = 12; // UUID 1
         x = a + 1; // x in scope

@@ -2,11 +2,11 @@ module Move.Translations.Scopes where
 
 import Data.Set qualified as Set
 import Move.AST
-import Move.Translations.TraversalUtils (TraversalMapper, traversalBindingsIdentity, traverseRootPostOrder)
+import Move.Translations.TraversalUtils (TraversalMapper, traversalIdentity, traverseRootPostOrder)
 import Move.Translations.Utils (Scope, VariableAnnotations (VariableAnnotations), getIdentifierFromScopes, inferExprType)
 
-
--- TODO: Rewrite to return LocalScopeAnalysis
+-- |
+-- Given the AST, marks all the variables that need to be inserted in the explicit local scope
 markVariablesForLocalScope :: Root -> Set.Set AnnotatedUUID
 markVariablesForLocalScope root = snd $ traverseRootPostOrder exprMapper bindsMapper root Set.empty
   where
@@ -38,9 +38,12 @@ markVariablesForLocalScope root = snd $ traverseRootPostOrder exprMapper bindsMa
     -- They should be added only if mutated themselves, like normal variables
     bindsMapper binds _scopes mutRes = (binds, mutRes)
 
+-- |
+-- Given an AST and the set of variables that need to be inserted into the local scope,
+-- rewrites the usages of those variables with (intermediate) AST nodes that act on the explicit local scope
 addLocalScopeInRoot :: Root -> Set.Set AnnotatedUUID -> Root
 addLocalScopeInRoot root markedVars =
-  let -- Given either a local identifier or a dot access chain `&[mut] a[.b.c]`,
+  let -- Given a reference to either a local identifier or a dot access chain `&[mut] a[.b.c]`,
       -- rewrites the node as an high level reference on the state, also preserving the resulting type
       mapRightValueRef :: Expr -> Type -> Expr
       mapRightValueRef (NameAccessChainExpr (LocalNameAccessChain ident)) identType = IntermediateExprExpr $ IntermediateReferenceLocalState [ident] identType
@@ -54,11 +57,6 @@ addLocalScopeInRoot root markedVars =
       -- TODO: Similarly, only references to variables or dot access are supported, but can be inline values
       mapRightValueRef expr _ = error $ "More complex reference not supported: " ++ show expr
 
-      -- Given any dereference, rewrites the node as a getter from the state
-      -- This passage is mainly used to preserve the resulting type, that would not be inferrable anymore after the AST rewrite
-      mapRightValueDeref :: Expr -> Type -> Expr
-      mapRightValueDeref expr exprType = IntermediateExprExpr $ IntermediateDereferenceLocalState expr exprType
-
       -- First pass: rewrite assignments (only left value) as pseudo let binding
       -- "pseudo" is due to the fact that are still expressions rather than `let` bindings in the AST,
       -- So this intermediate AST will be malformed
@@ -66,18 +64,43 @@ addLocalScopeInRoot root markedVars =
       rewriteAssignments :: TraversalMapper Expr ()
       rewriteAssignments expr scopes state = error "TODO:"
 
-      -- TODO: Must be called after rewriting assignment to prevent updating derefs on left value
       -- Second pass: rewrite references on right value as getters
-      -- Also rewrite dereferences on right value
+      -- (must be called after rewriting assignment to prevent updating derefs on left value)
       rewriteRefs :: TraversalMapper Expr ()
       rewriteRefs expr@(UnaryOpExpr (ImmutableReference referencedExpr)) scopes state = (mapRightValueRef referencedExpr $ inferExprType expr scopes, state)
       rewriteRefs expr@(UnaryOpExpr (MutableReference referencedExpr)) scopes state = (mapRightValueRef referencedExpr $ inferExprType expr scopes, state)
-      rewriteRefs expr@(UnaryOpExpr (Dereference dereferencedExpr)) scopes state = (mapRightValueDeref dereferencedExpr $ inferExprType expr scopes, state)
+      -- Also rewrite dereferences on right value
+      -- This passage is mainly used to preserve the resulting type, that would not be inferrable anymore after the AST rewrite
+      rewriteRefs expr@(UnaryOpExpr (Dereference dereferencedExpr)) scopes state = (IntermediateExprExpr $ IntermediateDereferenceLocalState dereferencedExpr $ inferExprType expr scopes, state)
       rewriteRefs expr _scopes state = (expr, state)
 
-      -- TODO: Third pass: rewrite variables on right value (must be done after references to avoid conflicts)
-      -- TODO: Fourth pass: rewrite `let` bindings (must be done as last so to preserve type inference)
+      -- Third pass: rewrite variables on right value, such as `a[.b.c]`
+      -- (must be done after references to avoid conflicts)
+      -- Note that the dot access chain is already handled with the leftmost identifier
+      -- This passage is mainly used to preserve the resulting type, so to allow for an explicit cast on the translated AST
+      rewriteVars :: TraversalMapper Expr ()
+      rewriteVars expr@(NameAccessChainExpr (LocalNameAccessChain ident)) scopes state =
+        case getIdentifierFromScopes ident scopes of
+          VariableAnnotations (Just identUUID) identType ->
+            -- Replace the variable only if it is marked as such
+            if Set.member identUUID markedVars
+              then (IntermediateExprExpr $ IntermediateGetLocalState [ident] identType, state)
+              else (expr, state)
+          VariableAnnotations Nothing _ -> error $ "Found identifier without UUID when adding local state: " ++ show expr
+      rewriteVars expr _scopes state = (expr, state)
 
-      firstPass :: Root = fst $ traverseRootPostOrder rewriteAssignments traversalBindingsIdentity root ()
-      secondPass :: Root = fst $ traverseRootPostOrder rewriteRefs traversalBindingsIdentity firstPass ()
-   in secondPass
+      -- Fourth pass: rewrite `let` bindings
+      -- (must be done as last so to preserve type inference)
+      -- TODO: also, only for variables that need to be inserted in the local scope
+      rewriteLetBinds :: TraversalMapper Bindings ()
+      rewriteLetBinds binds _scopes state = (binds, state)
+
+      firstPass :: Root = fst $ traverseRootPostOrder rewriteAssignments traversalIdentity root ()
+      secondPass :: Root = fst $ traverseRootPostOrder rewriteRefs traversalIdentity firstPass ()
+      thirdPass :: Root = fst $ traverseRootPostOrder rewriteVars traversalIdentity secondPass ()
+      fourthPass :: Root = fst $ traverseRootPostOrder traversalIdentity rewriteLetBinds thirdPass ()
+
+      -- TODO: Also create and manage the variables for scopes: creation and return of outerscopes,
+      -- passing and retrieving scopes to functions that have references
+      -- or to sequences that have assignments (or references)
+   in fourthPass

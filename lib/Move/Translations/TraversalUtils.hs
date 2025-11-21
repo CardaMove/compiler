@@ -1,4 +1,4 @@
-module Move.Translations.TraversalUtils (traverseExprPostOrder, traverseRootPostOrder, TraversalMapper,traversalBindingsIdentity) where
+module Move.Translations.TraversalUtils (traverseExprPostOrder, traverseRootPostOrder, TraversalMapper,traversalIdentity) where
 
 import Control.Monad.State qualified as State
 import Data.Generics.Uniplate.Data (descendM)
@@ -15,10 +15,10 @@ import Move.Translations.Utils
 type TraversalMapper node state = node -> [Scope] -> state -> (node, state)
 
 -- |
--- Used to traverse a `let` bind without producing any effet,
+-- Used to traverse either an expression or a `let` bind without producing any effect,
 -- acting as a sort of identity for both the node and the state
-traversalBindingsIdentity :: TraversalMapper Bindings state
-traversalBindingsIdentity binds _ state = (binds, state)
+traversalIdentity :: TraversalMapper node state
+traversalIdentity node _ state = (node, state)
 
 -- |
 -- Performs a post-order traversal of a tree of expressions.
