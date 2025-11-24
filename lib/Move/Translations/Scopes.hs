@@ -85,7 +85,7 @@ addLocalScopeInRoot root markedVars =
                 bindingsBindType = Nothing,
                 bindingsBindExpr = Just $ IntermediateExprExpr $ IntermediatePutLocalState (getDotAccessChain dotAccess) assignmentRight
               }
-          -- TODO: tuple bindings
+          -- TODO: tuple assignments
           f expr@(SequenceItemExpr _) = expr
           f bind = bind
 
@@ -116,9 +116,20 @@ addLocalScopeInRoot root markedVars =
 
       -- Fourth pass: rewrite `let` bindings
       -- (must be done as last so to preserve type inference)
-      -- TODO: also, only for variables that need to be inserted in the local scope
-      -- TODO: also, ignore let bindings regarding the scope
+      -- only for variables that need to be inserted in the local scope
+      -- (note that the variable for the local state is not marked as such so will be automatically ignored)
       rewriteLetBinds :: TraversalMapper Bindings ()
+      rewriteLetBinds expr@(Bindings{bindings = BindedSingle (BindIdentifier ident identUUID), bindingsBindExpr}) _scopes state =
+        case identUUID of
+          Just identUUID' -> if Set.member identUUID' markedVars
+            then  (Bindings{
+                bindings = BindedSingle $ BindIdentifier scopeIdentifier $ Just scopeUUID,
+                bindingsBindType = Nothing,
+                bindingsBindExpr = Just $ IntermediateExprExpr $ IntermediatePostLocalState ident bindingsBindExpr
+              }, state)
+            else (expr, state)
+          Nothing -> error $ "Found let binding without UUID when adding local state: " ++ show expr 
+      -- TODO: Should also rewrite tuple bindings and destructuring of structs (since variables can still be updated)
       rewriteLetBinds binds _scopes state = (binds, state)
 
       -- TODO: NOTE: the dot chain can be used as a syntactic sugar for references, both on the left value and right value:
@@ -134,4 +145,11 @@ addLocalScopeInRoot root markedVars =
       -- TODO: Also create and manage the variables for scopes: creation and return of outerscopes,
       -- passing and retrieving scopes to functions that have references
       -- or to sequences that have assignments (or references)
+      liftSequences :: TraversalMapper Expr (Set.Set Bindings, Int)
+      --liftSequences (SequenceExpr Sequence{sequenceUses, sequenceItems, sequenceEndExpr}) _scopes (toLift, state) =
+        
+      -- Any other expression should just propagate upwards the state
+      liftSequences expr _scopes state = (expr, state)
+
+      -- TODO: Also note that right values might still have sequences inside, in any of the previous cases
    in fourthPass

@@ -285,3 +285,4 @@ inferExprType (IntermediateExprExpr (IntermediateReferenceLocalState _ exprType)
 inferExprType (IntermediateExprExpr (IntermediateGetDereferenceLocalState _ exprType)) _ = exprType
 inferExprType (IntermediateExprExpr (IntermediateGetLocalState _ exprType)) _ = exprType
 inferExprType (IntermediateExprExpr (IntermediatePutLocalState _  _)) _ = TypeUnknown
+inferExprType (IntermediateExprExpr (IntermediatePostLocalState _  _)) _ = TypeUnknown

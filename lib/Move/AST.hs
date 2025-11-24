@@ -601,4 +601,5 @@ data IntermediateExpr
   | IntermediateGetDereferenceLocalState Expr Type
   | IntermediateGetLocalState [Identifier] Type
   | IntermediatePutLocalState [Identifier] Expr
+  | IntermediatePostLocalState Identifier (Maybe Expr)
   deriving (Eq, Show, Read, Data, Typeable, Ord)
