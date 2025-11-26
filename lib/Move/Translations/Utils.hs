@@ -137,6 +137,10 @@ annotateBindingsWithUUID root = do
     -- Annotates any top level
     topLevelAnnotator :: TopLevel -> State Int TopLevel
     topLevelAnnotator (TopLevelFunction topLFunction@Function {functionParameters, functionBody}) = do
+      -- Annotate the function itself
+      functionUUID <- get
+      put $ functionUUID + 1
+
       -- Annotate the parameters of the function
       annotatedParameters <-
         mapM
@@ -153,7 +157,8 @@ annotateBindingsWithUUID root = do
         TopLevelFunction $
           topLFunction
             { functionParameters = annotatedParameters,
-              functionBody = annotatedBody
+              functionBody = annotatedBody,
+              functionUUID = Just functionUUID
             }
     -- Every other top level node is ignored
     topLevelAnnotator otherTL = return otherTL
@@ -284,5 +289,7 @@ inferExprType Continue _ = TypeUnknown
 inferExprType (IntermediateExprExpr (IntermediateReferenceLocalState _ exprType)) _ = exprType
 inferExprType (IntermediateExprExpr (IntermediateGetDereferenceLocalState _ exprType)) _ = exprType
 inferExprType (IntermediateExprExpr (IntermediateGetLocalState _ exprType)) _ = exprType
-inferExprType (IntermediateExprExpr (IntermediatePutLocalState _  _)) _ = TypeUnknown
-inferExprType (IntermediateExprExpr (IntermediatePostLocalState _  _)) _ = TypeUnknown
+inferExprType (IntermediateExprExpr (IntermediatePutLocalState _  _)) _ = IntermediateTypeScopes
+inferExprType (IntermediateExprExpr (IntermediatePostLocalState _  _)) _ = IntermediateTypeScopes
+inferExprType (IntermediateExprExpr (IntermediatePushScope _)) _ = IntermediateTypeScopes
+inferExprType (IntermediateExprExpr (IntermediatePopScope _)) _ = IntermediateTypeScopes

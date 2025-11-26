@@ -211,7 +211,8 @@ testParseFunctionNoBody =
                         { sequenceUses = [],
                           sequenceItems = [],
                           sequenceEndExpr = Nothing
-                        }
+                        },
+                  functionUUID = Nothing
                 },
             -- Native function
             TopLevelFunction $
@@ -224,7 +225,8 @@ testParseFunctionNoBody =
                   functionParameters = [],
                   functionReturnType = Just $ TypeConstructor (LocalNameAccessChain $ Identifier "vector") [TypeConstructor (LocalNameAccessChain $ Identifier "Element") []],
                   functionAcquires = [],
-                  functionBody = Nothing
+                  functionBody = Nothing,
+                  functionUUID = Nothing
                 }
           ]
       }
@@ -481,7 +483,8 @@ testParseFunctionWithBody =
                             ],
                           -- inner
                           sequenceEndExpr = Just $ NameAccessChainExpr $ LocalNameAccessChain $ Identifier "inner"
-                        }
+                        },
+                  functionUUID = Nothing
                 }
           ]
       }
@@ -820,7 +823,8 @@ testParseStructExpr =
                             ],
                           -- No end expression
                           sequenceEndExpr = Nothing
-                        }
+                        },
+                  functionUUID = Nothing
                 }
           ]
       }

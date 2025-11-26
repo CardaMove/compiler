@@ -243,6 +243,8 @@ data Type
   | TypeMutableRef Type
   | TypeTuple [Type]
   | TypeUnknown
+  | IntermediateTypeScopes
+  | TypeArrow [Type]
   deriving (Eq, Show, Read, Data, Typeable, Ord)
 
 -- | A function declaration
@@ -258,7 +260,8 @@ data Function
     functionParameters :: [Parameter],
     functionReturnType :: Maybe Type,
     functionAcquires :: [NameAccessChain],
-    functionBody :: Maybe Sequence
+    functionBody :: Maybe Sequence,
+    functionUUID :: Maybe AnnotatedUUID
   }
   deriving (Eq, Show, Read, Data, Typeable)
 
@@ -602,4 +605,6 @@ data IntermediateExpr
   | IntermediateGetLocalState [Identifier] Type
   | IntermediatePutLocalState [Identifier] Expr
   | IntermediatePostLocalState Identifier (Maybe Expr)
+  | IntermediatePushScope Identifier
+  | IntermediatePopScope Identifier
   deriving (Eq, Show, Read, Data, Typeable, Ord)

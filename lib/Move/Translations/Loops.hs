@@ -191,7 +191,8 @@ mapWhileToFunction (While {whileCondition, whileExpr}) scopes containsBreak func
             functionParameters,
             functionReturnType = Nothing,
             functionAcquires = [],
-            functionBody
+            functionBody,
+            functionUUID = Nothing
           }
       )
 

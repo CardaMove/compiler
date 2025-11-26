@@ -351,7 +351,8 @@ Function :: { Function }
       functionParameters = $8,
       functionReturnType = $10,
       functionAcquires = $11,
-      functionBody = Nothing
+      functionBody = Nothing,
+      functionUUID = Nothing
     }
   }
   -- non-native function
@@ -365,7 +366,8 @@ Function :: { Function }
       functionParameters = $7,
       functionReturnType = $9,
       functionAcquires = $10,
-      functionBody = Just $11
+      functionBody = Just $11,
+      functionUUID = Nothing
     }
   }
 

@@ -20,7 +20,7 @@ testMarkVariablesForLocalScope = describe "Tests the function `markVariablesForL
 
     print annotated
 
-    markVariablesForLocalScope annotated `shouldBe` Set.fromList [0, 1, 3, 7, 9]
+    markVariablesForLocalScope annotated `shouldBe` Set.fromList [1,2,4,8,10]
 
 
 spec :: Spec

@@ -1,15 +1,17 @@
-module Move.Translations.TraversalUtils (traverseExprPostOrder, traverseRootPostOrder, TraversalMapper,traversalIdentity) where
+module Move.Translations.TraversalUtils (traverseExprPostOrder, traverseRootPostOrder, TraversalMapper, traversalIdentity) where
 
 import Control.Monad.State qualified as State
 import Data.Generics.Uniplate.Data (descendM)
 import Data.List (mapAccumL)
 import Data.Map qualified as Map
+import Data.Maybe (fromMaybe)
 import Move.AST
 import Move.Translations.Utils
   ( Scope,
     VariableAnnotations (VariableAnnotations),
     extractVariablesFromBindings,
     getUseIdentifiers,
+    unitType,
   )
 
 type TraversalMapper node state = node -> [Scope] -> state -> (node, state)
@@ -76,7 +78,7 @@ traverseSequencePostOrder exprMapper bindsMapper (Sequence {sequenceUses, sequen
                 -- Then, call the mapped function for the bindings, passing the scope before this binding,
                 -- but the state after traversing the right value
                 -- Also note that it is passed the mapped right value, not the original one
-                (mappedBindings, stateAfterTraversingBindings) = bindsMapper bindings{bindingsBindExpr = traversedBindExpr} scopesBeforeBind stateAfterTraversingBindExpr
+                (mappedBindings, stateAfterTraversingBindings) = bindsMapper bindings {bindingsBindExpr = traversedBindExpr} scopesBeforeBind stateAfterTraversingBindExpr
                 -- Then, add the binded identifiers to the local scope
                 bindScopes = Map.fromList $ extractVariablesFromBindings mappedBindings scopesBeforeBind
                 localScopeAfterBind = Map.union bindScopes localScopeBeforeBind
@@ -120,12 +122,14 @@ traverseRootPostOrder exprMapper bindsMapper root state = case root of
       -- Since top level identifiers are never renamed, add all of them to the module scope before starting to traverse
       let topLevelIdentifiersAnnotated = concatMap topLevelMap topLevels
             where
-              -- TODO: Structs, function declarations and uses for now do not have a type
+              -- TODO: Structs and uses for now do not have a type
               topLevelMap (TopLevelUse use) = map (,VariableAnnotations Nothing TypeUnknown) (getUseIdentifiers use)
               topLevelMap (TopLevelFriend _) = []
               topLevelMap (TopLevelNamedStruct (NamedStruct {namedStructIdentifier})) = [(namedStructIdentifier, VariableAnnotations Nothing TypeUnknown)]
               topLevelMap (TopLevelPositionalStruct (PositionalStruct {positionalStructIdentifier})) = [(positionalStructIdentifier, VariableAnnotations Nothing TypeUnknown)]
-              topLevelMap (TopLevelFunction (Function {functionName})) = [(functionName, VariableAnnotations Nothing TypeUnknown)]
+              -- Functions have a type, which is the arrow type of all its parameter types and return type (or unit if not specified)
+              topLevelMap (TopLevelFunction (Function {functionName, functionUUID, functionParameters, functionReturnType})) =
+                [(functionName, VariableAnnotations functionUUID $ TypeArrow $ map parameterType functionParameters ++ [fromMaybe unitType functionReturnType])]
               topLevelMap (TopLevelConstant (Constant {constantIdentifier, constantType})) = [(constantIdentifier, VariableAnnotations Nothing constantType)]
           moduleScope :: Scope = Map.fromList topLevelIdentifiersAnnotated
 
