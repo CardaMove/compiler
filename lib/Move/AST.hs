@@ -599,12 +599,22 @@ data BindedField
 
 type AnnotatedUUID = Int
 
+-- |
+-- Nodes used as intermediate representations for some expressions
 data IntermediateExpr
-  = IntermediateReferenceLocalState [Identifier] Type
+  =
+    -- | Any `&[mut] a[.b.c]`
+    IntermediateReferenceLocalState [Identifier] Type
+    -- | Any `*a` on the right side
   | IntermediateGetDereferenceLocalState Expr Type
+    -- | Any `a[.b.c]` where `a` is in the local state
   | IntermediateGetLocalState [Identifier] Type
+    -- | Any `a[.b.c] = ...`
   | IntermediatePutLocalState [Identifier] Expr
+    -- | Any `let a = ...` where `a` has to be inserted in the local state
   | IntermediatePostLocalState Identifier (Maybe Expr)
+    -- | Represents pushing a new local scope on top of the existing ones
   | IntermediatePushScope Identifier
+    -- | Represents popping the local scope from the existing ones
   | IntermediatePopScope Identifier
   deriving (Eq, Show, Read, Data, Typeable, Ord)
