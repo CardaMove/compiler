@@ -107,7 +107,7 @@ rewriteAssignments root scopeIdentifier scopeUUID = transformBi f root
 -- |
 -- Utility function
 --
--- Second pass: rewrite references on right value as getters
+-- Second pass: rewrite references and dereferences on right value as getters
 -- (must be called after rewriting assignment to prevent updating derefs on left value)
 rewriteRefs :: TraversalMapper Expr ()
 rewriteRefs expr@(UnaryOpExpr (ImmutableReference referencedExpr)) scopes state = (mapRightValueRef referencedExpr $ inferExprType expr scopes, state)

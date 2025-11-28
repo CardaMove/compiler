@@ -6,8 +6,9 @@ import Move.Parser (parse)
 import Test.Hspec
 import Move.Translations.Utils (annotateBindingsWithUUID)
 import Control.Monad.State (evalState)
-import Move.Translations.Scopes (markVariablesForLocalScope, rewriteAssignments)
+import Move.Translations.Scopes (markVariablesForLocalScope, rewriteAssignments, rewriteRefs)
 import Move.AST
+import Move.Translations.TraversalUtils (traverseRootPostOrder, traversalIdentity)
 
 testMarkVariablesForLocalScope :: Spec
 testMarkVariablesForLocalScope = describe "Tests the function `markVariablesForLocalScope`" $ do
@@ -33,16 +34,35 @@ testRewriteAssignments = describe "Tests the function `rewriteAssignments`" $ do
 
     let annotated = evalState (annotateBindingsWithUUID parsed) 0
 
+    let scopeIdentifier = Identifier "scopes"
+    let scopeUUID :: AnnotatedUUID = -1
+
+    rewriteAssignments annotated scopeIdentifier scopeUUID `shouldBe` toModule
+
+
+testRewriteRefs :: Spec
+testRewriteRefs = describe "Tests the function `rewriteRefs`" $ do
+  it "Rewrites references and dereferences on right value as getters from the state" $ do
+    fromModuleStr <- readFile "test/Move/Translations/files/ScopesSpec_4.move"
+    toModuleStr <- readFile "test/Move/Translations/files/ScopesSpec_5.txt"
+
+    let parsed = parse $ scan fromModuleStr
+
+    let toModule = read toModuleStr :: Root
+
+    let annotated = evalState (annotateBindingsWithUUID parsed) 0
+
     print annotated
 
     let scopeIdentifier = Identifier "scopes"
     let scopeUUID :: AnnotatedUUID = -1
 
-    -- TODO:
-    rewriteAssignments annotated scopeIdentifier scopeUUID `shouldBe` toModule
-
+    let firstPass :: Root = rewriteAssignments annotated scopeIdentifier scopeUUID
+    let secondPass :: Root = fst $ traverseRootPostOrder rewriteRefs traversalIdentity firstPass ()
+    secondPass `shouldBe` toModule
 
 spec :: Spec
 spec = do
   testMarkVariablesForLocalScope
   testRewriteAssignments
+  testRewriteRefs

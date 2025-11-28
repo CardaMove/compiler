@@ -122,11 +122,12 @@ traverseRootPostOrder exprMapper bindsMapper root state = case root of
       -- Since top level identifiers are never renamed, add all of them to the module scope before starting to traverse
       let topLevelIdentifiersAnnotated = concatMap topLevelMap topLevels
             where
-              -- TODO: Structs and uses for now do not have a type
+              -- TODO: uses for now do not have a type
+              -- TODO: For structs, consider type parameters (for now ignored) for the type
               topLevelMap (TopLevelUse use) = map (,VariableAnnotations Nothing TypeUnknown) (getUseIdentifiers use)
               topLevelMap (TopLevelFriend _) = []
-              topLevelMap (TopLevelNamedStruct (NamedStruct {namedStructIdentifier})) = [(namedStructIdentifier, VariableAnnotations Nothing TypeUnknown)]
-              topLevelMap (TopLevelPositionalStruct (PositionalStruct {positionalStructIdentifier})) = [(positionalStructIdentifier, VariableAnnotations Nothing TypeUnknown)]
+              topLevelMap (TopLevelNamedStruct (NamedStruct {namedStructIdentifier})) = [(namedStructIdentifier, VariableAnnotations Nothing $ TypeConstructor (LocalNameAccessChain namedStructIdentifier) [])]
+              topLevelMap (TopLevelPositionalStruct (PositionalStruct {positionalStructIdentifier})) = [(positionalStructIdentifier, VariableAnnotations Nothing $ TypeConstructor (LocalNameAccessChain positionalStructIdentifier) [])]
               -- Functions have a type, which is the arrow type of all its parameter types and return type (or unit if not specified)
               topLevelMap (TopLevelFunction (Function {functionName, functionUUID, functionParameters, functionReturnType})) =
                 [(functionName, VariableAnnotations functionUUID $ TypeArrow $ map parameterType functionParameters ++ [fromMaybe unitType functionReturnType])]

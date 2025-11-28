@@ -229,36 +229,42 @@ inferExprType (UnaryOpExpr (Dereference expr)) scopes =
   case inferExprType expr scopes of
     (TypeMutableRef refType) -> refType
     (TypeImmutableRef refType) -> refType
-    _ -> error "Dereferencing non-ref type"
+    exprType -> error $ "Dereferencing non-ref type: " ++ show expr ++ " with type: " ++ show exprType
 inferExprType (UnaryOpExpr (MoveExpr expr)) scopes = inferExprType (NameAccessChainExpr $ LocalNameAccessChain expr) scopes
 inferExprType (UnaryOpExpr (CopyExpr expr)) scopes = inferExprType (NameAccessChainExpr $ LocalNameAccessChain expr) scopes
 -- Dot or index chain TODO:
-inferExprType (DotOrIndexChainExpr (DotAccess {dotAccessLeft, dotAccessRight})) scopes =
+inferExprType expr@(DotOrIndexChainExpr (DotAccess {dotAccessLeft, dotAccessRight})) scopes =
   case inferExprType dotAccessLeft scopes of
     TypeConstructor typeCons typeArgs -> TypeUnknown
     TypeImmutableRef refType -> TypeUnknown -- Should be a TypeImmutableRef itself
     TypeMutableRef refType -> TypeUnknown -- Should be a TypeMutableRef itself
-    _ -> error "Dot access to non-struct type"
+    exprType -> error $ "Dot access to non-struct type: " ++ show expr ++ " with type: " ++ show exprType
 -- Literal values
 inferExprType (ValueLiteral (Address _)) _ = addressType
 inferExprType (ValueLiteral (Boolean _)) _ = booleanType
 inferExprType (ValueLiteral (Numerical _)) _ = numericType
 -- Comma expression
+-- If the tuple has just one expression, it is treated as a single value since parantesis act just for operation priority
+inferExprType (CommaExpr [singleExpr]) scopes = inferExprType singleExpr scopes
 inferExprType (CommaExpr exprs) scopes = TypeTuple $ map (`inferExprType` scopes) exprs
 -- Typed expression
 inferExprType (TypedExprTerm (TypedExpr {typedExprType})) _ = typedExprType
 -- Casting
 inferExprType (CastingTerm (Casting {castingType})) _ = castingType
--- Named struct expression TODO:
-inferExprType (NamedStructExprExpr (NamedStructExpr {nseNameAccessChain})) scopes = TypeUnknown
+-- Named struct expression
+-- TODO: type parameters for now are ignored, also non-local name access chains
+inferExprType (NamedStructExprExpr (NamedStructExpr {nseNameAccessChain = LocalNameAccessChain structName})) scopes =
+  case getIdentifierFromScopes structName scopes of
+    VariableAnnotations _ structType -> structType
+inferExprType (NamedStructExprExpr (NamedStructExpr {nseNameAccessChain = _})) _scopes = TypeUnknown
 -- Positional struct expression or function call TODO:
 inferExprType (PositionalStructExprOrFunctionCallExpr (PositionalStructExprOrFunctionCall {pseofcNameAccessChain})) scopes = TypeUnknown
 -- Function bang call has unit type
 inferExprType (FunctionBangCallExpr _) _ = unitType
 -- Name access chain
 inferExprType (NameAccessChainExpr (LocalNameAccessChain ident)) scopes =
-  let VariableAnnotations _ maybeType = getIdentifierFromScopes ident scopes
-   in maybeType
+  let VariableAnnotations _ identType = getIdentifierFromScopes ident scopes
+   in identType
 -- TODO: resolve alias
 inferExprType (NameAccessChainExpr (AliasedNameAccessChain address ident)) scopes = TypeUnknown
 -- TODO: resolve alias
@@ -294,3 +300,112 @@ inferExprType (IntermediateExprExpr (IntermediatePutLocalState _ _)) _ = Interme
 inferExprType (IntermediateExprExpr (IntermediatePostLocalState _ _)) _ = IntermediateTypeScopes
 inferExprType (IntermediateExprExpr (IntermediatePushScope _)) _ = IntermediateTypeScopes
 inferExprType (IntermediateExprExpr (IntermediatePopScope _)) _ = IntermediateTypeScopes
+
+a =
+  RModule
+    ( Module
+        { moduleAddress = NamedAddress (Identifier "NamedAddr"),
+          moduleIdentifier = Identifier "TestingModule",
+          moduleTopLevels =
+            [ TopLevelNamedStruct
+                ( NamedStruct
+                    { namedStructIdentifier = Identifier "S",
+                      namedStructTypeParameters = [],
+                      namedStructAbilities = [],
+                      namedStructFields =
+                        [ NamedField
+                            { fieldIdentifier = Identifier "s",
+                              fieldType = TypeConstructor (LocalNameAccessChain (Identifier "u64")) []
+                            }
+                        ]
+                    }
+                ),
+              TopLevelFunction
+                ( Function
+                    { functionHasNativeModifier = False,
+                      functionVisibilityModifier = Nothing,
+                      functionHasEntryModifier = False,
+                      functionName = Identifier "test",
+                      functionTypeParameters = [],
+                      functionParameters =
+                        [ Parameter
+                            { parameterIdentifier = Identifier "x",
+                              parameterType = TypeConstructor (LocalNameAccessChain (Identifier "bool")) [],
+                              parameterUUID = Just 1
+                            }
+                        ],
+                      functionReturnType = Just (TypeConstructor (LocalNameAccessChain (Identifier "u64")) []),
+                      functionAcquires = [],
+                      functionBody =
+                        Just
+                          ( Sequence
+                              { sequenceUses = [],
+                                sequenceItems =
+                                  [ SequenceItemBindExpr
+                                      ( Bindings
+                                          { bindings = BindedSingle (BindIdentifier (Identifier "s") (Just 2)),
+                                            bindingsBindType = Nothing,
+                                            bindingsBindExpr =
+                                              Just
+                                                ( NamedStructExprExpr
+                                                    ( NamedStructExpr
+                                                        { nseNameAccessChain = LocalNameAccessChain (Identifier "S"),
+                                                          nseTypeArgs = [],
+                                                          nseFields =
+                                                            [ NamedStructExprField
+                                                                { nsefIdentifier = Identifier "s",
+                                                                  nsefExpr = Just (ValueLiteral (Numerical (LiteralIntDec 12)))
+                                                                }
+                                                            ]
+                                                        }
+                                                    )
+                                                )
+                                          }
+                                      ),
+                                    SequenceItemBindExpr
+                                      ( Bindings
+                                          { bindings = BindedSingle (BindIdentifier (Identifier "r") (Just 3)),
+                                            bindingsBindType = Nothing,
+                                            bindingsBindExpr = Just (IntermediateExprExpr (IntermediateReferenceLocalState [Identifier "x"] (TypeMutableRef (TypeConstructor (LocalNameAccessChain (Identifier "bool")) []))))
+                                          }
+                                      ),
+                                    SequenceItemBindExpr
+                                      ( Bindings
+                                          { bindings = BindedSingle (BindIdentifier (Identifier "r2") (Just 4)),
+                                            bindingsBindType = Nothing,
+                                            bindingsBindExpr = Just (IntermediateExprExpr (IntermediateReferenceLocalState [Identifier "s", Identifier "s"] (TypeImmutableRef (TypeConstructor (LocalNameAccessChain (Identifier "u64")) []))))
+                                          }
+                                      ),
+                                    SequenceItemBindExpr
+                                      ( Bindings
+                                          { bindings = BindedSingle (BindIdentifier (Identifier "a") (Just 5)),
+                                            bindingsBindType = Nothing,
+                                            bindingsBindExpr =
+                                              Just
+                                                ( IfThenElseTerm
+                                                    ( IfThenElse
+                                                        { ifThenElseCondition = IntermediateExprExpr (IntermediateGetDereferenceLocalState (NameAccessChainExpr (LocalNameAccessChain (Identifier "r"))) (TypeConstructor (LocalNameAccessChain (Identifier "bool")) [])),
+                                                          ifThenElseIfBranch = BinaryOpExprExpr (Gt (IntermediateExprExpr (IntermediateGetDereferenceLocalState (NameAccessChainExpr (LocalNameAccessChain (Identifier "r2"))) (TypeConstructor (LocalNameAccessChain (Identifier "u64")) []))) (ValueLiteral (Numerical (LiteralIntDec 0)))),
+                                                          ifThenElseElseBranch = Just (UnaryOpExpr (Negation (CommaExpr [IntermediateExprExpr (IntermediateGetDereferenceLocalState (NameAccessChainExpr (LocalNameAccessChain (Identifier "r"))) (TypeConstructor (LocalNameAccessChain (Identifier "bool")) []))])))
+                                                        }
+                                                    )
+                                                )
+                                          }
+                                      ),
+                                    SequenceItemBindExpr
+                                      ( Bindings
+                                          { bindings = BindedSingle (BindIdentifier (Identifier "b") (Just 6)),
+                                            bindingsBindType = Nothing,
+                                            bindingsBindExpr = Just (IntermediateExprExpr (IntermediateGetDereferenceLocalState (CommaExpr [IntermediateExprExpr (IntermediateReferenceLocalState [Identifier "a"] (TypeImmutableRef (TypeConstructor (LocalNameAccessChain (Identifier "bool")) [])))]) (TypeConstructor (LocalNameAccessChain (Identifier "bool")) [])))
+                                          }
+                                      )
+                                  ],
+                                sequenceEndExpr = Just (NameAccessChainExpr (LocalNameAccessChain (Identifier "x")))
+                              }
+                          ),
+                      functionUUID = Just 0
+                    }
+                )
+            ]
+        }
+    )
