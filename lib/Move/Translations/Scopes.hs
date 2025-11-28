@@ -80,7 +80,7 @@ rewriteAssignments root scopeIdentifier scopeUUID = transformBi f root
       SequenceItemBindExpr
         Bindings
           { bindings = BindedSingle $ BindIdentifier scopeIdentifier $ Just scopeUUID,
-            bindingsBindType = Nothing,
+            bindingsBindType = Just IntermediateTypeScopes,
             bindingsBindExpr = Just $ IntermediateExprExpr $ IntermediatePutLocalState [ident] assignmentRight
           }
     -- `a[.b.c]`, note about syntactic sugar for references few comments below
@@ -88,10 +88,17 @@ rewriteAssignments root scopeIdentifier scopeUUID = transformBi f root
       SequenceItemBindExpr
         Bindings
           { bindings = BindedSingle $ BindIdentifier scopeIdentifier $ Just scopeUUID,
-            bindingsBindType = Nothing,
+            bindingsBindType = Just IntermediateTypeScopes,
             bindingsBindExpr = Just $ IntermediateExprExpr $ IntermediatePutLocalState (getDotAccessChain dotAccess) assignmentRight
           }
-    -- TODO: Missing dereferences `*a = ...`
+    -- `*a = ...`, it can not be a dot access since references can not be labels in structs
+    f (SequenceItemExpr (AssignmentExpr (Assignment {assignmentLeft = UnaryOpExpr (Dereference (NameAccessChainExpr (LocalNameAccessChain ident))), assignmentRight}))) =
+      SequenceItemBindExpr
+        Bindings
+          { bindings = BindedSingle $ BindIdentifier scopeIdentifier $ Just scopeUUID,
+            bindingsBindType = Just IntermediateTypeScopes,
+            bindingsBindExpr = Just $ IntermediateExprExpr $ IntermediatePutDereferenceLocalState ident assignmentRight
+          }
     -- TODO: tuple assignments
     f expr@(SequenceItemExpr _) = expr
     f bind = bind
@@ -146,7 +153,7 @@ rewriteLetBinds markedVars scopeIdentifier scopeUUID = rewriteLetBinds'
             then
               ( Bindings
                   { bindings = BindedSingle $ BindIdentifier scopeIdentifier $ Just scopeUUID,
-                    bindingsBindType = Nothing,
+                    bindingsBindType = Just IntermediateTypeScopes,
                     bindingsBindExpr = Just $ IntermediateExprExpr $ IntermediatePostLocalState ident bindingsBindExpr
                   },
                 state
@@ -270,6 +277,7 @@ rewriteInlineStateMutation scopeIdentifier scopeUUID = rewriteInlineStateMutatio
                   ( \expr'' -> case expr'' of
                       IntermediateExprExpr (IntermediatePutLocalState _ _) -> True
                       IntermediateExprExpr (IntermediatePostLocalState _ _) -> True
+                      IntermediateExprExpr (IntermediatePutDereferenceLocalState _ _) -> True
                       _ -> False
                   )
                   (universe expr')
@@ -277,8 +285,6 @@ rewriteInlineStateMutation scopeIdentifier scopeUUID = rewriteInlineStateMutatio
               -- Given any sequence item, prepend its temporary bindings, the sequence item itself, and the accumulated items
               -- The other two elements of the tuple are the updated map of the temporary bindings
               -- and a boolean representing if the state is mutated in any way
-              -- TODO: For this boolean, also check the IntermediateExpr nodes that modify the state
-              -- can be done with `universe`
               handleSeqItem :: SequenceItem -> ([SequenceItem], Map.Map Identifier Bindings, Bool) -> ([SequenceItem], Map.Map Identifier Bindings, Bool)
               handleSeqItem (SequenceItemExpr expr') (acc, bindingsToAdd''', mutatesState'') =
                 case getTemporaryBindingsOfExpr expr' bindingsToAdd''' of

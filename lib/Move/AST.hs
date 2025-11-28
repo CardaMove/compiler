@@ -607,6 +607,8 @@ data IntermediateExpr
     IntermediateReferenceLocalState [Identifier] Type
     -- | Any `*a` on the right side
   | IntermediateGetDereferenceLocalState Expr Type
+  -- | Any `*a` on the left side
+  | IntermediatePutDereferenceLocalState Identifier Expr
     -- | Any `a[.b.c]` where `a` is in the local state
   | IntermediateGetLocalState [Identifier] Type
     -- | Any `a[.b.c] = ...`
