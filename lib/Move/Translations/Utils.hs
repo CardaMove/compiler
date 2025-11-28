@@ -222,7 +222,7 @@ inferExprType (BinaryOpExprExpr (Mod _ _)) _ = numericType
 inferExprType (AssignmentExpr _) _ = unitType
 -- Unary expressions
 inferExprType (UnaryOpExpr (Negation _)) _ = booleanType
--- TODO: Consider about extending other references via &my_ref.b.c
+-- References and dereferences
 inferExprType (UnaryOpExpr (MutableReference ref)) scopes = TypeMutableRef $ inferExprType ref scopes
 inferExprType (UnaryOpExpr (ImmutableReference ref)) scopes = TypeImmutableRef $ inferExprType ref scopes
 inferExprType (UnaryOpExpr (Dereference expr)) scopes =
@@ -230,6 +230,7 @@ inferExprType (UnaryOpExpr (Dereference expr)) scopes =
     (TypeMutableRef refType) -> refType
     (TypeImmutableRef refType) -> refType
     exprType -> error $ "Dereferencing non-ref type: " ++ show expr ++ " with type: " ++ show exprType
+-- move and copy espressions
 inferExprType (UnaryOpExpr (MoveExpr expr)) scopes = inferExprType (NameAccessChainExpr $ LocalNameAccessChain expr) scopes
 inferExprType (UnaryOpExpr (CopyExpr expr)) scopes = inferExprType (NameAccessChainExpr $ LocalNameAccessChain expr) scopes
 -- Dot or index chain TODO:
@@ -256,9 +257,13 @@ inferExprType (CastingTerm (Casting {castingType})) _ = castingType
 inferExprType (NamedStructExprExpr (NamedStructExpr {nseNameAccessChain = LocalNameAccessChain structName})) scopes =
   case getIdentifierFromScopes structName scopes of
     VariableAnnotations _ structType -> structType
-inferExprType (NamedStructExprExpr (NamedStructExpr {nseNameAccessChain = _})) _scopes = TypeUnknown
--- Positional struct expression or function call TODO:
-inferExprType (PositionalStructExprOrFunctionCallExpr (PositionalStructExprOrFunctionCall {pseofcNameAccessChain})) scopes = TypeUnknown
+inferExprType (NamedStructExprExpr (NamedStructExpr {nseNameAccessChain = _})) scopes = TypeUnknown
+-- Positional struct expression or function call
+-- TODO: type parameters for now are ignored, also non-local name access chains
+inferExprType (PositionalStructExprOrFunctionCallExpr (PositionalStructExprOrFunctionCall {pseofcNameAccessChain = LocalNameAccessChain structName})) scopes =
+  case getIdentifierFromScopes structName scopes of
+    VariableAnnotations _ structType -> structType
+inferExprType (PositionalStructExprOrFunctionCallExpr (PositionalStructExprOrFunctionCall {pseofcNameAccessChain = _})) scopes = TypeUnknown
 -- Function bang call has unit type
 inferExprType (FunctionBangCallExpr _) _ = unitType
 -- Name access chain
