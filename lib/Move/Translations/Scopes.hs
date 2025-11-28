@@ -400,6 +400,6 @@ addLocalScopeInRoot root markedVars currUUID =
       fourthPass :: Root = fst $ traverseRootPostOrder traversalIdentity (rewriteLetBinds markedVars scopeIdentifier scopeUUID) thirdPass ()
       fifthPass :: Root = fst $ traverseRootPostOrder (rewriteInlineStateMutation scopeIdentifier scopeUUID) traversalIdentity fourthPass (currUUID, Map.empty)
    in -- TODO: Should also rewrite function definitions similar to how function calls are handled
-
-      -- TODO: Also note that right values might still have sequences inside, in any of the previous cases
+      -- NOTE that in some way it is needed to handle function parameters that need to be inserted into the scope
+      -- TODO: Also missing liftings
       fifthPass

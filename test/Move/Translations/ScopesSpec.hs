@@ -6,7 +6,7 @@ import Move.Parser (parse)
 import Test.Hspec
 import Move.Translations.Utils (annotateBindingsWithUUID)
 import Control.Monad.State (evalState)
-import Move.Translations.Scopes (markVariablesForLocalScope, rewriteAssignments, rewriteRefs)
+import Move.Translations.Scopes (markVariablesForLocalScope, rewriteAssignments, rewriteRefs, rewriteVars)
 import Move.AST
 import Move.Translations.TraversalUtils (traverseRootPostOrder, traversalIdentity)
 
@@ -52,8 +52,6 @@ testRewriteRefs = describe "Tests the function `rewriteRefs`" $ do
 
     let annotated = evalState (annotateBindingsWithUUID parsed) 0
 
-    print annotated
-
     let scopeIdentifier = Identifier "scopes"
     let scopeUUID :: AnnotatedUUID = -1
 
@@ -61,8 +59,35 @@ testRewriteRefs = describe "Tests the function `rewriteRefs`" $ do
     let secondPass :: Root = fst $ traverseRootPostOrder rewriteRefs traversalIdentity firstPass ()
     secondPass `shouldBe` toModule
 
+testRewriteVars :: Spec
+testRewriteVars = describe "Tests the function `rewriteVars`" $ do
+  it "Rewrites variables on right value as getters from the state, if needed" $ do
+    fromModuleStr <- readFile "test/Move/Translations/files/ScopesSpec_6.move"
+    toModuleStr <- readFile "test/Move/Translations/files/ScopesSpec_7.txt"
+
+    let parsed = parse $ scan fromModuleStr
+
+    let toModule = read toModuleStr :: Root
+
+    let annotated = evalState (annotateBindingsWithUUID parsed) 0
+
+    let markedVars = markVariablesForLocalScope annotated
+
+    let scopeIdentifier = Identifier "scopes"
+    let scopeUUID :: AnnotatedUUID = -1
+
+    let firstPass :: Root = rewriteAssignments annotated scopeIdentifier scopeUUID
+    let secondPass :: Root = fst $ traverseRootPostOrder rewriteRefs traversalIdentity firstPass ()
+    let thirdPass :: Root = fst $ traverseRootPostOrder (rewriteVars markedVars) traversalIdentity secondPass ()
+
+    print thirdPass
+
+    thirdPass `shouldBe` toModule
+
+
 spec :: Spec
 spec = do
   testMarkVariablesForLocalScope
   testRewriteAssignments
   testRewriteRefs
+  testRewriteVars

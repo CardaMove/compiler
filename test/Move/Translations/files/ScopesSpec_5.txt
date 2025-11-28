@@ -69,7 +69,7 @@ RModule
                                     ( Bindings
                                         { bindings = BindedSingle (BindIdentifier (Identifier "r2") (Just 4)),
                                         bindingsBindType = Nothing,
-                                        bindingsBindExpr = Just (IntermediateExprExpr (IntermediateReferenceLocalState [Identifier "s", Identifier "s"] (TypeImmutableRef (TypeConstructor (LocalNameAccessChain (Identifier "u64")) []))))
+                                        bindingsBindExpr = Just (IntermediateExprExpr (IntermediateReferenceLocalState [Identifier "s", Identifier "s"] (TypeImmutableRef TypeUnknown)))
                                         }
                                     ),
                                 SequenceItemBindExpr
@@ -81,7 +81,7 @@ RModule
                                             ( IfThenElseTerm
                                                 ( IfThenElse
                                                     { ifThenElseCondition = IntermediateExprExpr (IntermediateGetDereferenceLocalState (NameAccessChainExpr (LocalNameAccessChain (Identifier "r"))) (TypeConstructor (LocalNameAccessChain (Identifier "bool")) [])),
-                                                        ifThenElseIfBranch = BinaryOpExprExpr (Gt (IntermediateExprExpr (IntermediateGetDereferenceLocalState (NameAccessChainExpr (LocalNameAccessChain (Identifier "r2"))) (TypeConstructor (LocalNameAccessChain (Identifier "u64")) []))) (ValueLiteral (Numerical (LiteralIntDec 0)))),
+                                                        ifThenElseIfBranch = BinaryOpExprExpr (Gt (IntermediateExprExpr (IntermediateGetDereferenceLocalState (NameAccessChainExpr (LocalNameAccessChain (Identifier "r2"))) (TypeUnknown))) (ValueLiteral (Numerical (LiteralIntDec 0)))),
                                                         ifThenElseElseBranch = Just (UnaryOpExpr (Negation (CommaExpr [IntermediateExprExpr (IntermediateGetDereferenceLocalState (NameAccessChainExpr (LocalNameAccessChain (Identifier "r"))) (TypeConstructor (LocalNameAccessChain (Identifier "bool")) []))])))
                                                     }
                                                 )
