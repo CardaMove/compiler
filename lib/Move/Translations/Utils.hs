@@ -290,7 +290,7 @@ inferExprType (IntermediateExprExpr (IntermediateReferenceLocalState _ exprType)
 inferExprType (IntermediateExprExpr (IntermediateGetDereferenceLocalState _ exprType)) _ = exprType
 inferExprType (IntermediateExprExpr (IntermediatePutDereferenceLocalState _ _)) _ = IntermediateTypeScopes
 inferExprType (IntermediateExprExpr (IntermediateGetLocalState _ exprType)) _ = exprType
-inferExprType (IntermediateExprExpr (IntermediatePutLocalState _  _)) _ = IntermediateTypeScopes
-inferExprType (IntermediateExprExpr (IntermediatePostLocalState _  _)) _ = IntermediateTypeScopes
+inferExprType (IntermediateExprExpr (IntermediatePutLocalState _ _)) _ = IntermediateTypeScopes
+inferExprType (IntermediateExprExpr (IntermediatePostLocalState _ _)) _ = IntermediateTypeScopes
 inferExprType (IntermediateExprExpr (IntermediatePushScope _)) _ = IntermediateTypeScopes
 inferExprType (IntermediateExprExpr (IntermediatePopScope _)) _ = IntermediateTypeScopes

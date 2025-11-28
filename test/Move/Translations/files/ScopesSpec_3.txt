@@ -1,0 +1,97 @@
+RModule
+( Module
+    { moduleAddress = NamedAddress (Identifier "NamedAddr"),
+        moduleIdentifier = Identifier "TestingModule",
+        moduleTopLevels =
+        [ TopLevelNamedStruct
+            ( NamedStruct
+                { namedStructIdentifier = Identifier "S",
+                    namedStructTypeParameters = [],
+                    namedStructAbilities = [],
+                    namedStructFields =
+                    [ NamedField
+                        { fieldIdentifier = Identifier "s",
+                            fieldType = TypeConstructor (LocalNameAccessChain (Identifier "u64")) []
+                        }
+                    ]
+                }
+            ),
+            TopLevelFunction
+            ( Function
+                { functionHasNativeModifier = False,
+                    functionVisibilityModifier = Nothing,
+                    functionHasEntryModifier = False,
+                    functionName = Identifier "test",
+                    functionTypeParameters = [],
+                    functionParameters =
+                    [ Parameter
+                        { parameterIdentifier = Identifier "x",
+                            parameterType = TypeConstructor (LocalNameAccessChain (Identifier "bool")) [],
+                            parameterUUID = Just 1
+                        }
+                    ],
+                    functionReturnType = Just (TypeConstructor (LocalNameAccessChain (Identifier "u64")) []),
+                    functionAcquires = [],
+                    functionBody =
+                    Just
+                        ( Sequence
+                            { sequenceUses = [],
+                            sequenceItems =
+                                [ SequenceItemBindExpr
+                                    Bindings
+                                    { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
+                                        bindingsBindType = Just IntermediateTypeScopes,
+                                        bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePutLocalState [Identifier "x"] (BinaryOpExprExpr (Add (NameAccessChainExpr (LocalNameAccessChain (Identifier "x"))) (ValueLiteral (Numerical (LiteralIntDec 1)))))))
+                                    },
+                                SequenceItemBindExpr
+                                    ( Bindings
+                                        { bindings = BindedSingle (BindIdentifier (Identifier "a") (Just 2)),
+                                        bindingsBindType = Just (TypeMutableRef (TypeConstructor (LocalNameAccessChain (Identifier "u64")) [])),
+                                        bindingsBindExpr = Just (UnaryOpExpr (MutableReference (NameAccessChainExpr (LocalNameAccessChain (Identifier "x")))))
+                                        }
+                                    ),
+                                SequenceItemBindExpr
+                                    ( Bindings
+                                        { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
+                                        bindingsBindType = Just IntermediateTypeScopes,
+                                        bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePutDereferenceLocalState (Identifier "a") (BinaryOpExprExpr (Add (UnaryOpExpr (Dereference (NameAccessChainExpr (LocalNameAccessChain (Identifier "a"))))) (ValueLiteral (Numerical (LiteralIntDec 1)))))))
+                                        }
+                                    ),
+                                SequenceItemBindExpr
+                                    ( Bindings
+                                        { bindings = BindedSingle (BindIdentifier (Identifier "s") (Just 3)),
+                                        bindingsBindType = Nothing,
+                                        bindingsBindExpr =
+                                            Just
+                                            ( NamedStructExprExpr
+                                                ( NamedStructExpr
+                                                    { nseNameAccessChain = LocalNameAccessChain (Identifier "S"),
+                                                        nseTypeArgs = [],
+                                                        nseFields =
+                                                        [ NamedStructExprField
+                                                            { nsefIdentifier = Identifier "s",
+                                                                nsefExpr = Just (BinaryOpExprExpr (Add (NameAccessChainExpr (LocalNameAccessChain (Identifier "x"))) (ValueLiteral (Numerical (LiteralIntDec 1)))))
+                                                            }
+                                                        ]
+                                                    }
+                                                )
+                                            )
+                                        }
+                                    ),
+                                SequenceItemBindExpr
+                                    ( Bindings
+                                        { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
+                                        bindingsBindType = Just IntermediateTypeScopes,
+                                        bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePutLocalState [Identifier "s", Identifier "s"] (BinaryOpExprExpr ( Add ( DotOrIndexChainExpr ( DotAccess { dotAccessLeft = NameAccessChainExpr (LocalNameAccessChain (Identifier "s")), dotAccessRight = Identifier "s" } ) ) (ValueLiteral (Numerical (LiteralIntDec 1))) ))))
+                                        }
+                                    )
+                                ],
+                            sequenceEndExpr = Just (NameAccessChainExpr (LocalNameAccessChain (Identifier "x")))
+                            }
+                        ),
+                    functionUUID = Just 0
+                }
+            )
+        ]
+    }
+)

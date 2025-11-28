@@ -62,6 +62,7 @@ mapRightValueRef :: Expr -> Type -> Expr
 mapRightValueRef (NameAccessChainExpr (LocalNameAccessChain ident)) identType = IntermediateExprExpr $ IntermediateReferenceLocalState [ident] identType
 mapRightValueRef expr@(DotOrIndexChainExpr _) identType = IntermediateExprExpr $ IntermediateReferenceLocalState (getDotAccessChain expr) identType
 -- TODO: Similarly, only references to variables or dot access are supported, but can be inline values
+-- or also `(*a).b.c = ...`
 mapRightValueRef expr _ = error $ "More complex reference not supported: " ++ show expr
 
 -- |
