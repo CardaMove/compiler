@@ -1,0 +1,156 @@
+RModule
+( Module
+    { moduleAddress = NamedAddress (Identifier "NamedAddr"),
+        moduleIdentifier = Identifier "TestingModule",
+        moduleTopLevels =
+        [ TopLevelFunction
+            ( Function
+                { functionHasNativeModifier = False,
+                    functionVisibilityModifier = Just VisibilityModifierPublic,
+                    functionHasEntryModifier = False,
+                    functionName = Identifier "test",
+                    functionTypeParameters = [],
+                    functionParameters =
+                    [ Parameter
+                        { parameterIdentifier = Identifier "x",
+                            parameterType = TypeConstructor (LocalNameAccessChain (Identifier "u64")) [],
+                            parameterUUID = Just 1
+                        }
+                    ],
+                    functionReturnType = Nothing,
+                    functionAcquires = [],
+                    functionBody =
+                    Just
+                        ( Sequence
+                            { sequenceUses = [],
+                            sequenceItems =
+                                [ SequenceItemBindExpr
+                                    ( Bindings
+                                        { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
+                                        bindingsBindType = Just IntermediateTypeScopes,
+                                        bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePostLocalState (Identifier "a") (Just (ValueLiteral (Numerical (LiteralIntDec 12))))))
+                                        }
+                                    ),
+                                SequenceItemBindExpr
+                                    ( Bindings
+                                        { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
+                                        bindingsBindType = Just IntermediateTypeScopes,
+                                        bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePutLocalState [Identifier "x"] (BinaryOpExprExpr (Add (IntermediateExprExpr (IntermediateGetLocalState [Identifier "a"] (TypeConstructor (LocalNameAccessChain (Identifier "u256")) []))) (ValueLiteral (Numerical (LiteralIntDec 1)))))))
+                                        }
+                                    ),
+                                SequenceItemBindExpr
+                                    ( Bindings
+                                        { bindings = BindedSingle (BindIdentifier (Identifier "r") (Just 3)),
+                                        bindingsBindType = Nothing,
+                                        bindingsBindExpr = Just (IntermediateExprExpr (IntermediateReferenceLocalState [Identifier "a"] (TypeImmutableRef (TypeConstructor (LocalNameAccessChain (Identifier "u256")) []))))
+                                        }
+                                    ),
+                                SequenceItemBindExpr
+                                    ( Bindings
+                                        { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
+                                        bindingsBindType = Just IntermediateTypeScopes,
+                                        bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePostLocalState (Identifier "r2") (Just (IntermediateExprExpr (IntermediateReferenceLocalState [Identifier "a"] (TypeImmutableRef (TypeConstructor (LocalNameAccessChain (Identifier "u256")) [])))))))
+                                        }
+                                    ),
+                                SequenceItemBindExpr
+                                    ( Bindings
+                                        { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
+                                        bindingsBindType = Just IntermediateTypeScopes,
+                                        bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePutLocalState [Identifier "r2"] (NameAccessChainExpr (LocalNameAccessChain (Identifier "r")))))
+                                        }
+                                    ),
+                                SequenceItemExpr
+                                    ( IfThenElseTerm
+                                        ( IfThenElse
+                                            { ifThenElseCondition = BinaryOpExprExpr (Gt (IntermediateExprExpr (IntermediateGetLocalState [Identifier "x"] (TypeConstructor (LocalNameAccessChain (Identifier "u64")) []))) (ValueLiteral (Numerical (LiteralIntDec 10)))),
+                                            ifThenElseIfBranch =
+                                                SequenceExpr
+                                                ( Sequence
+                                                    { sequenceUses = [],
+                                                        sequenceItems =
+                                                        [ SequenceItemBindExpr
+                                                            ( Bindings
+                                                                { bindings = BindedSingle (BindIdentifier (Identifier "b") (Just 5)),
+                                                                    bindingsBindType = Nothing,
+                                                                    bindingsBindExpr = Just (ValueLiteral (Numerical (LiteralIntDec 1)))
+                                                                }
+                                                            ),
+                                                            SequenceItemBindExpr
+                                                            ( Bindings
+                                                                { bindings = BindedSingle (BindIdentifier (Identifier "r3") (Just 6)),
+                                                                    bindingsBindType = Nothing,
+                                                                    bindingsBindExpr = Nothing
+                                                                }
+                                                            )
+                                                        ],
+                                                        sequenceEndExpr = Nothing
+                                                    }
+                                                ),
+                                            ifThenElseElseBranch = Nothing
+                                            }
+                                        )
+                                    ),
+                                SequenceItemBindExpr
+                                    ( Bindings
+                                        { bindings = BindedSingle (BindIdentifier (Identifier "c") (Just 7)),
+                                        bindingsBindType = Nothing,
+                                        bindingsBindExpr =
+                                            Just
+                                            ( IfThenElseTerm
+                                                ( IfThenElse
+                                                    { ifThenElseCondition = BinaryOpExprExpr (Gt (IntermediateExprExpr (IntermediateGetLocalState [Identifier "x"] (TypeConstructor (LocalNameAccessChain (Identifier "u64")) []))) (ValueLiteral (Numerical (LiteralIntDec 10)))),
+                                                        ifThenElseIfBranch =
+                                                        SequenceExpr
+                                                            ( Sequence
+                                                                { sequenceUses = [],
+                                                                sequenceItems =
+                                                                    [ SequenceItemBindExpr
+                                                                        ( Bindings
+                                                                            { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
+                                                                            bindingsBindType = Just IntermediateTypeScopes,
+                                                                            bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePostLocalState (Identifier "d") (Just (ValueLiteral (Numerical (LiteralIntDec 1))))))
+                                                                            }
+                                                                        )
+                                                                    ],
+                                                                sequenceEndExpr = Just (IntermediateExprExpr (IntermediateReferenceLocalState [Identifier "d"] (TypeMutableRef (TypeConstructor (LocalNameAccessChain (Identifier "u256")) []))))
+                                                                }
+                                                            ),
+                                                        ifThenElseElseBranch =
+                                                        Just
+                                                            ( SequenceExpr
+                                                                ( Sequence
+                                                                    { sequenceUses = [],
+                                                                    sequenceItems = [],
+                                                                    sequenceEndExpr = Just (IntermediateExprExpr (IntermediateReferenceLocalState [Identifier "a"] (TypeMutableRef (TypeConstructor (LocalNameAccessChain (Identifier "u256")) []))))
+                                                                    }
+                                                                )
+                                                            )
+                                                    }
+                                                )
+                                            )
+                                        }
+                                    ),
+                                SequenceItemBindExpr
+                                    ( Bindings
+                                        { bindings = BindedTuple [BindIdentifier (Identifier "e") (Just 9), BindIdentifier (Identifier "f") (Just 10)],
+                                        bindingsBindType = Nothing,
+                                        bindingsBindExpr = Just (CommaExpr [ValueLiteral (Numerical (LiteralIntDec 1)), ValueLiteral (Numerical (LiteralIntDec 2))])
+                                        }
+                                    ),
+                                SequenceItemBindExpr
+                                    ( Bindings
+                                        { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
+                                        bindingsBindType = Just IntermediateTypeScopes,
+                                        bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePutLocalState [Identifier "f"] (BinaryOpExprExpr (Add (IntermediateExprExpr (IntermediateGetLocalState [Identifier "f"] (TypeConstructor (LocalNameAccessChain (Identifier "u256")) []))) (ValueLiteral (Numerical (LiteralIntDec 1)))))))
+                                        }
+                                    )
+                                ],
+                            sequenceEndExpr = Nothing
+                            }
+                        ),
+                    functionUUID = Just 0
+                }
+            )
+        ]
+    }
+)

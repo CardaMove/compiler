@@ -6,7 +6,7 @@ import Move.Parser (parse)
 import Test.Hspec
 import Move.Translations.Utils (annotateBindingsWithUUID)
 import Control.Monad.State (evalState)
-import Move.Translations.Scopes (markVariablesForLocalScope, rewriteAssignments, rewriteRefs, rewriteVars)
+import Move.Translations.Scopes (markVariablesForLocalScope, rewriteAssignments, rewriteRefs, rewriteVars, rewriteLetBinds)
 import Move.AST
 import Move.Translations.TraversalUtils (traverseRootPostOrder, traversalIdentity)
 
@@ -80,9 +80,32 @@ testRewriteVars = describe "Tests the function `rewriteVars`" $ do
     let secondPass :: Root = fst $ traverseRootPostOrder rewriteRefs traversalIdentity firstPass ()
     let thirdPass :: Root = fst $ traverseRootPostOrder (rewriteVars markedVars) traversalIdentity secondPass ()
 
-    print thirdPass
-
     thirdPass `shouldBe` toModule
+
+
+testRewriteLetBinds :: Spec
+testRewriteLetBinds = describe "Tests the function `rewriteLetBinds`" $ do
+  it "Rewrites let bindings as setters on the state" $ do
+    fromModuleStr <- readFile "test/Move/Translations/files/ScopesSpec_8.move"
+    toModuleStr <- readFile "test/Move/Translations/files/ScopesSpec_9.txt"
+
+    let parsed = parse $ scan fromModuleStr
+
+    let toModule = read toModuleStr :: Root
+
+    let annotated = evalState (annotateBindingsWithUUID parsed) 0
+
+    let markedVars = markVariablesForLocalScope annotated
+
+    let scopeIdentifier = Identifier "scopes"
+    let scopeUUID :: AnnotatedUUID = -1
+
+    let firstPass :: Root = rewriteAssignments annotated scopeIdentifier scopeUUID
+    let secondPass :: Root = fst $ traverseRootPostOrder rewriteRefs traversalIdentity firstPass ()
+    let thirdPass :: Root = fst $ traverseRootPostOrder (rewriteVars markedVars) traversalIdentity secondPass ()
+    let fourthPass :: Root = fst $ traverseRootPostOrder traversalIdentity (rewriteLetBinds markedVars scopeIdentifier scopeUUID) thirdPass ()
+
+    fourthPass `shouldBe` toModule
 
 
 spec :: Spec
@@ -91,3 +114,4 @@ spec = do
   testRewriteAssignments
   testRewriteRefs
   testRewriteVars
+  testRewriteLetBinds
