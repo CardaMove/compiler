@@ -305,3 +305,6 @@ inferExprType (IntermediateExprExpr (IntermediatePutLocalState _ _)) _ = Interme
 inferExprType (IntermediateExprExpr (IntermediatePostLocalState _ _)) _ = IntermediateTypeScopes
 inferExprType (IntermediateExprExpr (IntermediatePushScope _)) _ = IntermediateTypeScopes
 inferExprType (IntermediateExprExpr (IntermediatePopScope _)) _ = IntermediateTypeScopes
+inferExprType (IntermediateExprExpr (IntermediateBorrowGlobalMut _ t)) _ = TypeMutableRef t
+inferExprType (IntermediateExprExpr (IntermediateBorrowGlobal _ t)) _ = TypeImmutableRef t
+inferExprType (IntermediateExprExpr (IntermediateExists _ _)) _ = booleanType

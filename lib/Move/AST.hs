@@ -619,4 +619,16 @@ data IntermediateExpr
   | IntermediatePushScope Identifier
     -- | Represents popping the local scope from the existing ones
   | IntermediatePopScope Identifier
+  -- | Represents a `borrow_global_mut<T>(address)`
+  --
+  -- The second argument is the type of `T`
+  | IntermediateBorrowGlobalMut Expr Type
+  -- | Represents a `borrow_global<T>(address)`
+  --
+  -- The second argument is the type of `T`
+  | IntermediateBorrowGlobal Expr Type
+  -- | Represents a `exists<T>(address)`
+  --
+  -- The second argument is the type of `T`
+  | IntermediateExists Expr Type
   deriving (Eq, Show, Read, Data, Typeable, Ord)
