@@ -215,7 +215,7 @@ rewriteLetBinds markedVars scopeIdentifier scopeUUID = rewriteLetBinds'
 -- |
 -- Utility function
 --
--- It is a traversal that rewrites each function invocation and sequence (that modifies the state) into a let binding and the corresponding temporary variable.
+-- It is a traversal that rewrites each function invocation (including `move_to` and `move_from`) and sequence (that modifies the state) into a let binding and the corresponding temporary variable.
 --
 -- For example, suppose `my_func(&mut a)`, it is rewritten as `let (temp_i, scopes) = my_func(&mut a, scopes)` and replaced by `temp_i`.
 --
@@ -266,7 +266,6 @@ rewriteInlineStateMutation scopeIdentifier scopeUUID = rewriteInlineStateMutatio
               }
        in -- and replace the function call with the temp variable
           (NameAccessChainExpr $ LocalNameAccessChain tempIdentifier', (currUUID + 1, Map.insert tempIdentifier' newBinding bindingsToAdd))
-
     -- Handle the `move_from<T>(address)` similarly to the `move_to` case
     rewriteInlineStateMutation' expr@(PositionalStructExprOrFunctionCallExpr PositionalStructExprOrFunctionCall {pseofcNameAccessChain = LocalNameAccessChain (Identifier "move_from"), pseofcTypeArgs, pseofcFields = [addressExpr]}) _scopes (currUUID, bindingsToAdd) =
       let --
@@ -609,10 +608,7 @@ addLocalScopeInRoot root markedVars currUUID =
       secondPass :: Root = fst $ traverseRootPostOrder rewriteRefs traversalIdentity firstPass ()
       thirdPass :: Root = fst $ traverseRootPostOrder (rewriteVars markedVars) traversalIdentity secondPass ()
       fourthPass :: Root = fst $ traverseRootPostOrder traversalIdentity (rewriteLetBinds markedVars scopeIdentifier scopeUUID) thirdPass ()
-      -- TODO: intermediate pass to rewrite global storage operators (or add the functionality to existing passages)
       (fifthPass, (_, bindingsToAdd)) = traverseRootPostOrder (rewriteInlineStateMutation scopeIdentifier scopeUUID) traversalIdentity fourthPass (currUUID, Map.empty)
       sixthPass = rewriteFunctionDeclaration fifthPass markedVars bindingsToAdd scopeIdentifier scopeUUID
-   in -- TODO: Should also rewrite function definitions similar to how function calls are handled
-      -- NOTE that in some way it is needed to handle function parameters that need to be inserted into the scope
-      -- TODO: Also missing liftings
-      fifthPass
+   in -- TODO: Also missing liftings
+      sixthPass
