@@ -308,3 +308,5 @@ inferExprType (IntermediateExprExpr (IntermediatePopScope _)) _ = IntermediateTy
 inferExprType (IntermediateExprExpr (IntermediateBorrowGlobalMut _ t)) _ = TypeMutableRef t
 inferExprType (IntermediateExprExpr (IntermediateBorrowGlobal _ t)) _ = TypeImmutableRef t
 inferExprType (IntermediateExprExpr (IntermediateExists _ _)) _ = booleanType
+inferExprType (IntermediateExprExpr (IntermediateMoveTo {})) _ = unitType
+inferExprType (IntermediateExprExpr (IntermediateMoveFrom _ t)) _ = t

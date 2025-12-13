@@ -631,4 +631,12 @@ data IntermediateExpr
   --
   -- The second argument is the type of `T`
   | IntermediateExists Expr Type
+  -- | Represents a `move_to<T>(&signer, T)`
+  --
+  -- The last argument is the type of `T`
+  | IntermediateMoveTo Expr Expr Type
+  -- | Represents a `move_from<T>(address)`
+  --
+  -- The second argument is the type of `T`
+  | IntermediateMoveFrom Expr Type
   deriving (Eq, Show, Read, Data, Typeable, Ord)

@@ -72,6 +72,7 @@ mapRightValueRef expr _ = error $ "More complex reference not supported: " ++ sh
 -- It uses a custom traversal so to allow converting an expression into a let binding inside the sequence
 --    As a very picky comment, this will not match assignments that are inserted inside bigger expressions on right value,
 --    such as `... (a = 1) ...`, but cases like this should never be present anyway
+--
 -- Possible assignment are `a[.b.c] = ...`, tuple destructuring `(a, b[.c]) = ...` or dereferences `*a`
 rewriteAssignments :: Root -> Identifier -> AnnotatedUUID -> Root
 rewriteAssignments root scopeIdentifier scopeUUID = transformBi f root
@@ -214,9 +215,12 @@ rewriteLetBinds markedVars scopeIdentifier scopeUUID = rewriteLetBinds'
 -- |
 -- Utility function
 --
--- It is a traversal that rewrites each function invocation and sequence (that modify the state) into a let binding and the corresponding temporary variable
--- For example, suppose `my_func(&mut a)`, it is rewritten as `let (temp_i, scopes) = my_func(&mut a, scopes)` and replaced by `temp_i`
--- This is always performed on function calls, since they might mutate the global storage and it is not possible to know in advance (at least without a proper static analysis)
+-- It is a traversal that rewrites each function invocation and sequence (that modifies the state) into a let binding and the corresponding temporary variable.
+--
+-- For example, suppose `my_func(&mut a)`, it is rewritten as `let (temp_i, scopes) = my_func(&mut a, scopes)` and replaced by `temp_i`.
+--
+-- This is always performed on function calls, since they might mutate the global storage and it is not possible to know in advance (at least without a proper static analysis).
+--
 -- Similar for a sequence: `let (temp_i, scopes) = {...}`
 rewriteInlineStateMutation :: Identifier -> AnnotatedUUID -> TraversalMapper Expr (AnnotatedUUID, Map.Map Identifier Bindings)
 rewriteInlineStateMutation scopeIdentifier scopeUUID = rewriteInlineStateMutation'
@@ -224,7 +228,77 @@ rewriteInlineStateMutation scopeIdentifier scopeUUID = rewriteInlineStateMutatio
     tempIdentifier = Identifier "temp_"
 
     rewriteInlineStateMutation' :: TraversalMapper Expr (AnnotatedUUID, Map.Map Identifier Bindings)
+    -- Rewrite `move_to<T>(&signer, resource)` into a let binding.
+    --
+    -- This will result in a temporary variable inserted in its place, that for the most cases will be useless,
+    -- however in the (unlikely) case where a `move_to` is present inside an expression, will make it work by returning a unit
+    --
+    -- This works similarly to how any function call is rewritten
+    rewriteInlineStateMutation' expr@(PositionalStructExprOrFunctionCallExpr PositionalStructExprOrFunctionCall {pseofcNameAccessChain = LocalNameAccessChain (Identifier "move_to"), pseofcTypeArgs, pseofcFields = [signerExpr, resourceExpr]}) scopes (currUUID, bindingsToAdd) =
+      let --
+          -- First, the type argument migh be omitted, so infer it if necessary
+          resourceType = case pseofcTypeArgs of
+            [] -> inferExprType resourceExpr scopes
+            [t] -> t
+            _ -> error $ "Found a move_to with invalid type arguments: " ++ show expr
 
+          -- create a new binding in the form `let (temp, scopes) = my_func(..., scopes)`
+          -- The new variable should be `temp_i` to prevent name clashes with other rewrites
+          -- temp_i will always have unit value `()`
+          tempIdentifier' = case tempIdentifier of
+            Identifier str -> Identifier $ str ++ show currUUID
+
+          newBinding =
+            Bindings
+              { bindings =
+                  BindedTuple
+                    [ BindIdentifier tempIdentifier' (Just currUUID),
+                      BindIdentifier scopeIdentifier (Just scopeUUID)
+                    ],
+                bindingsBindType =
+                  Just $
+                    TypeTuple
+                      [ unitType,
+                        IntermediateTypeScopes
+                      ],
+                bindingsBindExpr =
+                  Just $ IntermediateExprExpr $ IntermediateMoveTo signerExpr resourceExpr resourceType
+              }
+       in -- and replace the function call with the temp variable
+          (NameAccessChainExpr $ LocalNameAccessChain tempIdentifier', (currUUID + 1, Map.insert tempIdentifier' newBinding bindingsToAdd))
+
+    -- Handle the `move_from<T>(address)` similarly to the `move_to` case
+    rewriteInlineStateMutation' expr@(PositionalStructExprOrFunctionCallExpr PositionalStructExprOrFunctionCall {pseofcNameAccessChain = LocalNameAccessChain (Identifier "move_from"), pseofcTypeArgs, pseofcFields = [addressExpr]}) _scopes (currUUID, bindingsToAdd) =
+      let --
+          -- The type argument can not be omitted and must be a single one
+          resourceType = case pseofcTypeArgs of
+            [] -> error $ "Found a move_from with invalid type arguments: " ++ show expr
+            [t] -> t
+            _ -> error $ "Found a move_from with invalid type arguments: " ++ show expr
+
+          -- create a new binding in the form `let (temp, scopes) = my_func(..., scopes)`
+          -- The new variable should be `temp_i` to prevent name clashes with other rewrites
+          tempIdentifier' = case tempIdentifier of
+            Identifier str -> Identifier $ str ++ show currUUID
+
+          newBinding =
+            Bindings
+              { bindings =
+                  BindedTuple
+                    [ BindIdentifier tempIdentifier' (Just currUUID),
+                      BindIdentifier scopeIdentifier (Just scopeUUID)
+                    ],
+                bindingsBindType =
+                  Just $
+                    TypeTuple
+                      [ unitType,
+                        IntermediateTypeScopes
+                      ],
+                bindingsBindExpr =
+                  Just $ IntermediateExprExpr $ IntermediateMoveFrom addressExpr resourceType
+              }
+       in -- and replace the function call with the temp variable
+          (NameAccessChainExpr $ LocalNameAccessChain tempIdentifier', (currUUID + 1, Map.insert tempIdentifier' newBinding bindingsToAdd))
     -- TODO: For now considers just functions with a local name. To support calling functions in other module,
     -- the traversal should probably be rewritten so to support different modules and/or aliases and similar
     -- It also considers the fact that a function call might access and update the global storage
@@ -360,10 +434,11 @@ rewriteInlineStateMutationInSequence (Sequence {sequenceUses, sequenceItems, seq
          in (sortedBinds, bindingsToAdd'''')
 
       -- For each sequence item, prepend its temporary let bindings
-      -- TODO: Probably add function calls in it and global storage operators (check better, this is for mutation only)
       -- Here it forces the optional `forceMutatesState`, so that the subsequent logic will be the same unregarding that parameter
       (sequenceItems', bindingsToAdd', mutatesState) = foldr handleSeqItem ([], bindingsToAdd, forceMutatesState) sequenceItems
         where
+          -- Returns True if an expression could modify the state in any way, useful in the case the expression does not have any temporary let binding associated.
+          -- This happens for PUT and POST operations on the state, but not for move_to, move_from and function calls
           hasIntermediateStateMutations :: Expr -> Bool
           hasIntermediateStateMutations expr' =
             any
