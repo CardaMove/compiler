@@ -214,7 +214,7 @@ data Ability
   | Drop
   | Key
   | Store
-  deriving (Eq, Show, Read, Data, Typeable)
+  deriving (Eq, Show, Read, Data, Typeable, Ord)
 
 -- | Named fields are field definitions inside a "normal" (named) struct
 --
@@ -224,7 +224,7 @@ data NamedField
   { fieldIdentifier :: Identifier,
     fieldType :: Type
   }
-  deriving (Eq, Show, Read, Data, Typeable)
+  deriving (Eq, Show, Read, Data, Typeable, Ord)
 
 -- | Positional fields are field definitions inside a positional struct
 --
@@ -245,6 +245,11 @@ data Type
   | TypeUnknown
   | IntermediateTypeScopes
   | TypeArrow [Type]
+  -- |
+  -- Intermediate type used for named struct declarations.
+  -- 
+  -- It includes the name of the type parameters and all the nested fields
+  | IntermediateTypeNamedStructDeclaration [Identifier] [NamedField]
   deriving (Eq, Show, Read, Data, Typeable, Ord)
 
 -- | A function declaration
@@ -281,7 +286,7 @@ data TypeParameter
     typeIdentifier :: Identifier, -- Not using Type since here we have just an identifier
     typeConstraints :: [Ability]
   }
-  deriving (Eq, Show, Read, Data, Typeable)
+  deriving (Eq, Show, Read, Data, Typeable, Ord)
 
 -- | A function parameter, consisting in an identifier and its type
 data Parameter

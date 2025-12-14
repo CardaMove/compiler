@@ -17,7 +17,7 @@ module NamedAddr::TestingModule {
         // GET x, POST a
         let a = A { num: x + 1 };
 
-        // Reference to scope FIXME: type is unknown
+        // Reference to scope
         let n = &mut a.num;
 
         // GET-dereference and PUT on scope

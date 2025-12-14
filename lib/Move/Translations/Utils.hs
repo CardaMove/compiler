@@ -5,6 +5,7 @@ import Control.Monad.State
     State,
   )
 import Data.Generics.Uniplate.Data (transformBiM)
+import Data.List qualified as List
 import Data.Map qualified as Map
 import Move.AST
 
@@ -233,13 +234,29 @@ inferExprType (UnaryOpExpr (Dereference expr)) scopes =
 -- move and copy espressions
 inferExprType (UnaryOpExpr (MoveExpr expr)) scopes = inferExprType (NameAccessChainExpr $ LocalNameAccessChain expr) scopes
 inferExprType (UnaryOpExpr (CopyExpr expr)) scopes = inferExprType (NameAccessChainExpr $ LocalNameAccessChain expr) scopes
--- Dot or index chain TODO:
+-- Dot or index chain
 inferExprType expr@(DotOrIndexChainExpr (DotAccess {dotAccessLeft, dotAccessRight})) scopes =
   case inferExprType dotAccessLeft scopes of
-    TypeConstructor typeCons typeArgs -> TypeUnknown
-    TypeImmutableRef refType -> TypeUnknown -- Should be a TypeImmutableRef itself
-    TypeMutableRef refType -> TypeUnknown -- Should be a TypeMutableRef itself
+    -- Usually, the left part of the dot access is a named struct
+    TypeConstructor typeCons typeArgs -> resolveDotAccess typeCons typeArgs
+    -- But it can also be a reference (to a named struct) that will then be extended
+    TypeImmutableRef (TypeConstructor typeCons typeArgs) -> TypeImmutableRef $ resolveDotAccess typeCons typeArgs
+    TypeMutableRef (TypeConstructor typeCons typeArgs) -> TypeMutableRef $ resolveDotAccess typeCons typeArgs
     exprType -> error $ "Dot access to non-struct type: " ++ show expr ++ " with type: " ++ show exprType
+  where
+    -- TODO: For now, only local names are supported
+    resolveDotAccess :: NameAccessChain -> [Type] -> Type
+    resolveDotAccess (LocalNameAccessChain ident) typeArgs =
+      case getIdentifierFromScopes ident scopes of
+        VariableAnnotations _ t@(IntermediateTypeNamedStructDeclaration typeParams namedFields) ->
+          if length typeParams /= length typeArgs
+            then error $ "Found a type constructor with wrong number of type arguments: " ++ show t
+            else case List.find (\NamedField {fieldIdentifier} -> fieldIdentifier == dotAccessRight) namedFields of
+              Nothing -> error $ "Found a dotAccessRight not present in the corresponding named struct declaration: " ++ show dotAccessLeft ++ ", " ++ show t
+              Just NamedField {fieldType} -> resolveTypedField fieldType typeParams typeArgs scopes
+        _ -> error $ "Found dotAccessLeft that is not a named struct: " ++ show dotAccessLeft
+    resolveDotAccess name _ = error $ "Unsupported name access chain: " ++ show name
+
 -- Literal values
 inferExprType (ValueLiteral (Address _)) _ = addressType
 inferExprType (ValueLiteral (Boolean _)) _ = booleanType
@@ -253,13 +270,18 @@ inferExprType (TypedExprTerm (TypedExpr {typedExprType})) _ = typedExprType
 -- Casting
 inferExprType (CastingTerm (Casting {castingType})) _ = castingType
 -- Named struct expression
--- TODO: type parameters for now are ignored, also non-local name access chains
-inferExprType (NamedStructExprExpr (NamedStructExpr {nseNameAccessChain = LocalNameAccessChain structName})) scopes =
+inferExprType (NamedStructExprExpr expr@(NamedStructExpr {nseNameAccessChain = LocalNameAccessChain structName, nseTypeArgs})) scopes =
   case getIdentifierFromScopes structName scopes of
-    VariableAnnotations _ structType -> structType
+    VariableAnnotations _ (IntermediateTypeNamedStructDeclaration typeParams _) ->
+      -- TODO: For now, inference of type arguments is not performed
+      if length typeParams /= length nseTypeArgs
+        then error $ "Found a named struct expression with wrong number of type arguments: " ++ show expr
+        else TypeConstructor (LocalNameAccessChain structName) nseTypeArgs
+    _ -> error $ "Found a named struct expression that does not correspond to a struct declaration: " ++ show expr
 inferExprType (NamedStructExprExpr (NamedStructExpr {nseNameAccessChain = _})) scopes = TypeUnknown
 -- Positional struct expression or function call
 -- TODO: type parameters for now are ignored, also non-local name access chains
+-- FIXME: follow what done for named structs
 inferExprType (PositionalStructExprOrFunctionCallExpr (PositionalStructExprOrFunctionCall {pseofcNameAccessChain = LocalNameAccessChain structName})) scopes =
   case getIdentifierFromScopes structName scopes of
     VariableAnnotations _ structType -> structType
@@ -310,3 +332,10 @@ inferExprType (IntermediateExprExpr (IntermediateBorrowGlobal _ t)) _ = TypeImmu
 inferExprType (IntermediateExprExpr (IntermediateExists _ _)) _ = booleanType
 inferExprType (IntermediateExprExpr (IntermediateMoveTo {})) _ = unitType
 inferExprType (IntermediateExprExpr (IntermediateMoveFrom _ t)) _ = t
+
+-- |
+-- Given a typed field, such as `A` inside `struct B {a: A}`, returns its actual type considering that `B` might have type parameters
+-- (with corresponding type arguments) and those can be resursively calculated by looking at the scopes
+-- TODO: for now, just assumes the type. Also, probably should just resolve the type arguments?
+resolveTypedField :: Type -> [Identifier] -> [Type] -> [Scope] -> Type
+resolveTypedField t _ _ _ = t

@@ -123,10 +123,10 @@ traverseRootPostOrder exprMapper bindsMapper root state = case root of
       let topLevelIdentifiersAnnotated = concatMap topLevelMap topLevels
             where
               -- TODO: uses for now do not have a type
-              -- TODO: For structs, consider type parameters (for now ignored) for the type
+              -- TODO: Positional structs should be handled similarly to named structs
               topLevelMap (TopLevelUse use) = map (,VariableAnnotations Nothing TypeUnknown) (getUseIdentifiers use)
               topLevelMap (TopLevelFriend _) = []
-              topLevelMap (TopLevelNamedStruct (NamedStruct {namedStructIdentifier})) = [(namedStructIdentifier, VariableAnnotations Nothing $ TypeConstructor (LocalNameAccessChain namedStructIdentifier) [])]
+              topLevelMap (TopLevelNamedStruct (NamedStruct {namedStructIdentifier, namedStructTypeParameters, namedStructFields})) = [(namedStructIdentifier, VariableAnnotations Nothing $ IntermediateTypeNamedStructDeclaration (map typeIdentifier namedStructTypeParameters) namedStructFields)]
               topLevelMap (TopLevelPositionalStruct (PositionalStruct {positionalStructIdentifier})) = [(positionalStructIdentifier, VariableAnnotations Nothing $ TypeConstructor (LocalNameAccessChain positionalStructIdentifier) [])]
               -- Functions have a type, which is the arrow type of all its parameter types and return type (or unit if not specified)
               topLevelMap (TopLevelFunction (Function {functionName, functionUUID, functionParameters, functionReturnType})) =
