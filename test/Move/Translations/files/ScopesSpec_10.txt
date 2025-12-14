@@ -3,7 +3,33 @@ RModule
       { moduleAddress = NamedAddress (Identifier "NamedAddr"),
         moduleIdentifier = Identifier "TestingModule",
         moduleTopLevels =
-          [ TopLevelFunction
+          [ TopLevelNamedStruct
+              ( NamedStruct
+                  { namedStructIdentifier = Identifier "A",
+                    namedStructTypeParameters = [],
+                    namedStructAbilities = [],
+                    namedStructFields =
+                      [ NamedField
+                          { fieldIdentifier = Identifier "num",
+                            fieldType = TypeConstructor (LocalNameAccessChain (Identifier "u64")) []
+                          }
+                      ]
+                  }
+              ),
+            TopLevelNamedStruct
+              ( NamedStruct
+                  { namedStructIdentifier = Identifier "B",
+                    namedStructTypeParameters = [],
+                    namedStructAbilities = [],
+                    namedStructFields =
+                      [ NamedField
+                          { fieldIdentifier = Identifier "a",
+                            fieldType = TypeConstructor (LocalNameAccessChain (Identifier "A")) []
+                          }
+                      ]
+                  }
+              ),
+            TopLevelFunction
               ( Function
                   { functionHasNativeModifier = False,
                     functionVisibilityModifier = Nothing,
@@ -48,6 +74,48 @@ RModule
                                         { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
                                           bindingsBindType = Just IntermediateTypeScopes,
                                           bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePutLocalState [Identifier "x"] (BinaryOpExprExpr (Add (IntermediateExprExpr (IntermediateGetLocalState [Identifier "x"] (TypeConstructor (LocalNameAccessChain (Identifier "u64")) []))) (ValueLiteral (Numerical (LiteralIntDec 1)))))))
+                                        }
+                                    ),
+                                  SequenceItemBindExpr
+                                    ( Bindings
+                                        { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
+                                          bindingsBindType = Just IntermediateTypeScopes,
+                                          bindingsBindExpr =
+                                            Just
+                                              ( IntermediateExprExpr
+                                                  ( IntermediatePostLocalState
+                                                      (Identifier "a")
+                                                      ( Just
+                                                          ( NamedStructExprExpr
+                                                              ( NamedStructExpr
+                                                                  { nseNameAccessChain = LocalNameAccessChain (Identifier "A"),
+                                                                    nseTypeArgs = [],
+                                                                    nseFields =
+                                                                      [ NamedStructExprField
+                                                                          { nsefIdentifier = Identifier "num",
+                                                                            nsefExpr = Just (BinaryOpExprExpr (Add (IntermediateExprExpr (IntermediateGetLocalState [Identifier "x"] (TypeConstructor (LocalNameAccessChain (Identifier "u64")) []))) (ValueLiteral (Numerical (LiteralIntDec 1)))))
+                                                                          }
+                                                                      ]
+                                                                  }
+                                                              )
+                                                          )
+                                                      )
+                                                  )
+                                              )
+                                        }
+                                    ),
+                                  SequenceItemBindExpr
+                                    ( Bindings
+                                        { bindings = BindedSingle (BindIdentifier (Identifier "n") (Just 3)),
+                                          bindingsBindType = Nothing,
+                                          bindingsBindExpr = Just (IntermediateExprExpr (IntermediateReferenceLocalState [Identifier "a", Identifier "num"] (TypeMutableRef TypeUnknown)))
+                                        }
+                                    ),
+                                  SequenceItemBindExpr
+                                    ( Bindings
+                                        { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
+                                          bindingsBindType = Just IntermediateTypeScopes,
+                                          bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePutDereferenceLocalState (Identifier "n") (BinaryOpExprExpr (Add (IntermediateExprExpr (IntermediateGetDereferenceLocalState (NameAccessChainExpr (LocalNameAccessChain (Identifier "n"))) TypeUnknown)) (ValueLiteral (Numerical (LiteralIntDec 1)))))))
                                         }
                                     )
                                 ],
