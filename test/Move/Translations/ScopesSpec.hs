@@ -5,8 +5,8 @@ import Data.Set qualified as Set
 import Move.Parser (parse)
 import Test.Hspec
 import Move.Translations.Utils (annotateBindingsWithUUID)
-import Control.Monad.State (evalState)
-import Move.Translations.Scopes (markVariablesForLocalScope, rewriteAssignments, rewriteRefs, rewriteVars, rewriteLetBinds)
+import Control.Monad.State (evalState, runState)
+import Move.Translations.Scopes (markVariablesForLocalScope, rewriteAssignments, rewriteRefs, rewriteVars, rewriteLetBinds, addLocalScopeInRoot)
 import Move.AST
 import Move.Translations.TraversalUtils (traverseRootPostOrder, traversalIdentity)
 
@@ -107,6 +107,26 @@ testRewriteLetBinds = describe "Tests the function `rewriteLetBinds`" $ do
 
     fourthPass `shouldBe` toModule
 
+testAddLocalScopeInRoot :: Spec
+testAddLocalScopeInRoot = describe "Tests the function `addLocalScopeInRoot`" $ do
+  it "Rewrites the AST to handle the scopes" $ do
+    fromModuleStr <- readFile "test/Move/Translations/files/ScopesSpec_1.move"
+    toModuleStr <- readFile "test/Move/Translations/files/ScopesSpec_10.txt"
+
+    let parsed = parse $ scan fromModuleStr
+    let toModule = read toModuleStr :: Root
+
+
+    let (annotated, currUUID) = runState (annotateBindingsWithUUID parsed) 0
+
+    let markedVars = markVariablesForLocalScope annotated
+
+    let updated = addLocalScopeInRoot annotated markedVars currUUID
+
+    --print updated
+
+    updated `shouldBe` toModule
+
 
 spec :: Spec
 spec = do
@@ -115,3 +135,4 @@ spec = do
   testRewriteRefs
   testRewriteVars
   testRewriteLetBinds
+  testAddLocalScopeInRoot

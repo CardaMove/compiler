@@ -466,7 +466,7 @@ rewriteInlineStateMutationInSequence (Sequence {sequenceUses, sequenceItems, seq
         Just sequenceEndExpr'' ->
           case getTemporaryBindingsOfExpr sequenceEndExpr'' bindingsToAdd' of
             (sortedBinds, bindingsToAdd''') ->
-              if mutatesState' || not (null sortedBinds)
+              if mutatesState || not (null sortedBinds)
                 -- If either the sequence items or the ending expression mutate state,
                 -- return the pair `(end_expr, tail scopes)` and append any temporary binding for the end expression to the sequence items
                 then
@@ -588,7 +588,22 @@ rewriteFunctionDeclaration root markedVars bindingsToAdd scopeIdentifier scopeUU
           functionReturnType' = case functionReturnType of
             Nothing -> Just $ TypeTuple [unitType, IntermediateTypeScopes]
             Just functionReturnType'' -> Just $ TypeTuple [functionReturnType'', IntermediateTypeScopes]
-       in TopLevelFunction tlf {functionBody = functionBody'', functionReturnType = functionReturnType'}
+
+          -- Append the scope as last parameter
+          functionParameters' =
+            functionParameters
+              ++ [ Parameter
+                     { parameterIdentifier = scopeIdentifier,
+                       parameterType = IntermediateTypeScopes,
+                       parameterUUID = Just scopeUUID
+                     }
+                 ]
+       in TopLevelFunction
+            tlf
+              { functionParameters = functionParameters',
+                functionBody = functionBody'',
+                functionReturnType = functionReturnType'
+              }
     rewriteTopLevel tl = tl
 
 -- |

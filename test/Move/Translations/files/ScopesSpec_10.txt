@@ -1,0 +1,62 @@
+RModule
+  ( Module
+      { moduleAddress = NamedAddress (Identifier "NamedAddr"),
+        moduleIdentifier = Identifier "TestingModule",
+        moduleTopLevels =
+          [ TopLevelFunction
+              ( Function
+                  { functionHasNativeModifier = False,
+                    functionVisibilityModifier = Nothing,
+                    functionHasEntryModifier = False,
+                    functionName = Identifier "test",
+                    functionTypeParameters = [],
+                    functionParameters =
+                      [ Parameter
+                          { parameterIdentifier = Identifier "x",
+                            parameterType = TypeConstructor (LocalNameAccessChain (Identifier "u64")) [],
+                            parameterUUID = Just 1
+                          },
+                        Parameter
+                          { parameterIdentifier = Identifier "scopes",
+                            parameterType = IntermediateTypeScopes,
+                            parameterUUID = Just (-1)
+                          }
+                      ],
+                    functionReturnType = Just (TypeTuple [TypeConstructor (LocalNameAccessChain (Identifier "u64")) [], IntermediateTypeScopes]),
+                    functionAcquires = [],
+                    functionBody =
+                      Just
+                        ( Sequence
+                            { sequenceUses = [],
+                              sequenceItems =
+                                [ SequenceItemBindExpr
+                                    ( Bindings
+                                        { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
+                                          bindingsBindType = Just IntermediateTypeScopes,
+                                          bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePushScope (Identifier "scopes")))
+                                        }
+                                    ),
+                                  SequenceItemBindExpr
+                                    ( Bindings
+                                        { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
+                                          bindingsBindType = Just IntermediateTypeScopes,
+                                          bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePostLocalState (Identifier "x") (Just (NameAccessChainExpr (LocalNameAccessChain (Identifier "x"))))))
+                                        }
+                                    ),
+                                  SequenceItemBindExpr
+                                    ( Bindings
+                                        { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
+                                          bindingsBindType = Just IntermediateTypeScopes,
+                                          bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePutLocalState [Identifier "x"] (BinaryOpExprExpr (Add (IntermediateExprExpr (IntermediateGetLocalState [Identifier "x"] (TypeConstructor (LocalNameAccessChain (Identifier "u64")) []))) (ValueLiteral (Numerical (LiteralIntDec 1)))))))
+                                        }
+                                    )
+                                ],
+                              sequenceEndExpr = Just (CommaExpr [IntermediateExprExpr (IntermediateGetLocalState [Identifier "x"] (TypeConstructor (LocalNameAccessChain (Identifier "u64")) [])), IntermediateExprExpr (IntermediatePopScope (Identifier "scopes"))])
+                            }
+                        ),
+                    functionUUID = Just 0
+                  }
+              )
+          ]
+      }
+  )
