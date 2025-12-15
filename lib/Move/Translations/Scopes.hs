@@ -619,6 +619,27 @@ rewriteFunctionDeclaration root markedVars bindingsToAdd scopeIdentifier scopeUU
 -- |
 -- Given an AST and the set of variables that need to be inserted into the local scope,
 -- rewrites the usages of those variables with (intermediate) AST nodes that act on the explicit local scope
+--
+-- See the comments on the inner function calls for additional logic
+--
+-- ## The following is a summary of the implemented functionalities:
+--
+--    - Function's signature is updated to accept and return the outer scopes
+--    - A local scope is pushed at the beginning of each Sequence
+--    - Function parameters are inserted (if needed) in the local scope at the start of the function
+--    - Assignments are rewritten as PUT operations on the state
+--    - `let` bindings are rewritten as POST operations on the state
+--    - References and dereferences are rewitten so that always apply to variables that have been inserted in the scope
+--    - A function call or a sequence that modifies the state are extracted when inlined, associating a temporary variable to them
+--    - Type inference is used when GETting from the state and supports the most common cases
+--
+-- ## TODO: The following is instead a list of functionalities currently not implemented or that can be extended
+--
+--    - A variable that is referenced outside will need to be lifted
+--    - if-then-else are currently not aligned in the return type of the branches
+--    - Function calls and structs namings only apply to local names
+--    - Tuple bindings, destructuring of structs and tuple assignments in the cases where at least one variable has to be inserted in the scope are not supported
+--    - Dot accesses expect the left part to always be a struct, inline values are currently not supported
 addLocalScopeInRoot :: Root -> Set.Set AnnotatedUUID -> AnnotatedUUID -> Root
 addLocalScopeInRoot root markedVars currUUID =
   let scopeIdentifier = Identifier "scopes"
@@ -627,7 +648,7 @@ addLocalScopeInRoot root markedVars currUUID =
       -- TODO: NOTE: the dot chain can be used as a syntactic sugar for references, both on the left value and right value:
       -- `ref.a.b` is in fact identical to `(*ref).a.b`
       -- To support this, the runtime function to Get and Put LocalState need to check if the leftmost value is a reference,
-      -- and if the access path is longer than one element, it means its actually a dot access so it mas meant to dereference the variabler
+      -- and if the access path is longer than one element, it means its actually a dot access so it mas meant to dereference the variable
 
       firstPass :: Root = rewriteAssignments root scopeIdentifier scopeUUID
       secondPass :: Root = fst $ traverseRootPostOrder rewriteRefs traversalIdentity firstPass ()

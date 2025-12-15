@@ -139,8 +139,6 @@ testAddLocalScopeInRoot = describe "Tests the function `addLocalScopeInRoot`" $ 
 
     let updated = addLocalScopeInRoot annotated markedVars currUUID
 
-    print updated
-
     updated `shouldBe` toModule
 
 
