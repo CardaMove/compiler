@@ -7,6 +7,7 @@ import Data.Set qualified as Set
 import Move.AST
 import Move.Translations.TraversalUtils (TraversalMapper, traversalIdentity, traverseRootPostOrder)
 import Move.Translations.Utils (Scope, VariableAnnotations (VariableAnnotations), getIdentifierFromScopes, inferExprType, unitType)
+import Data.Maybe (fromMaybe)
 
 -- |
 -- Given the AST, marks all the variables that need to be inserted in the explicit local scope
@@ -469,12 +470,21 @@ rewriteInlineStateMutationInSequence (Sequence {sequenceUses, sequenceItems, seq
               if mutatesState || not (null sortedBinds)
                 -- If either the sequence items or the ending expression mutate state,
                 -- return the pair `(end_expr, tail scopes)` and append any temporary binding for the end expression to the sequence items
-                then
-                  ( Just $ CommaExpr [sequenceEndExpr'', IntermediateExprExpr $ IntermediatePopScope scopeIdentifier],
-                    sequenceItems' ++ sortedBinds,
-                    bindingsToAdd''',
-                    True
-                  )
+                then case sequenceEndExpr'' of
+                  -- There is the case where the expression is a return. In this case, remove the `return` keyword
+                  Return sequenceEndExpr''' ->
+                    ( Just $ CommaExpr [fromMaybe (CommaExpr []) sequenceEndExpr''', IntermediateExprExpr $ IntermediatePopScope scopeIdentifier],
+                      sequenceItems' ++ sortedBinds,
+                      bindingsToAdd''',
+                      True
+                    )
+                  -- Otherwise, just return the `(end_expr, tail scopes)`
+                  _ ->
+                    ( Just $ CommaExpr [sequenceEndExpr'', IntermediateExprExpr $ IntermediatePopScope scopeIdentifier],
+                      sequenceItems' ++ sortedBinds,
+                      bindingsToAdd''',
+                      True
+                    )
                 -- Otherwise just return the ending expression as is
                 else (Just sequenceEndExpr'', sequenceItems', bindingsToAdd''', False)
         Nothing ->

@@ -248,7 +248,10 @@ data Type
   -- |
   -- Intermediate type used for named struct declarations.
   -- 
-  -- It includes the name of the type parameters and all the nested fields
+  -- It includes the name of the type parameters and all the nested fields.
+  --
+  -- NOTE: This type should only be used for declarations. All variables that resolve to a struct should instead use the TypeConstructor,
+  -- this is because this type acs only as a way to keep the nested fields of a struct declaration and to resolve their type
   | IntermediateTypeNamedStructDeclaration [Identifier] [NamedField]
   deriving (Eq, Show, Read, Data, Typeable, Ord)
 

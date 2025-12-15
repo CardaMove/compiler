@@ -282,8 +282,12 @@ inferExprType (NamedStructExprExpr (NamedStructExpr {nseNameAccessChain = _})) s
 -- Positional struct expression or function call
 -- TODO: type parameters for now are ignored, also non-local name access chains
 -- FIXME: follow what done for named structs
-inferExprType (PositionalStructExprOrFunctionCallExpr (PositionalStructExprOrFunctionCall {pseofcNameAccessChain = LocalNameAccessChain structName})) scopes =
-  case getIdentifierFromScopes structName scopes of
+inferExprType (PositionalStructExprOrFunctionCallExpr (PositionalStructExprOrFunctionCall {pseofcNameAccessChain = LocalNameAccessChain calledIdent})) scopes =
+  case getIdentifierFromScopes calledIdent scopes of
+    -- The type of a function call is the return type.
+    -- It is assumed that the correct number of arguments is passed
+    VariableAnnotations _ (TypeArrow ts) -> last ts
+    -- Otherwise, for a struct, it is the name of the struct
     VariableAnnotations _ structType -> structType
 inferExprType (PositionalStructExprOrFunctionCallExpr (PositionalStructExprOrFunctionCall {pseofcNameAccessChain = _})) scopes = TypeUnknown
 -- Function bang call has unit type

@@ -1,0 +1,239 @@
+RModule
+  ( Module
+      { moduleAddress = NamedAddress (Identifier "NamedAddr"),
+        moduleIdentifier = Identifier "TestingModule",
+        moduleTopLevels =
+          [ TopLevelNamedStruct
+              ( NamedStruct
+                  { namedStructIdentifier = Identifier "A",
+                    namedStructTypeParameters = [],
+                    namedStructAbilities = [],
+                    namedStructFields =
+                      [ NamedField
+                          { fieldIdentifier = Identifier "num",
+                            fieldType = TypeConstructor (LocalNameAccessChain (Identifier "u64")) []
+                          }
+                      ]
+                  }
+              ),
+            TopLevelNamedStruct
+              ( NamedStruct
+                  { namedStructIdentifier = Identifier "B",
+                    namedStructTypeParameters = [],
+                    namedStructAbilities = [],
+                    namedStructFields =
+                      [ NamedField
+                          { fieldIdentifier = Identifier "a",
+                            fieldType = TypeConstructor (LocalNameAccessChain (Identifier "A")) []
+                          }
+                      ]
+                  }
+              ),
+            TopLevelFunction
+              ( Function
+                  { functionHasNativeModifier = False,
+                    functionVisibilityModifier = Nothing,
+                    functionHasEntryModifier = False,
+                    functionName = Identifier "test2",
+                    functionTypeParameters = [],
+                    functionParameters =
+                      [ Parameter
+                          { parameterIdentifier = Identifier "a",
+                            parameterType = TypeImmutableRef (TypeConstructor (LocalNameAccessChain (Identifier "A")) []),
+                            parameterUUID = Just 1
+                          },
+                        Parameter
+                          { parameterIdentifier = Identifier "scopes",
+                            parameterType = IntermediateTypeScopes,
+                            parameterUUID = Just (-1)
+                          }
+                      ],
+                    functionReturnType = Just (TypeTuple [TypeConstructor (LocalNameAccessChain (Identifier "B")) [], IntermediateTypeScopes]),
+                    functionAcquires = [],
+                    functionBody =
+                      Just
+                        ( Sequence
+                            { sequenceUses = [],
+                              sequenceItems =
+                                [ SequenceItemBindExpr
+                                    ( Bindings
+                                        { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
+                                          bindingsBindType = Just IntermediateTypeScopes,
+                                          bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePushScope (Identifier "scopes")))
+                                        }
+                                    )
+                                ],
+                              sequenceEndExpr =
+                                Just
+                                  ( CommaExpr
+                                      [ NamedStructExprExpr
+                                          ( NamedStructExpr
+                                              { nseNameAccessChain = LocalNameAccessChain (Identifier "B"),
+                                                nseTypeArgs = [],
+                                                nseFields =
+                                                  [ NamedStructExprField
+                                                      { nsefIdentifier = Identifier "a",
+                                                        nsefExpr = Just (IntermediateExprExpr (IntermediateGetDereferenceLocalState (NameAccessChainExpr (LocalNameAccessChain (Identifier "a"))) (TypeConstructor (LocalNameAccessChain (Identifier "A")) [])))
+                                                      }
+                                                  ]
+                                              }
+                                          ),
+                                        IntermediateExprExpr (IntermediatePopScope (Identifier "scopes"))
+                                      ]
+                                  )
+                            }
+                        ),
+                    functionUUID = Just 0
+                  }
+              ),
+            TopLevelFunction
+              ( Function
+                  { functionHasNativeModifier = False,
+                    functionVisibilityModifier = Nothing,
+                    functionHasEntryModifier = False,
+                    functionName = Identifier "test",
+                    functionTypeParameters = [],
+                    functionParameters =
+                      [ Parameter
+                          { parameterIdentifier = Identifier "scopes",
+                            parameterType = IntermediateTypeScopes,
+                            parameterUUID = Just (-1)
+                          }
+                      ],
+                    functionReturnType = Just (TypeTuple [TypeTuple [], IntermediateTypeScopes]),
+                    functionAcquires = [],
+                    functionBody =
+                      Just
+                        ( Sequence
+                            { sequenceUses = [],
+                              sequenceItems =
+                                [ SequenceItemBindExpr
+                                    ( Bindings
+                                        { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
+                                          bindingsBindType = Just IntermediateTypeScopes,
+                                          bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePushScope (Identifier "scopes")))
+                                        }
+                                    ),
+                                  SequenceItemBindExpr
+                                    ( Bindings
+                                        { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
+                                          bindingsBindType = Just IntermediateTypeScopes,
+                                          bindingsBindExpr =
+                                            Just
+                                              ( IntermediateExprExpr
+                                                  ( IntermediatePostLocalState
+                                                      (Identifier "a")
+                                                      ( Just
+                                                          ( NamedStructExprExpr
+                                                              ( NamedStructExpr
+                                                                  { nseNameAccessChain = LocalNameAccessChain (Identifier "A"),
+                                                                    nseTypeArgs = [],
+                                                                    nseFields =
+                                                                      [ NamedStructExprField
+                                                                          { nsefIdentifier = Identifier "num",
+                                                                            nsefExpr = Just (ValueLiteral (Numerical (LiteralIntDec 1)))
+                                                                          }
+                                                                      ]
+                                                                  }
+                                                              )
+                                                          )
+                                                      )
+                                                  )
+                                              )
+                                        }
+                                    ),
+                                  SequenceItemBindExpr
+                                    ( Bindings
+                                        { bindings = BindedTuple [BindIdentifier (Identifier "temp_7") (Just 7), BindIdentifier (Identifier "scopes") (Just (-1))],
+                                          bindingsBindType = Just (TypeTuple [TypeTuple [TypeConstructor (LocalNameAccessChain (Identifier "B")) [], IntermediateTypeScopes], IntermediateTypeScopes]),
+                                          bindingsBindExpr =
+                                            Just
+                                              ( SequenceExpr
+                                                  ( Sequence
+                                                      { sequenceUses = [],
+                                                        sequenceItems =
+                                                          [ SequenceItemBindExpr
+                                                              ( Bindings
+                                                                  { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
+                                                                    bindingsBindType = Just IntermediateTypeScopes,
+                                                                    bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePushScope (Identifier "scopes")))
+                                                                  }
+                                                              ),
+                                                            SequenceItemBindExpr
+                                                              ( Bindings
+                                                                  { bindings = BindedTuple [BindIdentifier (Identifier "temp_6") (Just 6), BindIdentifier (Identifier "scopes") (Just (-1))],
+                                                                    bindingsBindType = Just (TypeTuple [TypeConstructor (LocalNameAccessChain (Identifier "B")) [], IntermediateTypeScopes]),
+                                                                    bindingsBindExpr =
+                                                                      Just
+                                                                        ( PositionalStructExprOrFunctionCallExpr
+                                                                            ( PositionalStructExprOrFunctionCall
+                                                                                { pseofcNameAccessChain = LocalNameAccessChain (Identifier "test2"),
+                                                                                  pseofcTypeArgs = [],
+                                                                                  pseofcFields = [IntermediateExprExpr (IntermediateReferenceLocalState [Identifier "a"] (TypeImmutableRef (TypeConstructor (LocalNameAccessChain (Identifier "A")) []))), NameAccessChainExpr (LocalNameAccessChain (Identifier "scopes"))]
+                                                                                }
+                                                                            )
+                                                                        )
+                                                                  }
+                                                              ),
+                                                            SequenceItemBindExpr
+                                                              ( Bindings
+                                                                  { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
+                                                                    bindingsBindType = Just IntermediateTypeScopes,
+                                                                    bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePostLocalState (Identifier "c") (Just (NameAccessChainExpr (LocalNameAccessChain (Identifier "temp_6"))))))
+                                                                  }
+                                                              ),
+                                                            SequenceItemBindExpr
+                                                              ( Bindings
+                                                                  { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
+                                                                    bindingsBindType = Just IntermediateTypeScopes,
+                                                                    bindingsBindExpr =
+                                                                      Just
+                                                                        ( IntermediateExprExpr
+                                                                            ( IntermediatePutLocalState
+                                                                                [Identifier "c", Identifier "a", Identifier "num"]
+                                                                                ( BinaryOpExprExpr
+                                                                                    ( Add
+                                                                                        ( DotOrIndexChainExpr
+                                                                                            ( DotAccess
+                                                                                                { dotAccessLeft =
+                                                                                                    DotOrIndexChainExpr
+                                                                                                      ( DotAccess
+                                                                                                          { dotAccessLeft = IntermediateExprExpr (IntermediateGetLocalState [Identifier "c"] (TypeConstructor (LocalNameAccessChain (Identifier "B")) [])),
+                                                                                                            dotAccessRight = Identifier "a"
+                                                                                                          }
+                                                                                                      ),
+                                                                                                  dotAccessRight = Identifier "num"
+                                                                                                }
+                                                                                            )
+                                                                                        )
+                                                                                        (ValueLiteral (Numerical (LiteralIntDec 1)))
+                                                                                    )
+                                                                                )
+                                                                            )
+                                                                        )
+                                                                  }
+                                                              )
+                                                          ],
+                                                        sequenceEndExpr = Just (CommaExpr [IntermediateExprExpr (IntermediateGetLocalState [Identifier "c"] (TypeConstructor (LocalNameAccessChain (Identifier "B")) [])), IntermediateExprExpr (IntermediatePopScope (Identifier "scopes"))])
+                                                      }
+                                                  )
+                                              )
+                                        }
+                                    ),
+                                  SequenceItemBindExpr
+                                    ( Bindings
+                                        { bindings = BindedSingle (BindIdentifier (Identifier "b") (Just 4)),
+                                          bindingsBindType = Nothing,
+                                          bindingsBindExpr = Just (NameAccessChainExpr (LocalNameAccessChain (Identifier "temp_7")))
+                                        }
+                                    )
+                                ],
+                              sequenceEndExpr = Just (CommaExpr [CommaExpr [], IntermediateExprExpr (IntermediatePopScope (Identifier "scopes"))])
+                            }
+                        ),
+                    functionUUID = Just 2
+                  }
+              )
+          ]
+      }
+  )

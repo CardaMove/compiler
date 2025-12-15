@@ -109,9 +109,25 @@ testRewriteLetBinds = describe "Tests the function `rewriteLetBinds`" $ do
 
 testAddLocalScopeInRoot :: Spec
 testAddLocalScopeInRoot = describe "Tests the function `addLocalScopeInRoot`" $ do
-  it "Rewrites the AST to handle the scopes" $ do
+  it "Handles function params, scopes in CPS, assignments, references, dot accesses" $ do
     fromModuleStr <- readFile "test/Move/Translations/files/ScopesSpec_1.move"
     toModuleStr <- readFile "test/Move/Translations/files/ScopesSpec_10.txt"
+
+    let parsed = parse $ scan fromModuleStr
+    let toModule = read toModuleStr :: Root
+
+
+    let (annotated, currUUID) = runState (annotateBindingsWithUUID parsed) 0
+
+    let markedVars = markVariablesForLocalScope annotated
+
+    let updated = addLocalScopeInRoot annotated markedVars currUUID
+
+    updated `shouldBe` toModule
+
+  it "Handles nested sequences, function calls" $ do
+    fromModuleStr <- readFile "test/Move/Translations/files/ScopesSpec_11.move"
+    toModuleStr <- readFile "test/Move/Translations/files/ScopesSpec_12.txt"
 
     let parsed = parse $ scan fromModuleStr
     let toModule = read toModuleStr :: Root
