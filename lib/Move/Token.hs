@@ -84,7 +84,8 @@ data Token
   | TokenOperatorDoubleDot
   | TokenOperatorAt
   | TokenOperatorShiftLeft
-  | TokenOperatorShiftRight
+  -- See Parser.y about '>>' operator
+  -- TokenOperatorShiftRight
   | -- Identifiers
     TokenIdentifier String
   deriving (Eq, Show)

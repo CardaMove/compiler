@@ -90,7 +90,10 @@ import Move.Token
   '..'      { TokenOperatorDoubleDot    }
   '@'       { TokenOperatorAt           }
   '<<'      { TokenOperatorShiftLeft    }
-  '>>'      { TokenOperatorShiftRight   }
+  -- NOTE: The '>>' operator has been replaced by two '>' '>'
+  -- This is to solve the problem in the case of nested type arguments such as `move_to<A<u64>>` that would otherwise fail
+  -- This error has been encountered also in the Move compiler and has been solved similarly but at parsing time
+  --'>>'      { TokenOperatorShiftRight   }
   -- Identifiers
   identifier{ TokenIdentifier $$        }
 
@@ -140,7 +143,8 @@ import Move.Token
 %left '^' 
 %left '&' 
 %left '<<'
-%left '>>'
+-- See above about '>>' operator
+--%left '>>'
 %left '+' '-' 
 %left '*' '/' '%' 
 
@@ -490,7 +494,8 @@ BinaryOpExpr :: { Expr }
   | BinaryOpExpr '^' BinaryOpExpr                        { BinaryOpExprExpr $ BitwiseXor $1 $3 }
   | BinaryOpExpr '&' BinaryOpExpr                        { BinaryOpExprExpr $ BitwiseAnd $1 $3 }
   | BinaryOpExpr '<<' BinaryOpExpr                       { BinaryOpExprExpr $ ShiftLeft $1 $3 }
-  | BinaryOpExpr '>>' BinaryOpExpr                       { BinaryOpExprExpr $ ShiftRight $1 $3 }
+  -- See above about '>>' operator
+  | BinaryOpExpr '>' '>' BinaryOpExpr                    { BinaryOpExprExpr $ ShiftRight $1 $4 }
   | BinaryOpExpr '+' BinaryOpExpr                        { BinaryOpExprExpr $ Add $1 $3 }
   | BinaryOpExpr '-' BinaryOpExpr                        { BinaryOpExprExpr $ Sub $1 $3 }
   | BinaryOpExpr '*' BinaryOpExpr                        { BinaryOpExprExpr $ Mult $1 $3 }

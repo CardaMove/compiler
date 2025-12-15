@@ -100,7 +100,8 @@ tokens :-
   \.\.                          { \_ _ -> TokenOperatorDoubleDot            }
   \@                            { \_ _ -> TokenOperatorAt                   }
   \<\<                          { \_ _ -> TokenOperatorShiftLeft            }
-  \>\>                          { \_ _ -> TokenOperatorShiftRight           }
+  -- See Parser.y about '>>' operator
+  --\>\>                        { \_ _ -> TokenOperatorShiftRight           }
   -- TODO: Compound assignments
   -- TODO: vector<u8> literarls with b"" and x""
   -- Identifiers

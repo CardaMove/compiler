@@ -1,0 +1,217 @@
+RModule
+( Module
+    { moduleAddress = NamedAddress (Identifier "NamedAddr"),
+        moduleIdentifier = Identifier "TestingModule",
+        moduleTopLevels =
+        [ TopLevelNamedStruct
+            ( NamedStruct
+                { namedStructIdentifier = Identifier "F",
+                    namedStructTypeParameters =
+                    [ TypeParameter
+                        { typeParameterIsPhantom = False,
+                            typeIdentifier = Identifier "T1",
+                            typeConstraints = []
+                        }
+                    ],
+                    namedStructAbilities = [Key, Store],
+                    namedStructFields =
+                    [ NamedField
+                        { fieldIdentifier = Identifier "val",
+                            fieldType = TypeConstructor (LocalNameAccessChain (Identifier "T1")) []
+                        }
+                    ]
+                }
+            ),
+            TopLevelNamedStruct
+            ( NamedStruct
+                { namedStructIdentifier = Identifier "G",
+                    namedStructTypeParameters =
+                    [ TypeParameter
+                        { typeParameterIsPhantom = True,
+                            typeIdentifier = Identifier "T2",
+                            typeConstraints = []
+                        }
+                    ],
+                    namedStructAbilities = [Key],
+                    namedStructFields =
+                    [ NamedField
+                        { fieldIdentifier = Identifier "f",
+                            fieldType = TypeConstructor (LocalNameAccessChain (Identifier "F")) [TypeConstructor (LocalNameAccessChain (Identifier "u64")) []]
+                        }
+                    ]
+                }
+            ),
+            TopLevelFunction
+            ( Function
+                { functionHasNativeModifier = False,
+                    functionVisibilityModifier = Nothing,
+                    functionHasEntryModifier = False,
+                    functionName = Identifier "test",
+                    functionTypeParameters = [],
+                    functionParameters =
+                    [ Parameter
+                        { parameterIdentifier = Identifier "s",
+                            parameterType = TypeImmutableRef (TypeConstructor (LocalNameAccessChain (Identifier "signer")) []),
+                            parameterUUID = Nothing
+                        },
+                        Parameter
+                        { parameterIdentifier = Identifier "a1",
+                            parameterType = TypeConstructor (LocalNameAccessChain (Identifier "address")) [],
+                            parameterUUID = Nothing
+                        }
+                    ],
+                    functionReturnType = Nothing,
+                    functionAcquires = [LocalNameAccessChain (Identifier "F"), LocalNameAccessChain (Identifier "G")],
+                    functionBody =
+                    Just
+                        ( Sequence
+                            { sequenceUses = [],
+                            sequenceItems =
+                                [ SequenceItemBindExpr
+                                    ( Bindings
+                                        { bindings = BindedSingle (BindIdentifier (Identifier "f") Nothing),
+                                        bindingsBindType = Nothing,
+                                        bindingsBindExpr =
+                                            Just
+                                            ( PositionalStructExprOrFunctionCallExpr
+                                                ( PositionalStructExprOrFunctionCall
+                                                    { pseofcNameAccessChain = LocalNameAccessChain (Identifier "move_from"),
+                                                        pseofcTypeArgs = [TypeConstructor (LocalNameAccessChain (Identifier "F")) [TypeConstructor (LocalNameAccessChain (Identifier "u64")) []]],
+                                                        pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "a1"))]
+                                                    }
+                                                )
+                                            )
+                                        }
+                                    ),
+                                SequenceItemBindExpr
+                                    ( Bindings
+                                        { bindings = BindedSingle (BindIdentifier (Identifier "g") Nothing),
+                                        bindingsBindType = Nothing,
+                                        bindingsBindExpr =
+                                            Just
+                                            ( NamedStructExprExpr
+                                                ( NamedStructExpr
+                                                    { nseNameAccessChain = LocalNameAccessChain (Identifier "G"),
+                                                        nseTypeArgs = [TypeConstructor (LocalNameAccessChain (Identifier "bool")) []],
+                                                        nseFields =
+                                                        [ NamedStructExprField
+                                                            { nsefIdentifier = Identifier "f",
+                                                                nsefExpr = Just (NameAccessChainExpr (LocalNameAccessChain (Identifier "f")))
+                                                            }
+                                                        ]
+                                                    }
+                                                )
+                                            )
+                                        }
+                                    ),
+                                SequenceItemExpr
+                                    ( PositionalStructExprOrFunctionCallExpr
+                                        ( PositionalStructExprOrFunctionCall
+                                            { pseofcNameAccessChain = LocalNameAccessChain (Identifier "move_to"),
+                                            pseofcTypeArgs = [],
+                                            pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "s")), NameAccessChainExpr (LocalNameAccessChain (Identifier "g"))]
+                                            }
+                                        )
+                                    ),
+                                SequenceItemBindExpr
+                                    ( Bindings
+                                        { bindings = BindedSingle (BindIdentifier (Identifier "a") Nothing),
+                                        bindingsBindType = Nothing,
+                                        bindingsBindExpr =
+                                            Just
+                                            ( SequenceExpr
+                                                ( Sequence
+                                                    { sequenceUses = [],
+                                                        sequenceItems =
+                                                        [ SequenceItemBindExpr
+                                                            ( Bindings
+                                                                { bindings = BindedSingle (BindIdentifier (Identifier "g2") Nothing),
+                                                                    bindingsBindType = Nothing,
+                                                                    bindingsBindExpr =
+                                                                    Just
+                                                                        ( PositionalStructExprOrFunctionCallExpr
+                                                                            ( PositionalStructExprOrFunctionCall
+                                                                                { pseofcNameAccessChain = LocalNameAccessChain (Identifier "borrow_global_mut"),
+                                                                                pseofcTypeArgs = [TypeConstructor (LocalNameAccessChain (Identifier "G")) [TypeConstructor (LocalNameAccessChain (Identifier "bool")) []]],
+                                                                                pseofcFields =
+                                                                                    [ PositionalStructExprOrFunctionCallExpr
+                                                                                        ( PositionalStructExprOrFunctionCall
+                                                                                            { pseofcNameAccessChain = LocalNameAccessChain (Identifier "address_of"),
+                                                                                            pseofcTypeArgs = [],
+                                                                                            pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "s"))]
+                                                                                            }
+                                                                                        )
+                                                                                    ]
+                                                                                }
+                                                                            )
+                                                                        )
+                                                                }
+                                                            ),
+                                                            SequenceItemExpr
+                                                            ( AssignmentExpr
+                                                                ( Assignment
+                                                                    { assignmentLeft =
+                                                                        DotOrIndexChainExpr
+                                                                            ( DotAccess
+                                                                                { dotAccessLeft =
+                                                                                    DotOrIndexChainExpr
+                                                                                    ( DotAccess
+                                                                                        { dotAccessLeft = NameAccessChainExpr (LocalNameAccessChain (Identifier "g2")),
+                                                                                            dotAccessRight = Identifier "f"
+                                                                                        }
+                                                                                    ),
+                                                                                dotAccessRight = Identifier "val"
+                                                                                }
+                                                                            ),
+                                                                        assignmentRight =
+                                                                        BinaryOpExprExpr
+                                                                            ( Mult
+                                                                                ( DotOrIndexChainExpr
+                                                                                    ( DotAccess
+                                                                                        { dotAccessLeft =
+                                                                                            DotOrIndexChainExpr
+                                                                                            ( DotAccess
+                                                                                                { dotAccessLeft = NameAccessChainExpr (LocalNameAccessChain (Identifier "g2")),
+                                                                                                    dotAccessRight = Identifier "f"
+                                                                                                }
+                                                                                            ),
+                                                                                        dotAccessRight = Identifier "val"
+                                                                                        }
+                                                                                    )
+                                                                                )
+                                                                                (ValueLiteral (Numerical (LiteralIntDec 5)))
+                                                                            )
+                                                                    }
+                                                                )
+                                                            )
+                                                        ],
+                                                        sequenceEndExpr =
+                                                        Just
+                                                            ( DotOrIndexChainExpr
+                                                                ( DotAccess
+                                                                    { dotAccessLeft =
+                                                                        DotOrIndexChainExpr
+                                                                        ( DotAccess
+                                                                            { dotAccessLeft = NameAccessChainExpr (LocalNameAccessChain (Identifier "g2")),
+                                                                                dotAccessRight = Identifier "f"
+                                                                            }
+                                                                        ),
+                                                                    dotAccessRight = Identifier "val"
+                                                                    }
+                                                                )
+                                                            )
+                                                    }
+                                                )
+                                            )
+                                        }
+                                    )
+                                ],
+                            sequenceEndExpr = Nothing
+                            }
+                        ),
+                    functionUUID = Nothing
+                }
+            )
+        ]
+    }
+)

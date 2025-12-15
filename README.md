@@ -33,7 +33,7 @@ Where:
 The generated parser can also be loaded in **GHCI**:
 
 ```shell
-$ ghci -ilib lib/Move/Parser.hs`
+$ ghci -ilib lib/Move/Parser.hs
 ```
 
 ## Haskell debugger

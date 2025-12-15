@@ -74,7 +74,8 @@ testScanOperators :: Spec
 testScanOperators = describe "Scan operators" $ do
   testScan "&mut" [TokenOperatorAmpMut]
   testScan ">" [TokenOperatorGt]
-  testScan ">>" [TokenOperatorShiftRight]
+  -- See Parser.y about '>>' operator
+  testScan ">>" [TokenOperatorGt,TokenOperatorGt]
 
 spec :: Spec
 spec = do

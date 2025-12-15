@@ -829,6 +829,19 @@ testParseStructExpr =
           ]
       }
 
+-- The '>>' operator made the parser fail in the case of nested type arguments.
+-- For more details, see Parser.y 
+testParseTypeArguments :: Spec
+testParseTypeArguments = describe "Parse function with type arguments" $ do
+  it "Parse function with >>" $ do
+    fromModuleStr <- readFile "test/Move/files/ParserSpec_0.move"
+    toModuleStr <- readFile "test/Move/files/ParserSpec_1.txt"
+    let toModule = read toModuleStr :: Root
+
+    let tokens = scan fromModuleStr
+    parse tokens `shouldBe` toModule
+
+
 spec :: Spec
 spec = do
   testParseEmptyModule
@@ -841,3 +854,4 @@ spec = do
   testParseConstants
   testParseFunctionWithBody
   testParseStructExpr
+  testParseTypeArguments
