@@ -9,6 +9,7 @@ import Move.AST
 import Move.Translations.Utils
   ( Scope,
     VariableAnnotations (VariableAnnotations),
+    booleanType,
     extractVariablesFromBindings,
     getUseIdentifiers,
     unitType,
@@ -134,20 +135,33 @@ traverseRootPostOrder exprMapper bindsMapper root state = case root of
               topLevelMap (TopLevelConstant (Constant {constantIdentifier, constantType})) = [(constantIdentifier, VariableAnnotations Nothing constantType)]
           moduleScope :: Scope = Map.fromList topLevelIdentifiersAnnotated
 
+          -- Add the std lib to the scope
+          topLevelScope :: [Scope] = [moduleScope, moveStdLibScope]
+
           (stateAfterTraversal, mappedTopLevels) = mapAccumL topLevelMap state topLevels
             where
               -- Traverse the constant expressions
               -- Note that the scope is unchanged, only the state is forwarded
               topLevelMap state' (TopLevelConstant constant@Constant {constantExpression}) =
-                let (mappedExpr, state'') = traverseExprPostOrder exprMapper bindsMapper constantExpression [moduleScope] state'
+                let (mappedExpr, state'') = traverseExprPostOrder exprMapper bindsMapper constantExpression topLevelScope state'
                  in (state'', TopLevelConstant $ constant {constantExpression = mappedExpr})
               -- Traverse the function declarations that have a body.
               -- Each function will have an additional scope for both the parameters and the body
               topLevelMap state' (TopLevelFunction function@Function {functionParameters, functionBody = Just bodySequence}) =
                 -- Create a new local scope including the function parameters
                 let functionParametersScope :: Scope = Map.fromList $ map (\(Parameter {parameterIdentifier, parameterType, parameterUUID}) -> (parameterIdentifier, VariableAnnotations parameterUUID parameterType)) functionParameters
-                    (mappedSequence, state'') = traverseSequencePostOrder exprMapper bindsMapper bodySequence [functionParametersScope, moduleScope] state'
+                    (mappedSequence, state'') = traverseSequencePostOrder exprMapper bindsMapper bodySequence (functionParametersScope : topLevelScope) state'
                  in (state'', TopLevelFunction $ function {functionBody = Just mappedSequence})
               -- Otherwise do nothing
               topLevelMap state' topLevel = (state', topLevel)
        in (mappedTopLevels, stateAfterTraversal)
+
+moveStdLibScope :: Scope
+moveStdLibScope =
+  Map.fromList
+    [ (Identifier "move_to", VariableAnnotations (Just $ -2) (TypeArrow [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "signer") [], TypeConstructor (LocalNameAccessChain $ Identifier "T") [], unitType])),
+      (Identifier "move_from", VariableAnnotations (Just $ -3) (TypeArrow [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [], TypeConstructor (LocalNameAccessChain $ Identifier "T") []])),
+      (Identifier "borrow_global_mut", VariableAnnotations (Just $ -4) (TypeArrow [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [], TypeMutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "T") []])),
+      (Identifier "borrow_global", VariableAnnotations (Just $ -5) (TypeArrow [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [], TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "T") []])),
+      (Identifier "exists", VariableAnnotations (Just $ -5) (TypeArrow [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [], booleanType]))
+    ]

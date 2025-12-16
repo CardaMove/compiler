@@ -8,6 +8,7 @@ import Data.Generics.Uniplate.Data (transformBiM)
 import Data.List qualified as List
 import Data.Map qualified as Map
 import Move.AST
+import Data.Maybe (fromMaybe)
 
 -- | Unity type ()
 unitType :: Type
@@ -253,7 +254,7 @@ inferExprType expr@(DotOrIndexChainExpr (DotAccess {dotAccessLeft, dotAccessRigh
             then error $ "Found a type constructor with wrong number of type arguments: " ++ show t
             else case List.find (\NamedField {fieldIdentifier} -> fieldIdentifier == dotAccessRight) namedFields of
               Nothing -> error $ "Found a dotAccessRight not present in the corresponding named struct declaration: " ++ show dotAccessLeft ++ ", " ++ show t
-              Just NamedField {fieldType} -> resolveTypedField fieldType typeParams typeArgs scopes
+              Just NamedField {fieldType} -> resolveTypeConstructor fieldType (zip typeParams typeArgs)
         _ -> error $ "Found dotAccessLeft that is not a named struct: " ++ show dotAccessLeft
     resolveDotAccess name _ = error $ "Unsupported name access chain: " ++ show name
 
@@ -338,8 +339,24 @@ inferExprType (IntermediateExprExpr (IntermediateMoveTo {})) _ = unitType
 inferExprType (IntermediateExprExpr (IntermediateMoveFrom _ t)) _ = t
 
 -- |
--- Given a typed field, such as `A` inside `struct B {a: A}`, returns its actual type considering that `B` might have type parameters
--- (with corresponding type arguments) and those can be resursively calculated by looking at the scopes
--- TODO: for now, just assumes the type. Also, probably should just resolve the type arguments?
-resolveTypedField :: Type -> [Identifier] -> [Type] -> [Scope] -> Type
-resolveTypedField t _ _ _ = t
+-- Given a type of a record label, along with the type parameters of the record and their respective type arguments,
+-- resolves the type by substituting the type arguments where a type param appears in the record type
+resolveTypeConstructor :: Type -> [(Identifier, Type)] -> Type
+-- `T` can either be a defined type itself or be a type parameter
+-- ```struct A<T>{label1: T}```
+resolveTypeConstructor t@(TypeConstructor (LocalNameAccessChain tCons) []) parentTArgs = fromMaybe t $ findMap (\(ident, typ) -> if tCons == ident then Just typ else Nothing) parentTArgs
+  where
+    -- |
+    -- Combination of List.find and List.map
+    findMap :: (a -> Maybe b) -> [a] -> Maybe b
+    findMap _ [] = Nothing
+    findMap mapper (x:xs) = case mapper x of
+      mapped@(Just _) -> mapped
+      Nothing -> findMap mapper xs
+-- If the type is not a local name, surely is not a type param
+resolveTypeConstructor t@(TypeConstructor _ []) _ = t
+-- Otherwise it is a type where the constructor surely is not a type param, and the arguments might be
+-- ```struct A<T>{label1: B<T>}```
+resolveTypeConstructor (TypeConstructor tCons tArgs) parentTArgs = TypeConstructor tCons (map (`resolveTypeConstructor` parentTArgs) tArgs)
+-- In a record label, the type must be one of the above cases. Tuples, references and other combinations not above are not allowed
+resolveTypeConstructor t _ = error $ "Unexpected type: " ++ show t 

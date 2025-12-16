@@ -3,11 +3,11 @@ module Move.Translations.Scopes where
 import Data.Generics.Uniplate.Data (transformBi, universe)
 import Data.List (sortOn)
 import Data.Map qualified as Map
+import Data.Maybe (fromMaybe)
 import Data.Set qualified as Set
 import Move.AST
 import Move.Translations.TraversalUtils (TraversalMapper, traversalIdentity, traverseRootPostOrder)
 import Move.Translations.Utils (Scope, VariableAnnotations (VariableAnnotations), getIdentifierFromScopes, inferExprType, unitType)
-import Data.Maybe (fromMaybe)
 
 -- |
 -- Given the AST, marks all the variables that need to be inserted in the explicit local scope

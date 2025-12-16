@@ -141,6 +141,22 @@ testAddLocalScopeInRoot = describe "Tests the function `addLocalScopeInRoot`" $ 
 
     updated `shouldBe` toModule
 
+  it "Handles global storage operations" $ do
+    fromModuleStr <- readFile "test/Move/Translations/files/ScopesSpec_13.move"
+    toModuleStr <- readFile "test/Move/Translations/files/ScopesSpec_14.txt"
+
+    let parsed = parse $ scan fromModuleStr
+    let toModule = read toModuleStr :: Root
+
+
+    let (annotated, currUUID) = runState (annotateBindingsWithUUID parsed) 0
+
+    let markedVars = markVariablesForLocalScope annotated
+
+    let updated = addLocalScopeInRoot annotated markedVars currUUID
+
+    updated `shouldBe` toModule
+
 
 spec :: Spec
 spec = do
