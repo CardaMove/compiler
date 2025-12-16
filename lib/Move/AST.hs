@@ -244,7 +244,10 @@ data Type
   | TypeTuple [Type]
   | TypeUnknown
   | IntermediateTypeScopes
-  | TypeArrow [Type]
+  -- |
+  -- Represents a function type, optionally with type params
+  -- Example: `fun my_fun<A>(b: B, c: C): D<A>`
+  | TypeArrow [Identifier] [Type]
   -- |
   -- Intermediate type used for named struct declarations.
   -- 

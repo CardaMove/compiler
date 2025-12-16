@@ -254,7 +254,7 @@ inferExprType expr@(DotOrIndexChainExpr (DotAccess {dotAccessLeft, dotAccessRigh
             then error $ "Found a type constructor with wrong number of type arguments: " ++ show t
             else case List.find (\NamedField {fieldIdentifier} -> fieldIdentifier == dotAccessRight) namedFields of
               Nothing -> error $ "Found a dotAccessRight not present in the corresponding named struct declaration: " ++ show dotAccessLeft ++ ", " ++ show t
-              Just NamedField {fieldType} -> resolveTypeConstructor fieldType (zip typeParams typeArgs)
+              Just NamedField {fieldType} -> resolveParametricType fieldType (zip typeParams typeArgs)
         _ -> error $ "Found dotAccessLeft that is not a named struct: " ++ show dotAccessLeft
     resolveDotAccess name _ = error $ "Unsupported name access chain: " ++ show name
 
@@ -281,13 +281,19 @@ inferExprType (NamedStructExprExpr expr@(NamedStructExpr {nseNameAccessChain = L
     _ -> error $ "Found a named struct expression that does not correspond to a struct declaration: " ++ show expr
 inferExprType (NamedStructExprExpr (NamedStructExpr {nseNameAccessChain = _})) scopes = TypeUnknown
 -- Positional struct expression or function call
--- TODO: type parameters for now are ignored, also non-local name access chains
+-- TODO: type parameters for now are ignored (for structs), also non-local name access chains
 -- FIXME: follow what done for named structs
-inferExprType (PositionalStructExprOrFunctionCallExpr (PositionalStructExprOrFunctionCall {pseofcNameAccessChain = LocalNameAccessChain calledIdent})) scopes =
+inferExprType (PositionalStructExprOrFunctionCallExpr expr@(PositionalStructExprOrFunctionCall {pseofcNameAccessChain = LocalNameAccessChain calledIdent, pseofcTypeArgs})) scopes =
   case getIdentifierFromScopes calledIdent scopes of
     -- The type of a function call is the return type.
     -- It is assumed that the correct number of arguments is passed
-    VariableAnnotations _ (TypeArrow ts) -> last ts
+    VariableAnnotations _ (TypeArrow typeParams ts) ->
+      -- TODO: For now, inference of type arguments is not performed
+      if length typeParams /= length pseofcTypeArgs
+        then error $ "Found a function call with wrong number of type arguments: " ++ show expr
+        -- Resolve the return type of the function
+        else resolveParametricType (last ts) (zip typeParams pseofcTypeArgs)
+
     -- Otherwise, for a struct, it is the name of the struct
     VariableAnnotations _ structType -> structType
 inferExprType (PositionalStructExprOrFunctionCallExpr (PositionalStructExprOrFunctionCall {pseofcNameAccessChain = _})) scopes = TypeUnknown
@@ -339,12 +345,12 @@ inferExprType (IntermediateExprExpr (IntermediateMoveTo {})) _ = unitType
 inferExprType (IntermediateExprExpr (IntermediateMoveFrom _ t)) _ = t
 
 -- |
--- Given a type of a record label, along with the type parameters of the record and their respective type arguments,
+-- Given a type that might be parametric, along with the type parameters of the record (or function) and their respective type arguments,
 -- resolves the type by substituting the type arguments where a type param appears in the record type
-resolveTypeConstructor :: Type -> [(Identifier, Type)] -> Type
+resolveParametricType :: Type -> [(Identifier, Type)] -> Type
 -- `T` can either be a defined type itself or be a type parameter
 -- ```struct A<T>{label1: T}```
-resolveTypeConstructor t@(TypeConstructor (LocalNameAccessChain tCons) []) parentTArgs = fromMaybe t $ findMap (\(ident, typ) -> if tCons == ident then Just typ else Nothing) parentTArgs
+resolveParametricType t@(TypeConstructor (LocalNameAccessChain tCons) []) parentTArgs = fromMaybe t $ findMap (\(ident, typ) -> if tCons == ident then Just typ else Nothing) parentTArgs
   where
     -- |
     -- Combination of List.find and List.map
@@ -354,9 +360,13 @@ resolveTypeConstructor t@(TypeConstructor (LocalNameAccessChain tCons) []) paren
       mapped@(Just _) -> mapped
       Nothing -> findMap mapper xs
 -- If the type is not a local name, surely is not a type param
-resolveTypeConstructor t@(TypeConstructor _ []) _ = t
+resolveParametricType t@(TypeConstructor _ []) _ = t
 -- Otherwise it is a type where the constructor surely is not a type param, and the arguments might be
 -- ```struct A<T>{label1: B<T>}```
-resolveTypeConstructor (TypeConstructor tCons tArgs) parentTArgs = TypeConstructor tCons (map (`resolveTypeConstructor` parentTArgs) tArgs)
+resolveParametricType (TypeConstructor tCons tArgs) parentTArgs = TypeConstructor tCons (map (`resolveParametricType` parentTArgs) tArgs)
 -- In a record label, the type must be one of the above cases. Tuples, references and other combinations not above are not allowed
-resolveTypeConstructor t _ = error $ "Unexpected type: " ++ show t 
+-- But in case of function return, for example, it is possible to have tuples
+resolveParametricType (TypeImmutableRef t) parentTArgs = TypeImmutableRef $ resolveParametricType t parentTArgs
+resolveParametricType (TypeMutableRef t) parentTArgs = TypeMutableRef $ resolveParametricType t parentTArgs
+resolveParametricType (TypeTuple t) parentTArgs = TypeTuple $ map (`resolveParametricType` parentTArgs) t
+resolveParametricType t _ = error $ "Unexpected type: " ++ show t 

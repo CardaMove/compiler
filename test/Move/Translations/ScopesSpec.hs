@@ -141,7 +141,7 @@ testAddLocalScopeInRoot = describe "Tests the function `addLocalScopeInRoot`" $ 
 
     updated `shouldBe` toModule
 
-  it "Handles global storage operations" $ do
+  it "Handles global storage operations and resolves type parameters" $ do
     fromModuleStr <- readFile "test/Move/Translations/files/ScopesSpec_13.move"
     toModuleStr <- readFile "test/Move/Translations/files/ScopesSpec_14.txt"
 

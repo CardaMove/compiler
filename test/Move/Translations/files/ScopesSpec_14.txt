@@ -121,7 +121,7 @@ RModule
                                                         ( Add
                                                             ( DotOrIndexChainExpr
                                                                 DotAccess
-                                                                  { dotAccessLeft = IntermediateExprExpr (IntermediateGetLocalState [Identifier "f"] (TypeConstructor (LocalNameAccessChain (Identifier "T")) [])),
+                                                                  { dotAccessLeft = IntermediateExprExpr (IntermediateGetLocalState [Identifier "f"] (TypeConstructor (LocalNameAccessChain (Identifier "F")) [TypeConstructor (LocalNameAccessChain (Identifier "u64")) []])),
                                                                     dotAccessRight = Identifier "val"
                                                                   }
                                                             )
@@ -144,7 +144,7 @@ RModule
                                                         nseFields =
                                                           [ NamedStructExprField
                                                               { nsefIdentifier = Identifier "f",
-                                                                nsefExpr = Just (IntermediateExprExpr (IntermediateGetLocalState [Identifier "f"] (TypeConstructor (LocalNameAccessChain (Identifier "T")) [])))
+                                                                nsefExpr = Just (IntermediateExprExpr (IntermediateGetLocalState [Identifier "f"] (TypeConstructor (LocalNameAccessChain (Identifier "F")) [TypeConstructor (LocalNameAccessChain (Identifier "u64")) []])))
                                                               }
                                                           ]
                                                       }

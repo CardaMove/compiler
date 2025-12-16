@@ -305,7 +305,7 @@ rewriteInlineStateMutation scopeIdentifier scopeUUID = rewriteInlineStateMutatio
     rewriteInlineStateMutation' expr@(PositionalStructExprOrFunctionCallExpr funcCall@PositionalStructExprOrFunctionCall {pseofcNameAccessChain = LocalNameAccessChain funcIdent, pseofcFields}) scopes (currUUID, bindingsToAdd) =
       case getIdentifierFromScopes funcIdent scopes of
         -- In this case, it is a function call and not a positional struct
-        VariableAnnotations _ (TypeArrow typeArr) ->
+        VariableAnnotations _ (TypeArrow _ _) ->
           -- Since it is not possible (without a proper static analysis) to know if the function call accesses or modify the state,
           -- for now assume it always does that
           --
@@ -324,7 +324,8 @@ rewriteInlineStateMutation scopeIdentifier scopeUUID = rewriteInlineStateMutatio
                     bindingsBindType =
                       Just $
                         TypeTuple
-                          [ last typeArr,
+                          [ -- Infer the type of the function call, considering also type parameters if present
+                            inferExprType expr scopes,
                             IntermediateTypeScopes
                           ],
                     bindingsBindExpr =

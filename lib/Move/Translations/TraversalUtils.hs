@@ -130,8 +130,9 @@ traverseRootPostOrder exprMapper bindsMapper root state = case root of
               topLevelMap (TopLevelNamedStruct (NamedStruct {namedStructIdentifier, namedStructTypeParameters, namedStructFields})) = [(namedStructIdentifier, VariableAnnotations Nothing $ IntermediateTypeNamedStructDeclaration (map typeIdentifier namedStructTypeParameters) namedStructFields)]
               topLevelMap (TopLevelPositionalStruct (PositionalStruct {positionalStructIdentifier})) = [(positionalStructIdentifier, VariableAnnotations Nothing $ TypeConstructor (LocalNameAccessChain positionalStructIdentifier) [])]
               -- Functions have a type, which is the arrow type of all its parameter types and return type (or unit if not specified)
-              topLevelMap (TopLevelFunction (Function {functionName, functionUUID, functionParameters, functionReturnType})) =
-                [(functionName, VariableAnnotations functionUUID $ TypeArrow $ map parameterType functionParameters ++ [fromMaybe unitType functionReturnType])]
+              -- Additionally, type parameters are considered
+              topLevelMap (TopLevelFunction (Function {functionName, functionUUID, functionParameters, functionReturnType, functionTypeParameters})) =
+                [(functionName, VariableAnnotations functionUUID $ TypeArrow (map typeIdentifier functionTypeParameters) (map parameterType functionParameters ++ [fromMaybe unitType functionReturnType]))]
               topLevelMap (TopLevelConstant (Constant {constantIdentifier, constantType})) = [(constantIdentifier, VariableAnnotations Nothing constantType)]
           moduleScope :: Scope = Map.fromList topLevelIdentifiersAnnotated
 
@@ -159,9 +160,9 @@ traverseRootPostOrder exprMapper bindsMapper root state = case root of
 moveStdLibScope :: Scope
 moveStdLibScope =
   Map.fromList
-    [ (Identifier "move_to", VariableAnnotations (Just $ -2) (TypeArrow [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "signer") [], TypeConstructor (LocalNameAccessChain $ Identifier "T") [], unitType])),
-      (Identifier "move_from", VariableAnnotations (Just $ -3) (TypeArrow [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [], TypeConstructor (LocalNameAccessChain $ Identifier "T") []])),
-      (Identifier "borrow_global_mut", VariableAnnotations (Just $ -4) (TypeArrow [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [], TypeMutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "T") []])),
-      (Identifier "borrow_global", VariableAnnotations (Just $ -5) (TypeArrow [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [], TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "T") []])),
-      (Identifier "exists", VariableAnnotations (Just $ -5) (TypeArrow [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [], booleanType]))
+    [ (Identifier "move_to", VariableAnnotations (Just $ -2) (TypeArrow [Identifier "T"] [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "signer") [], TypeConstructor (LocalNameAccessChain $ Identifier "T") [], unitType])),
+      (Identifier "move_from", VariableAnnotations (Just $ -3) (TypeArrow [Identifier "T"] [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [], TypeConstructor (LocalNameAccessChain $ Identifier "T") []])),
+      (Identifier "borrow_global_mut", VariableAnnotations (Just $ -4) (TypeArrow [Identifier "T"] [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [], TypeMutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "T") []])),
+      (Identifier "borrow_global", VariableAnnotations (Just $ -5) (TypeArrow [Identifier "T"] [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [], TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "T") []])),
+      (Identifier "exists", VariableAnnotations (Just $ -5) (TypeArrow [Identifier "T"] [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [], booleanType]))
     ]
