@@ -238,6 +238,8 @@ rewriteInlineStateMutation scopeIdentifier scopeUUID = rewriteInlineStateMutatio
     rewriteInlineStateMutation' expr@(PositionalStructExprOrFunctionCallExpr PositionalStructExprOrFunctionCall {pseofcNameAccessChain = LocalNameAccessChain (Identifier "move_to"), pseofcTypeArgs, pseofcFields = [signerExpr, resourceExpr]}) scopes (currUUID, bindingsToAdd) =
       let --
           -- First, the type argument migh be omitted, so infer it if necessary
+          -- FIXME: Might crash for Not in scope: Identifier "temp_i" if one of the parameters has been replaced by a temporary variable
+          -- (happened for if-then-else)
           resourceType = case pseofcTypeArgs of
             [] -> inferExprType resourceExpr scopes
             [t] -> t
@@ -325,6 +327,8 @@ rewriteInlineStateMutation scopeIdentifier scopeUUID = rewriteInlineStateMutatio
                       Just $
                         TypeTuple
                           [ -- Infer the type of the function call, considering also type parameters if present
+                            -- FIXME: Might crash for Not in scope: Identifier "temp_i" if one of the parameters has been replaced by a temporary variable
+                            -- (happened for if-then-else)
                             inferExprType expr scopes,
                             IntermediateTypeScopes
                           ],
@@ -365,6 +369,8 @@ rewriteInlineStateMutation scopeIdentifier scopeUUID = rewriteInlineStateMutatio
                           bindingsBindType =
                             Just $
                               TypeTuple
+                                -- FIXME: Might crash for Not in scope: Identifier "temp_i" the ending expression is replaced by a temporary variable
+                                -- (happened for if-then-else)
                                 [ inferExprType (SequenceExpr seq') scopes,
                                   IntermediateTypeScopes
                                 ],
@@ -378,10 +384,112 @@ rewriteInlineStateMutation scopeIdentifier scopeUUID = rewriteInlineStateMutatio
                   (currUUID, bindingsToAdd')
                 )
        in (expr, (currUUID', bindingstoAdd''))
-    -- TODO: Should also rewite if else. NOTE that is probably already modified wrongly (without considering conditional execution, return type instead is correct)
-    -- during the universe function when examining the sequence
-    -- A possible solution might be using an intermediate expression and handle it accordingly?
+    -- In case of if-then-else, each branch can be an Expr (SequenceExpr included, if if does not modify the state)
+    -- Then, if the branch has some temporary bindings in it, it means it modifies the state.
+    -- In this case, the whole branch is replaced by a sequence, complete with PUSH/POP of a new scope, with all the temporary bindings in it.
+    -- By doing so, it is respected that a mutation will not happen if is not in the branch that is actually executed
+    -- Additionally, the branch will return `(end_expr, tail scopes)`, meaning that the other branch needs to be aligned,
+    -- and also that the if-then-else as a whole needs to be replaced by a temporary variable
+    rewriteInlineStateMutation' (IfThenElseTerm expr@IfThenElse {ifThenElseIfBranch, ifThenElseElseBranch}) scopes (currUUID, bindingsToAdd) =
+      let (tempBindsOfIfBranch, bindingsToAdd') = getTemporaryBindingsOfExpr ifThenElseIfBranch bindingsToAdd
+          (tempBindsOfElseBranch, bindingsToAdd'') = case ifThenElseElseBranch of
+            Nothing -> ([], bindingsToAdd')
+            Just ifThenElseElseBranch' -> getTemporaryBindingsOfExpr ifThenElseElseBranch' bindingsToAdd'
+
+          -- Given either the if or the else branch, with the corresponding temporary bindings,
+          -- returns a SequenceExpr that contains all the temporary bindings and always returns `(end_expr, tail scopes)`,
+          -- even if the branch does not modify the state. This is so to align the return types of the branches
+          rewriteBranch :: Expr -> [SequenceItem] -> Expr
+          rewriteBranch branch tempBindings =
+            SequenceExpr $
+              Sequence
+                { sequenceUses = [],
+                  sequenceItems =
+                    -- Push a new scope
+                    SequenceItemBindExpr
+                      ( Bindings
+                          { bindings = BindedSingle $ BindIdentifier scopeIdentifier (Just scopeUUID),
+                            bindingsBindType = Just IntermediateTypeScopes,
+                            bindingsBindExpr = Just $ IntermediateExprExpr $ IntermediatePushScope scopeIdentifier
+                          }
+                      )
+                      -- Add the temporary bindings
+                      : tempBindings,
+                  -- Return the pair `(end_expr, tail scopes)`
+                  sequenceEndExpr = Just $ CommaExpr [branch, IntermediateExprExpr $ IntermediatePopScope scopeIdentifier]
+                }
+       in case (tempBindsOfIfBranch, tempBindsOfElseBranch) of
+            -- In this case, both branches are pure
+            ([], []) -> (IfThenElseTerm expr, (currUUID, bindingsToAdd''))
+            -- Otherwise, both branches need to be rewritten to return `(end_expr, tail scopes)`,
+            -- and the whole if-then-else needs to be replaced by a temporary variable
+            _ ->
+              let -- create a new binding in the form `let (temp, scopes) = if-then-else`
+                  -- The new variable should be `temp_i` to prevent name clashes with other rewrites
+                  tempIdentifier' = case tempIdentifier of
+                    Identifier str -> Identifier $ str ++ show currUUID
+
+                  newBinding =
+                    Bindings
+                      { bindings =
+                          BindedTuple
+                            [ BindIdentifier tempIdentifier' (Just currUUID),
+                              BindIdentifier scopeIdentifier (Just scopeUUID)
+                            ],
+                        bindingsBindType =
+                          Just $
+                            TypeTuple
+                              [ -- Infer the type of the whole if-then-else
+                                -- FIXME: Might crash for Not in scope: Identifier "temp_i" if one of the expressions has been replaced by a temporary variable
+                                -- (happened for if-then-else)
+                                inferExprType (IfThenElseTerm expr) scopes,
+                                IntermediateTypeScopes
+                              ],
+                        -- As the binded expression, use the if-then-else with the rewritten branches
+                        bindingsBindExpr =
+                          Just $
+                            IfThenElseTerm
+                              expr
+                                { ifThenElseIfBranch = rewriteBranch ifThenElseIfBranch tempBindsOfIfBranch,
+                                  -- Regarding the else branch, in case it is not present, add a dummy branch that still returns `(unit, tail scopes)`
+                                  ifThenElseElseBranch = case ifThenElseElseBranch of
+                                    Nothing -> Just $ CommaExpr [CommaExpr [], IntermediateExprExpr $ IntermediatePopScope scopeIdentifier]
+                                    Just ifThenElseElseBranch' -> Just $ rewriteBranch ifThenElseElseBranch' tempBindsOfElseBranch
+                                }
+                      }
+               in -- and replace the if-then-else itself with the temporary variable
+                  (NameAccessChainExpr $ LocalNameAccessChain tempIdentifier', (currUUID + 1, Map.insert tempIdentifier' newBinding bindingsToAdd))
     rewriteInlineStateMutation' expr _scopes state = (expr, state)
+
+-- |
+-- Given an expression, return its temporary bindings,
+-- sorted by the order they have been created during the traversal
+-- The other element of the tuple is the updated Map of the temporary bindings
+-- In fact, temporary bindings already inspected should be removed in order to not be inserted multiple times,
+-- for example by an outer sequence that sees the temporary variables of an inner sequence
+getTemporaryBindingsOfExpr :: Expr -> Map.Map Identifier Bindings -> ([SequenceItem], Map.Map Identifier Bindings)
+getTemporaryBindingsOfExpr expr' bindingsToAdd''' =
+  let -- Retrieve all identifiers in the expression
+      identifiersInExpr = [ident | NameAccessChainExpr (LocalNameAccessChain ident) <- universe expr']
+      -- Then, if the identifier has a temporary binding associated, retrieve it along with the UUID
+      (identsUUIDWithBinding, bindingsToAdd'''') =
+        foldr
+          ( \ident (acc', bindingsToAdd''''') ->
+              -- Here, retrieve the temporary binding associated to this identifier (if exists)
+              case Map.updateLookupWithKey (\_k _val -> Nothing) ident bindingsToAdd''''' of
+                -- If exists, it must be in the form `let (temp_i, scopes) = ...`, so extract the UUID of temp_i
+                (Just binding@Bindings {bindings = BindedTuple [BindIdentifier _ identUUID, _]}, bindingsToAdd'''''') -> case identUUID of
+                  (Just identUUID') -> ((identUUID', binding) : acc', bindingsToAdd'''''')
+                  Nothing -> error $ "Found temporary variable without UUID: " ++ show ident
+                (Just binding, _) -> error $ "Found unexpected temporary binding associated to UUID " ++ show ident ++ ": " ++ show binding
+                (Nothing, _) -> (acc', bindingsToAdd''''')
+          )
+          ([], bindingsToAdd''')
+          identifiersInExpr
+      -- The UUID is used to sort the bindings, since it follows the post order visit
+      -- and so the execution order
+      sortedBinds = map (SequenceItemBindExpr . snd) $ sortOn fst identsUUIDWithBinding
+   in (sortedBinds, bindingsToAdd'''')
 
 -- |
 -- Utility function
@@ -405,35 +513,7 @@ rewriteInlineStateMutation scopeIdentifier scopeUUID = rewriteInlineStateMutatio
 -- In fact, this function does not create any new binding, it only adds bindings that have already been created
 rewriteInlineStateMutationInSequence :: Sequence -> Identifier -> AnnotatedUUID -> Map.Map Identifier Bindings -> Bool -> Bool -> (Sequence, Map.Map Identifier Bindings, Bool)
 rewriteInlineStateMutationInSequence (Sequence {sequenceUses, sequenceItems, sequenceEndExpr}) scopeIdentifier scopeUUID bindingsToAdd doPushScope forceMutatesState =
-  let -- Given an expression, return its temporary bindings,
-      -- sorted by the order they have been created during the traversal
-      -- The other element of the tuple is the updated Map of the temporary bindings
-      -- In fact, temporary bindings already inspected should be removed in order to not be inserted multiple times,
-      -- for example by an outer sequence that sees the temporary variables of an inner sequence
-      getTemporaryBindingsOfExpr :: Expr -> Map.Map Identifier Bindings -> ([SequenceItem], Map.Map Identifier Bindings)
-      getTemporaryBindingsOfExpr expr' bindingsToAdd''' =
-        let -- Retrieve all identifiers in the expression
-            identifiersInExpr = [ident | NameAccessChainExpr (LocalNameAccessChain ident) <- universe expr']
-            -- Then, if the identifier has a temporary binding associated, retrieve it along with the UUID
-            (identsUUIDWithBinding, bindingsToAdd'''') =
-              foldr
-                ( \ident (acc', bindingsToAdd''''') ->
-                    -- Here, retrieve the temporary binding associated to this identifier (if exists)
-                    case Map.updateLookupWithKey (\_k _val -> Nothing) ident bindingsToAdd''''' of
-                      -- If exists, it must be in the form `let (temp_i, scopes) = ...`, so extract the UUID of temp_i
-                      (Just binding@Bindings {bindings = BindedTuple [BindIdentifier _ identUUID, _]}, bindingsToAdd'''''') -> case identUUID of
-                        (Just identUUID') -> ((identUUID', binding) : acc', bindingsToAdd'''''')
-                        Nothing -> error $ "Found temporary variable without UUID: " ++ show ident
-                      (Just binding, _) -> error $ "Found unexpected temporary binding associated to UUID " ++ show ident ++ ": " ++ show binding
-                      (Nothing, _) -> (acc', bindingsToAdd''''')
-                )
-                ([], bindingsToAdd''')
-                identifiersInExpr
-            -- The UUID is used to sort the bindings, since it follows the post order visit
-            -- and so the execution order
-            sortedBinds = map (SequenceItemBindExpr . snd) $ sortOn fst identsUUIDWithBinding
-         in (sortedBinds, bindingsToAdd'''')
-
+  let --
       -- For each sequence item, prepend its temporary let bindings
       -- Here it forces the optional `forceMutatesState`, so that the subsequent logic will be the same unregarding that parameter
       (sequenceItems', bindingsToAdd', mutatesState) = foldr handleSeqItem ([], bindingsToAdd, forceMutatesState) sequenceItems
