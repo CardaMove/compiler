@@ -375,8 +375,8 @@ resolveParametricType t _ = error $ "Unexpected type: " ++ show t
 -- Given all the temporary bindings, retrieves the original type of the temporary identifiers as a new Scope
 -- In this way, it is possible to infer the type of expressions that depend on those temporary identifiers
 --
--- FIXME: This is called multiple types with the same input, and moreover might often be not needed
--- Can a possible fix be inserting this scope as the last one, and leave to the lazy evaluation the work?
+-- FIXME: This is called multiple times with the same input, and moreover might often be not needed
+-- Can a possible fix be inserting this scope as the last one, and leave the work to the lazy evaluation?
 mapTemporaryBindingsToScope :: Map.Map Identifier Bindings -> Scope
 mapTemporaryBindingsToScope = Map.map handleTempBind
   where
