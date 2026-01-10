@@ -7,7 +7,7 @@ import Data.Maybe (fromMaybe)
 import Data.Set qualified as Set
 import Move.AST
 import Move.Translations.TraversalUtils (TraversalMapper, traversalIdentity, traverseRootPostOrder)
-import Move.Translations.Utils (Scope, VariableAnnotations (VariableAnnotations), getIdentifierFromScopes, inferExprType, unitType, mapTemporaryBindingsToScope)
+import Move.Translations.Utils (Scope, VariableAnnotations (VariableAnnotations), getIdentifierFromScopes, inferExprType, mapTemporaryBindingsToScope, unitType)
 
 -- |
 -- Given the AST, marks all the variables that need to be inserted in the explicit local scope
@@ -452,9 +452,16 @@ rewriteInlineStateMutation scopeIdentifier scopeUUID = rewriteInlineStateMutatio
                             IfThenElseTerm
                               expr
                                 { ifThenElseIfBranch = rewriteBranch ifThenElseIfBranch tempBindsOfIfBranch,
-                                  -- Regarding the else branch, in case it is not present, add a dummy branch that still returns `(unit, tail scopes)`
+                                  -- Regarding the else branch, in case it is not present, add a dummy branch consisting in a sequence that simply returns `(unit, scopes)`
                                   ifThenElseElseBranch = case ifThenElseElseBranch of
-                                    Nothing -> Just $ CommaExpr [CommaExpr [], IntermediateExprExpr $ IntermediatePopScope scopeIdentifier]
+                                    Nothing ->
+                                      Just $
+                                        SequenceExpr $
+                                          Sequence
+                                            { sequenceUses = [],
+                                              sequenceItems = [],
+                                              sequenceEndExpr = Just $ CommaExpr [CommaExpr [], NameAccessChainExpr $ LocalNameAccessChain scopeIdentifier]
+                                            }
                                     Just ifThenElseElseBranch' -> Just $ rewriteBranch ifThenElseElseBranch' tempBindsOfElseBranch
                                 }
                       }

@@ -157,6 +157,24 @@ testAddLocalScopeInRoot = describe "Tests the function `addLocalScopeInRoot`" $ 
 
     updated `shouldBe` toModule
 
+  it "Rewrites if-then-else accordingly if the branches mutate the state, respecting the resulting type" $ do
+    fromModuleStr <- readFile "test/Move/Translations/files/ScopesSpec_15.move"
+    toModuleStr <- readFile "test/Move/Translations/files/ScopesSpec_16.txt"
+
+    let parsed = parse $ scan fromModuleStr
+    let toModule = read toModuleStr :: Root
+
+
+    let (annotated, currUUID) = runState (annotateBindingsWithUUID parsed) 0
+
+    let markedVars = markVariablesForLocalScope annotated
+
+    let updated = addLocalScopeInRoot annotated markedVars currUUID
+
+    -- FIXME: Was expecting that a sequence branch would be translated into a single temporary variable
+    -- but it is not. Still working
+    updated `shouldBe` toModule
+
 
 spec :: Spec
 spec = do
