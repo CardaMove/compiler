@@ -370,3 +370,19 @@ resolveParametricType (TypeImmutableRef t) parentTArgs = TypeImmutableRef $ reso
 resolveParametricType (TypeMutableRef t) parentTArgs = TypeMutableRef $ resolveParametricType t parentTArgs
 resolveParametricType (TypeTuple t) parentTArgs = TypeTuple $ map (`resolveParametricType` parentTArgs) t
 resolveParametricType t _ = error $ "Unexpected type: " ++ show t 
+
+-- |
+-- Given all the temporary bindings, retrieves the original type of the temporary identifiers as a new Scope
+-- In this way, it is possible to infer the type of expressions that depend on those temporary identifiers
+--
+-- FIXME: This is called multiple types with the same input, and moreover might often be not needed
+-- Can a possible fix be inserting this scope as the last one, and leave to the lazy evaluation the work?
+mapTemporaryBindingsToScope :: Map.Map Identifier Bindings -> Scope
+mapTemporaryBindingsToScope = Map.map handleTempBind
+  where
+    handleTempBind :: Bindings -> VariableAnnotations
+    handleTempBind Bindings{
+      bindings = BindedTuple [BindIdentifier _ tempUUID, _],
+      bindingsBindType = Just (TypeTuple [tempT, IntermediateTypeScopes])
+    } = VariableAnnotations tempUUID tempT
+    handleTempBind bind = error $ "Unexpected temporary binding: " ++ show bind

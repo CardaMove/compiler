@@ -7,7 +7,7 @@ import Data.Maybe (fromMaybe)
 import Data.Set qualified as Set
 import Move.AST
 import Move.Translations.TraversalUtils (TraversalMapper, traversalIdentity, traverseRootPostOrder)
-import Move.Translations.Utils (Scope, VariableAnnotations (VariableAnnotations), getIdentifierFromScopes, inferExprType, unitType)
+import Move.Translations.Utils (Scope, VariableAnnotations (VariableAnnotations), getIdentifierFromScopes, inferExprType, unitType, mapTemporaryBindingsToScope)
 
 -- |
 -- Given the AST, marks all the variables that need to be inserted in the explicit local scope
@@ -237,11 +237,11 @@ rewriteInlineStateMutation scopeIdentifier scopeUUID = rewriteInlineStateMutatio
     -- This works similarly to how any function call is rewritten
     rewriteInlineStateMutation' expr@(PositionalStructExprOrFunctionCallExpr PositionalStructExprOrFunctionCall {pseofcNameAccessChain = LocalNameAccessChain (Identifier "move_to"), pseofcTypeArgs, pseofcFields = [signerExpr, resourceExpr]}) scopes (currUUID, bindingsToAdd) =
       let --
-          -- First, the type argument migh be omitted, so infer it if necessary
-          -- FIXME: Might crash for Not in scope: Identifier "temp_i" if one of the parameters has been replaced by a temporary variable
-          -- (happened for if-then-else)
+          -- To correctly infer the type, it might be needed to access some temporary variables,
+          -- so they have been added as a new scope.
+          -- Adding a scope on top does not cause issues in this step
           resourceType = case pseofcTypeArgs of
-            [] -> inferExprType resourceExpr scopes
+            [] -> inferExprType resourceExpr (scopes ++ [mapTemporaryBindingsToScope bindingsToAdd])
             [t] -> t
             _ -> error $ "Found a move_to with invalid type arguments: " ++ show expr
 
@@ -326,10 +326,10 @@ rewriteInlineStateMutation scopeIdentifier scopeUUID = rewriteInlineStateMutatio
                     bindingsBindType =
                       Just $
                         TypeTuple
-                          [ -- Infer the type of the function call, considering also type parameters if present
-                            -- FIXME: Might crash for Not in scope: Identifier "temp_i" if one of the parameters has been replaced by a temporary variable
-                            -- (happened for if-then-else)
-                            inferExprType expr scopes,
+                          [ -- To correctly infer the type, it might be needed to access some temporary variables,
+                            -- so they have been added as a new scope.
+                            -- Adding a scope on top does not cause issues in this step
+                            inferExprType expr (scopes ++ [mapTemporaryBindingsToScope bindingsToAdd]),
                             IntermediateTypeScopes
                           ],
                     bindingsBindExpr =
@@ -369,9 +369,10 @@ rewriteInlineStateMutation scopeIdentifier scopeUUID = rewriteInlineStateMutatio
                           bindingsBindType =
                             Just $
                               TypeTuple
-                                -- FIXME: Might crash for Not in scope: Identifier "temp_i" the ending expression is replaced by a temporary variable
-                                -- (happened for if-then-else)
-                                [ inferExprType (SequenceExpr seq') scopes,
+                                -- To correctly infer the type, it might be needed to access some temporary variables,
+                                -- so they have been added as a new scope.
+                                -- Adding a scope on top does not cause issues in this step
+                                [ inferExprType (SequenceExpr seq') (scopes ++ [mapTemporaryBindingsToScope bindingsToAdd]),
                                   IntermediateTypeScopes
                                 ],
                           bindingsBindExpr = Just $ SequenceExpr seq'
@@ -439,10 +440,10 @@ rewriteInlineStateMutation scopeIdentifier scopeUUID = rewriteInlineStateMutatio
                         bindingsBindType =
                           Just $
                             TypeTuple
-                              [ -- Infer the type of the whole if-then-else
-                                -- FIXME: Might crash for Not in scope: Identifier "temp_i" if one of the expressions has been replaced by a temporary variable
-                                -- (happened for if-then-else)
-                                inferExprType (IfThenElseTerm expr) scopes,
+                              [ -- To correctly infer the type, it might be needed to access some temporary variables,
+                                -- so they have been added as a new scope.
+                                -- Adding a scope on top does not cause issues in this step
+                                inferExprType (IfThenElseTerm expr) (scopes ++ [mapTemporaryBindingsToScope bindingsToAdd]),
                                 IntermediateTypeScopes
                               ],
                         -- As the binded expression, use the if-then-else with the rewritten branches
