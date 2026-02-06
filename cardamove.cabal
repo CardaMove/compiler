@@ -33,6 +33,7 @@ library
       Move.Translations.Loops
       Move.Translations.Scopes
       Move.Translations.TraversalUtils
+      Move.Translations.TypeWitness
       Move.Translations.Utils
   other-modules:
       Paths_cardamove

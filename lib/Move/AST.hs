@@ -244,18 +244,24 @@ data Type
   | TypeTuple [Type]
   | TypeUnknown
   | IntermediateTypeScopes
-  -- |
-  -- Represents a function type, optionally with type params
-  -- Example: `fun my_fun<A>(b: B, c: C): D<A>`
-  | TypeArrow [Identifier] [Type]
-  -- |
-  -- Intermediate type used for named struct declarations.
-  -- 
-  -- It includes the name of the type parameters and all the nested fields.
-  --
-  -- NOTE: This type should only be used for declarations. All variables that resolve to a struct should instead use the TypeConstructor,
-  -- this is because this type acs only as a way to keep the nested fields of a struct declaration and to resolve their type
-  | IntermediateTypeNamedStructDeclaration [Identifier] [NamedField]
+  | -- |
+    -- Represents a function type, optionally with type params
+    --
+    -- Type parameters are returned as identifiers in the first element
+    --
+    -- The second element contains the parameters and return type of the function
+    --
+    -- Example: `fun my_fun<A>(b: B, c: C): D<A>`
+    TypeArrow [Identifier] [Type]
+  | -- |
+    -- Intermediate type used for named struct declarations.
+    --
+    -- It includes the name of the type parameters and all the nested fields.
+    --
+    -- NOTE: This type should only be used for declarations. All variables that resolve to a struct should instead use the TypeConstructor,
+    -- this is because this type acs only as a way to keep the nested fields of a struct declaration and to resolve their type
+    IntermediateTypeNamedStructDeclaration [Identifier] [NamedField]
+  | IntermediateTypeWitnessType
   deriving (Eq, Show, Read, Data, Typeable, Ord)
 
 -- | A function declaration
@@ -613,41 +619,55 @@ type AnnotatedUUID = Int
 -- |
 -- Nodes used as intermediate representations for some expressions
 data IntermediateExpr
-  =
-    -- | Any `&[mut] a[.b.c]`
+  = -- | Any `&[mut] a[.b.c]`
     IntermediateReferenceLocalState [Identifier] Type
-    -- | Any `*a` on the right side
-  | IntermediateGetDereferenceLocalState Expr Type
-  -- | Any `*a` on the left side
-  | IntermediatePutDereferenceLocalState Identifier Expr
-    -- | Any `a[.b.c]` where `a` is in the local state
-  | IntermediateGetLocalState [Identifier] Type
-    -- | Any `a[.b.c] = ...`
-  | IntermediatePutLocalState [Identifier] Expr
-    -- | Any `let a = ...` where `a` has to be inserted in the local state
-  | IntermediatePostLocalState Identifier (Maybe Expr)
-    -- | Represents pushing a new local scope on top of the existing ones
-  | IntermediatePushScope Identifier
-    -- | Represents popping the local scope from the existing ones
-  | IntermediatePopScope Identifier
-  -- | Represents a `borrow_global_mut<T>(address)`
-  --
-  -- The second argument is the type of `T`
-  | IntermediateBorrowGlobalMut Expr Type
-  -- | Represents a `borrow_global<T>(address)`
-  --
-  -- The second argument is the type of `T`
-  | IntermediateBorrowGlobal Expr Type
-  -- | Represents a `exists<T>(address)`
-  --
-  -- The second argument is the type of `T`
-  | IntermediateExists Expr Type
-  -- | Represents a `move_to<T>(&signer, T)`
-  --
-  -- The last argument is the type of `T`
-  | IntermediateMoveTo Expr Expr Type
-  -- | Represents a `move_from<T>(address)`
-  --
-  -- The second argument is the type of `T`
-  | IntermediateMoveFrom Expr Type
+  | -- | Any `*a` on the right side
+    IntermediateGetDereferenceLocalState Expr Type
+  | -- | Any `*a` on the left side
+    IntermediatePutDereferenceLocalState Identifier Expr
+  | -- | Any `a[.b.c]` where `a` is in the local state
+    IntermediateGetLocalState [Identifier] Type
+  | -- | Any `a[.b.c] = ...`
+    -- FIXME: probably needs to know the type of the root identifier, so to downcast it and access nested fields
+    IntermediatePutLocalState [Identifier] Expr
+  | -- | Any `let a = ...` where `a` has to be inserted in the local state
+    IntermediatePostLocalState Identifier (Maybe Expr)
+  | -- | Represents pushing a new local scope on top of the existing ones
+    IntermediatePushScope Identifier
+  | -- | Represents popping the local scope from the existing ones
+    IntermediatePopScope Identifier
+  | -- | Represents a `borrow_global_mut<T>(address)`
+    --
+    -- The second argument is the type of `T`
+    IntermediateBorrowGlobalMut Expr Type
+  | -- | Represents a `borrow_global<T>(address)`
+    --
+    -- The second argument is the type of `T`
+    IntermediateBorrowGlobal Expr Type
+  | -- | Represents a `exists<T>(address)`
+    --
+    -- The second argument is the type of `T`
+    IntermediateExists Expr Type
+  | -- | Represents a `move_to<T>(&signer, T)`
+    --
+    -- The last argument is the type of `T`
+    IntermediateMoveTo Expr Expr Type
+  | -- | Represents a `move_from<T>(address)`
+    --
+    -- The second argument is the type of `T`
+    IntermediateMoveFrom Expr Type
+  -- | Represents the expression holding a type witness
+  | IntermediateTypeWitnessExprExpr IntermediateTypeWitnessExpr
+  deriving (Eq, Show, Read, Data, Typeable, Ord)
+
+-- |
+-- Represents the expression holding a type witness
+--
+-- The constructor is always a name, while the arguments can be type witnesses themselves
+--
+-- Note that a witnessed type either is a type parameter itself such as `T`, or is a name with optional type arguments,
+-- such as `MyType<T>`.
+--
+-- Types as `MyType<&u64>`, `MyType<(u64, u64)` or `T<MyType` are forbidden
+data IntermediateTypeWitnessExpr = IntermediateTypeWithnessC NameAccessChain [IntermediateTypeWitnessExpr]
   deriving (Eq, Show, Read, Data, Typeable, Ord)
