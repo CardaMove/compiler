@@ -1,0 +1,44 @@
+RModule
+( Module
+    { moduleAddress = NamedAddress (Identifier "NamedAddr"),
+        moduleIdentifier = Identifier "TestingModule",
+        moduleTopLevels =
+        [ TopLevelNamedStruct
+            ( NamedStruct
+                { namedStructIdentifier = Identifier "F",
+                    namedStructTypeParameters = [TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "T1", typeConstraints = []}],
+                    namedStructAbilities = [Key, Store],
+                    namedStructFields = [NamedField {fieldIdentifier = Identifier "val", fieldType = TypeConstructor (LocalNameAccessChain (Identifier "T1")) []}]
+                }
+            ),
+            TopLevelFunction
+            ( Function
+                { functionHasNativeModifier = False,
+                    functionVisibilityModifier = Nothing,
+                    functionHasEntryModifier = False,
+                    functionName = Identifier "noT",
+                    functionTypeParameters = [],
+                    functionParameters = [Parameter {parameterIdentifier = Identifier "a", parameterType = TypeConstructor (LocalNameAccessChain (Identifier "u64")) [], parameterUUID = Just 1}],
+                    functionReturnType = Just (TypeTuple []),
+                    functionAcquires = [],
+                    functionBody = Just (Sequence {sequenceUses = [], sequenceItems = [], sequenceEndExpr = Nothing}),
+                    functionUUID = Just 0
+                }
+            ),
+            TopLevelFunction
+            ( Function
+                { functionHasNativeModifier = False,
+                    functionVisibilityModifier = Nothing,
+                    functionHasEntryModifier = False,
+                    functionName = Identifier "twoT",
+                    functionTypeParameters = [TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "T", typeConstraints = []}, TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "AnotherT", typeConstraints = []}],
+                    functionParameters = [Parameter {parameterIdentifier = Identifier "a", parameterType = TypeConstructor (LocalNameAccessChain (Identifier "u64")) [], parameterUUID = Just 3}, Parameter {parameterIdentifier = Identifier "b", parameterType = TypeConstructor (LocalNameAccessChain (Identifier "bool")) [], parameterUUID = Just 4}, Parameter {parameterIdentifier = Identifier "T", parameterType = IntermediateTypeWitnessType, parameterUUID = Just 5}, Parameter {parameterIdentifier = Identifier "AnotherT", parameterType = IntermediateTypeWitnessType, parameterUUID = Just 6}],
+                    functionReturnType = Just (TypeConstructor (LocalNameAccessChain (Identifier "F")) [TypeConstructor (LocalNameAccessChain (Identifier "AnotherT")) []]),
+                    functionAcquires = [],
+                    functionBody = Just (Sequence {sequenceUses = [], sequenceItems = [], sequenceEndExpr = Nothing}),
+                    functionUUID = Just 2
+                }
+            )
+        ]
+    }
+)

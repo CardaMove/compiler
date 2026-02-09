@@ -7,8 +7,8 @@ import Control.Monad.State
 import Data.Generics.Uniplate.Data (transformBiM)
 import Data.List qualified as List
 import Data.Map qualified as Map
-import Move.AST
 import Data.Maybe (fromMaybe)
+import Move.AST
 
 -- | Unity type ()
 unitType :: Type
@@ -290,10 +290,9 @@ inferExprType (PositionalStructExprOrFunctionCallExpr expr@(PositionalStructExpr
     VariableAnnotations _ (TypeArrow typeParams ts) ->
       -- TODO: For now, inference of type arguments is not performed
       if length typeParams /= length pseofcTypeArgs
-        then error $ "Found a function call with wrong number of type arguments: " ++ show expr
+        then error $ "Inferring type arguments is currently not supported, or mismatching number of type arguments: " ++ show expr
         -- Resolve the return type of the function
         else resolveParametricType (last ts) (zip typeParams pseofcTypeArgs)
-
     -- Otherwise, for a struct, it is the name of the struct
     VariableAnnotations _ structType -> structType
 inferExprType (PositionalStructExprOrFunctionCallExpr (PositionalStructExprOrFunctionCall {pseofcNameAccessChain = _})) scopes = TypeUnknown
@@ -338,11 +337,12 @@ inferExprType (IntermediateExprExpr (IntermediatePutLocalState _ _)) _ = Interme
 inferExprType (IntermediateExprExpr (IntermediatePostLocalState _ _)) _ = IntermediateTypeScopes
 inferExprType (IntermediateExprExpr (IntermediatePushScope _)) _ = IntermediateTypeScopes
 inferExprType (IntermediateExprExpr (IntermediatePopScope _)) _ = IntermediateTypeScopes
-inferExprType (IntermediateExprExpr (IntermediateBorrowGlobalMut _ t)) _ = TypeMutableRef t
-inferExprType (IntermediateExprExpr (IntermediateBorrowGlobal _ t)) _ = TypeImmutableRef t
-inferExprType (IntermediateExprExpr (IntermediateExists _ _)) _ = booleanType
+inferExprType (IntermediateExprExpr (IntermediateBorrowGlobalMut _ t _)) _ = TypeMutableRef t
+inferExprType (IntermediateExprExpr (IntermediateBorrowGlobal _ t _)) _ = TypeImmutableRef t
+inferExprType (IntermediateExprExpr (IntermediateExists {})) _ = booleanType
 inferExprType (IntermediateExprExpr (IntermediateMoveTo {})) _ = unitType
-inferExprType (IntermediateExprExpr (IntermediateMoveFrom _ t)) _ = t
+inferExprType (IntermediateExprExpr (IntermediateMoveFrom _ t _)) _ = t
+inferExprType (IntermediateExprExpr (IntermediateTypeWitnessExprExpr _)) _ = IntermediateTypeWitnessType
 
 -- |
 -- Given a type that might be parametric, along with the type parameters of the record (or function) and their respective type arguments,
@@ -352,11 +352,11 @@ resolveParametricType :: Type -> [(Identifier, Type)] -> Type
 -- ```struct A<T>{label1: T}```
 resolveParametricType t@(TypeConstructor (LocalNameAccessChain tCons) []) parentTArgs = fromMaybe t $ findMap (\(ident, typ) -> if tCons == ident then Just typ else Nothing) parentTArgs
   where
-    -- |
+    -- \|
     -- Combination of List.find and List.map
     findMap :: (a -> Maybe b) -> [a] -> Maybe b
     findMap _ [] = Nothing
-    findMap mapper (x:xs) = case mapper x of
+    findMap mapper (x : xs) = case mapper x of
       mapped@(Just _) -> mapped
       Nothing -> findMap mapper xs
 -- If the type is not a local name, surely is not a type param
@@ -369,7 +369,7 @@ resolveParametricType (TypeConstructor tCons tArgs) parentTArgs = TypeConstructo
 resolveParametricType (TypeImmutableRef t) parentTArgs = TypeImmutableRef $ resolveParametricType t parentTArgs
 resolveParametricType (TypeMutableRef t) parentTArgs = TypeMutableRef $ resolveParametricType t parentTArgs
 resolveParametricType (TypeTuple t) parentTArgs = TypeTuple $ map (`resolveParametricType` parentTArgs) t
-resolveParametricType t _ = error $ "Unexpected type: " ++ show t 
+resolveParametricType t _ = error $ "Unexpected type: " ++ show t
 
 -- |
 -- Given all the temporary bindings, retrieves the original type of the temporary identifiers as a new Scope
@@ -381,8 +381,9 @@ mapTemporaryBindingsToScope :: Map.Map Identifier Bindings -> Scope
 mapTemporaryBindingsToScope = Map.map handleTempBind
   where
     handleTempBind :: Bindings -> VariableAnnotations
-    handleTempBind Bindings{
-      bindings = BindedTuple [BindIdentifier _ tempUUID, _],
-      bindingsBindType = Just (TypeTuple [tempT, IntermediateTypeScopes])
-    } = VariableAnnotations tempUUID tempT
+    handleTempBind
+      Bindings
+        { bindings = BindedTuple [BindIdentifier _ tempUUID, _],
+          bindingsBindType = Just (TypeTuple [tempT, IntermediateTypeScopes])
+        } = VariableAnnotations tempUUID tempT
     handleTempBind bind = error $ "Unexpected temporary binding: " ++ show bind

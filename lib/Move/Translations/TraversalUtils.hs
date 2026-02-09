@@ -157,12 +157,19 @@ traverseRootPostOrder exprMapper bindsMapper root state = case root of
               topLevelMap state' topLevel = (state', topLevel)
        in (mappedTopLevels, stateAfterTraversal)
 
+-- |
+-- Contains some functions that Move recognizes as stdlib,
+-- such as global storage operators and TODO: Coin library
+--
+-- Note that the global storage definitions have a final parameter for the type witness.
+-- This will correspond to the actual AST only after the TypeWitness step,
+-- meaning that before it, the actual function invocation is missing that argument
 moveStdLibScope :: Scope
 moveStdLibScope =
   Map.fromList
-    [ (Identifier "move_to", VariableAnnotations (Just $ -2) (TypeArrow [Identifier "T"] [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "signer") [], TypeConstructor (LocalNameAccessChain $ Identifier "T") [], unitType])),
-      (Identifier "move_from", VariableAnnotations (Just $ -3) (TypeArrow [Identifier "T"] [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [], TypeConstructor (LocalNameAccessChain $ Identifier "T") []])),
-      (Identifier "borrow_global_mut", VariableAnnotations (Just $ -4) (TypeArrow [Identifier "T"] [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [], TypeMutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "T") []])),
-      (Identifier "borrow_global", VariableAnnotations (Just $ -5) (TypeArrow [Identifier "T"] [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [], TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "T") []])),
-      (Identifier "exists", VariableAnnotations (Just $ -5) (TypeArrow [Identifier "T"] [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [], booleanType]))
+    [ (Identifier "move_to", VariableAnnotations (Just $ -2) (TypeArrow [Identifier "T"] [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "signer") [], TypeConstructor (LocalNameAccessChain $ Identifier "T") [], IntermediateTypeWitnessType, unitType])),
+      (Identifier "move_from", VariableAnnotations (Just $ -3) (TypeArrow [Identifier "T"] [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [], IntermediateTypeWitnessType, TypeConstructor (LocalNameAccessChain $ Identifier "T") []])),
+      (Identifier "borrow_global_mut", VariableAnnotations (Just $ -4) (TypeArrow [Identifier "T"] [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [], IntermediateTypeWitnessType, TypeMutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "T") []])),
+      (Identifier "borrow_global", VariableAnnotations (Just $ -5) (TypeArrow [Identifier "T"] [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [], IntermediateTypeWitnessType, TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "T") []])),
+      (Identifier "exists", VariableAnnotations (Just $ -5) (TypeArrow [Identifier "T"] [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [], IntermediateTypeWitnessType, booleanType]))
     ]

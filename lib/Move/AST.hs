@@ -638,24 +638,24 @@ data IntermediateExpr
     IntermediatePopScope Identifier
   | -- | Represents a `borrow_global_mut<T>(address)`
     --
-    -- The second argument is the type of `T`
-    IntermediateBorrowGlobalMut Expr Type
+    -- Includes the type of `T` both as type for downcasting and (runtime) type witness
+    IntermediateBorrowGlobalMut Expr Type IntermediateTypeWitnessExpr
   | -- | Represents a `borrow_global<T>(address)`
     --
-    -- The second argument is the type of `T`
-    IntermediateBorrowGlobal Expr Type
+    -- Includes the type of `T` both as type for downcasting and (runtime) type witness
+    IntermediateBorrowGlobal Expr Type IntermediateTypeWitnessExpr
   | -- | Represents a `exists<T>(address)`
     --
-    -- The second argument is the type of `T`
-    IntermediateExists Expr Type
+    -- Includes the type of `T` both as type for downcasting and (runtime) type witness
+    IntermediateExists Expr Type IntermediateTypeWitnessExpr
   | -- | Represents a `move_to<T>(&signer, T)`
     --
-    -- The last argument is the type of `T`
-    IntermediateMoveTo Expr Expr Type
+    -- Includes the type of `T` both as type for downcasting and (runtime) type witness
+    IntermediateMoveTo Expr Expr Type IntermediateTypeWitnessExpr
   | -- | Represents a `move_from<T>(address)`
     --
-    -- The second argument is the type of `T`
-    IntermediateMoveFrom Expr Type
+    -- Includes the type of `T` both as type for downcasting and (runtime) type witness
+    IntermediateMoveFrom Expr Type IntermediateTypeWitnessExpr
   -- | Represents the expression holding a type witness
   | IntermediateTypeWitnessExprExpr IntermediateTypeWitnessExpr
   deriving (Eq, Show, Read, Data, Typeable, Ord)
@@ -663,11 +663,17 @@ data IntermediateExpr
 -- |
 -- Represents the expression holding a type witness
 --
--- The constructor is always a name, while the arguments can be type witnesses themselves
---
--- Note that a witnessed type either is a type parameter itself such as `T`, or is a name with optional type arguments,
+-- The constructor is either a name of a type (eg u64, MyCoin) with optionally type arguments (recursively),
+-- or a type witness (eg T), that must not have any type arguments,
+-- meaning that a witnessed type either is a type parameter itself such as `T`, or is a name with optional type arguments,
 -- such as `MyType<T>`.
 --
 -- Types as `MyType<&u64>`, `MyType<(u64, u64)` or `T<MyType` are forbidden
-data IntermediateTypeWitnessExpr = IntermediateTypeWithnessC NameAccessChain [IntermediateTypeWitnessExpr]
+--
+-- To distinguish the two cases, two variant instances have been defined
+--
+-- In the final code, the type witness has to be translated as a variable name, while the other as a string value
+data IntermediateTypeWitnessExpr = 
+  IntermediateTypeWithnessC NameAccessChain [IntermediateTypeWitnessExpr]
+  | IntermediateTypeWitnessIdent Identifier
   deriving (Eq, Show, Read, Data, Typeable, Ord)

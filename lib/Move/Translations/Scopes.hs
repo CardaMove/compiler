@@ -125,28 +125,28 @@ rewriteRefs
            ( PositionalStructExprOrFunctionCall
                { pseofcNameAccessChain = LocalNameAccessChain (Identifier "borrow_global_mut"),
                  pseofcTypeArgs,
-                 pseofcFields = [addressExpr]
+                 pseofcFields = [addressExpr, IntermediateExprExpr (IntermediateTypeWitnessExprExpr typeWitnessExpr)]
                }
              )
          )
   _scopes
   state = case pseofcTypeArgs of
     [] -> error $ "Found a borrow_global_mut with invalid type arguments: " ++ show expr
-    [t] -> (IntermediateExprExpr $ IntermediateBorrowGlobalMut addressExpr t, state)
+    [t] -> (IntermediateExprExpr $ IntermediateBorrowGlobalMut addressExpr t typeWitnessExpr, state)
     _ -> error $ "Found a borrow_global_mut with invalid type arguments: " ++ show expr
 rewriteRefs
   expr@( PositionalStructExprOrFunctionCallExpr
            ( PositionalStructExprOrFunctionCall
                { pseofcNameAccessChain = LocalNameAccessChain (Identifier "borrow_global"),
                  pseofcTypeArgs,
-                 pseofcFields = [addressExpr]
+                 pseofcFields = [addressExpr, IntermediateExprExpr (IntermediateTypeWitnessExprExpr typeWitnessExpr)]
                }
              )
          )
   _scopes
   state = case pseofcTypeArgs of
     [] -> error $ "Found a borrow_global with invalid type arguments: " ++ show expr
-    [t] -> (IntermediateExprExpr $ IntermediateBorrowGlobal addressExpr t, state)
+    [t] -> (IntermediateExprExpr $ IntermediateBorrowGlobal addressExpr t typeWitnessExpr, state)
     _ -> error $ "Found a borrow_global with invalid type arguments: " ++ show expr
 -- Also rewrite the `exists<T>(address)`
 rewriteRefs
@@ -154,14 +154,14 @@ rewriteRefs
            ( PositionalStructExprOrFunctionCall
                { pseofcNameAccessChain = LocalNameAccessChain (Identifier "exists"),
                  pseofcTypeArgs,
-                 pseofcFields = [addressExpr]
+                 pseofcFields = [addressExpr, IntermediateExprExpr (IntermediateTypeWitnessExprExpr typeWitnessExpr)]
                }
              )
          )
   _scopes
   state = case pseofcTypeArgs of
     [] -> error $ "Found a exists with invalid type arguments: " ++ show expr
-    [t] -> (IntermediateExprExpr $ IntermediateExists addressExpr t, state)
+    [t] -> (IntermediateExprExpr $ IntermediateExists addressExpr t typeWitnessExpr, state)
     _ -> error $ "Found a exists with invalid type arguments: " ++ show expr
 rewriteRefs expr _scopes state = (expr, state)
 
@@ -235,72 +235,90 @@ rewriteInlineStateMutation scopeIdentifier scopeUUID = rewriteInlineStateMutatio
     -- however in the (unlikely) case where a `move_to` is present inside an expression, will make it work by returning a unit
     --
     -- This works similarly to how any function call is rewritten
-    rewriteInlineStateMutation' expr@(PositionalStructExprOrFunctionCallExpr PositionalStructExprOrFunctionCall {pseofcNameAccessChain = LocalNameAccessChain (Identifier "move_to"), pseofcTypeArgs, pseofcFields = [signerExpr, resourceExpr]}) scopes (currUUID, bindingsToAdd) =
-      let --
-          -- To correctly infer the type, it might be needed to access some temporary variables,
-          -- so they have been added as a new scope.
-          -- Adding a scope on top does not cause issues in this step
-          resourceType = case pseofcTypeArgs of
-            [] -> inferExprType resourceExpr (scopes ++ [mapTemporaryBindingsToScope bindingsToAdd])
-            [t] -> t
-            _ -> error $ "Found a move_to with invalid type arguments: " ++ show expr
+    rewriteInlineStateMutation'
+      expr@( PositionalStructExprOrFunctionCallExpr
+               PositionalStructExprOrFunctionCall
+                 { pseofcNameAccessChain = LocalNameAccessChain (Identifier "move_to"),
+                   pseofcTypeArgs,
+                   pseofcFields = [signerExpr, resourceExpr, IntermediateExprExpr (IntermediateTypeWitnessExprExpr typeWitnessExpr)]
+                 }
+             )
+      scopes
+      (currUUID, bindingsToAdd) =
+        let --
+            -- To correctly infer the type, it might be needed to access some temporary variables,
+            -- so they have been added as a new scope.
+            -- Adding a scope on top does not cause issues in this step
+            resourceType = case pseofcTypeArgs of
+              [] -> inferExprType resourceExpr (scopes ++ [mapTemporaryBindingsToScope bindingsToAdd])
+              [t] -> t
+              _ -> error $ "Found a move_to with invalid type arguments: " ++ show expr
 
-          -- create a new binding in the form `let (temp, scopes) = my_func(..., scopes)`
-          -- The new variable should be `temp_i` to prevent name clashes with other rewrites
-          -- temp_i will always have unit value `()`
-          tempIdentifier' = case tempIdentifier of
-            Identifier str -> Identifier $ str ++ show currUUID
+            -- create a new binding in the form `let (temp, scopes) = my_func(..., scopes)`
+            -- The new variable should be `temp_i` to prevent name clashes with other rewrites
+            -- temp_i will always have unit value `()`
+            tempIdentifier' = case tempIdentifier of
+              Identifier str -> Identifier $ str ++ show currUUID
 
-          newBinding =
-            Bindings
-              { bindings =
-                  BindedTuple
-                    [ BindIdentifier tempIdentifier' (Just currUUID),
-                      BindIdentifier scopeIdentifier (Just scopeUUID)
-                    ],
-                bindingsBindType =
-                  Just $
-                    TypeTuple
-                      [ unitType,
-                        IntermediateTypeScopes
+            newBinding =
+              Bindings
+                { bindings =
+                    BindedTuple
+                      [ BindIdentifier tempIdentifier' (Just currUUID),
+                        BindIdentifier scopeIdentifier (Just scopeUUID)
                       ],
-                bindingsBindExpr =
-                  Just $ IntermediateExprExpr $ IntermediateMoveTo signerExpr resourceExpr resourceType
-              }
-       in -- and replace the function call with the temp variable
-          (NameAccessChainExpr $ LocalNameAccessChain tempIdentifier', (currUUID + 1, Map.insert tempIdentifier' newBinding bindingsToAdd))
+                  bindingsBindType =
+                    Just $
+                      TypeTuple
+                        [ unitType,
+                          IntermediateTypeScopes
+                        ],
+                  bindingsBindExpr =
+                    Just $ IntermediateExprExpr $ IntermediateMoveTo signerExpr resourceExpr resourceType typeWitnessExpr
+                }
+         in -- and replace the function call with the temp variable
+            (NameAccessChainExpr $ LocalNameAccessChain tempIdentifier', (currUUID + 1, Map.insert tempIdentifier' newBinding bindingsToAdd))
     -- Handle the `move_from<T>(address)` similarly to the `move_to` case
-    rewriteInlineStateMutation' expr@(PositionalStructExprOrFunctionCallExpr PositionalStructExprOrFunctionCall {pseofcNameAccessChain = LocalNameAccessChain (Identifier "move_from"), pseofcTypeArgs, pseofcFields = [addressExpr]}) _scopes (currUUID, bindingsToAdd) =
-      let --
-          -- The type argument can not be omitted and must be a single one
-          resourceType = case pseofcTypeArgs of
-            [] -> error $ "Found a move_from with invalid type arguments: " ++ show expr
-            [t] -> t
-            _ -> error $ "Found a move_from with invalid type arguments: " ++ show expr
+    rewriteInlineStateMutation'
+      expr@( PositionalStructExprOrFunctionCallExpr
+               PositionalStructExprOrFunctionCall
+                 { pseofcNameAccessChain = LocalNameAccessChain (Identifier "move_from"),
+                   pseofcTypeArgs,
+                   pseofcFields = [addressExpr, IntermediateExprExpr (IntermediateTypeWitnessExprExpr typeWitnessExpr)]
+                 }
+             )
+      _scopes
+      (currUUID, bindingsToAdd) =
+        let --
+            -- The type argument can not be omitted and must be a single one
+            resourceType = case pseofcTypeArgs of
+              [] -> error $ "Found a move_from with invalid type arguments: " ++ show expr
+              [t] -> t
+              _ -> error $ "Found a move_from with invalid type arguments: " ++ show expr
 
-          -- create a new binding in the form `let (temp, scopes) = my_func(..., scopes)`
-          -- The new variable should be `temp_i` to prevent name clashes with other rewrites
-          tempIdentifier' = case tempIdentifier of
-            Identifier str -> Identifier $ str ++ show currUUID
+            -- create a new binding in the form `let (temp, scopes) = my_func(..., scopes)`
+            -- The new variable should be `temp_i` to prevent name clashes with other rewrites
+            tempIdentifier' = case tempIdentifier of
+              Identifier str -> Identifier $ str ++ show currUUID
 
-          newBinding =
-            Bindings
-              { bindings =
-                  BindedTuple
-                    [ BindIdentifier tempIdentifier' (Just currUUID),
-                      BindIdentifier scopeIdentifier (Just scopeUUID)
-                    ],
-                bindingsBindType =
-                  Just $
-                    TypeTuple
-                      [ unitType,
-                        IntermediateTypeScopes
+            newBinding =
+              Bindings
+                { bindings =
+                    BindedTuple
+                      [ BindIdentifier tempIdentifier' (Just currUUID),
+                        BindIdentifier scopeIdentifier (Just scopeUUID)
                       ],
-                bindingsBindExpr =
-                  Just $ IntermediateExprExpr $ IntermediateMoveFrom addressExpr resourceType
-              }
-       in -- and replace the function call with the temp variable
-          (NameAccessChainExpr $ LocalNameAccessChain tempIdentifier', (currUUID + 1, Map.insert tempIdentifier' newBinding bindingsToAdd))
+                  bindingsBindType =
+                    Just $
+                      TypeTuple
+                        [ unitType,
+                          IntermediateTypeScopes
+                        ],
+                  bindingsBindExpr =
+                    Just $ IntermediateExprExpr $ IntermediateMoveFrom addressExpr resourceType typeWitnessExpr
+                }
+         in -- and replace the function call with the temp variable
+            (NameAccessChainExpr $ LocalNameAccessChain tempIdentifier', (currUUID + 1, Map.insert tempIdentifier' newBinding bindingsToAdd))
     -- TODO: For now considers just functions with a local name. To support calling functions in other module,
     -- the traversal should probably be rewritten so to support different modules and/or aliases and similar
     -- It also considers the fact that a function call might access and update the global storage
@@ -710,6 +728,9 @@ rewriteFunctionDeclaration root markedVars bindingsToAdd scopeIdentifier scopeUU
 -- rewrites the usages of those variables with (intermediate) AST nodes that act on the explicit local scope
 --
 -- See the comments on the inner function calls for additional logic
+--
+-- NOTE: this step requires the type witnesses to be already translated.
+-- In fact, it needs the to correctly rewrite the global storage operators
 --
 -- ## The following is a summary of the implemented functionalities:
 --
