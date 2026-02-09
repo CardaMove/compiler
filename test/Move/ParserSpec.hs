@@ -3,8 +3,8 @@
 module Move.ParserSpec (spec) where
 
 import Move.AST
-import Move.Lexer
-import Move.Parser
+import Move.Lexer ( scan )
+import Move.Parser ( parse )
 import Test.Hspec
 
 testScan :: String -> Root -> SpecWith ()
