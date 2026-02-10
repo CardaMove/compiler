@@ -22,10 +22,6 @@ extra-source-files:
 
 library
   exposed-modules:
-      Aiken.AST
-      Aiken.Token
-      Aiken.UnLexer
-      Aiken.UnParser
       Move.AST
       Move.Lexer
       Move.Loader.Loader
@@ -91,7 +87,6 @@ test-suite cardamove-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      Aiken.UnLexerSpec
       Move.LexerSpec
       Move.Loader.LoaderSpec
       Move.ParserSpec

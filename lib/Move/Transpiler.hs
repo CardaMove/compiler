@@ -1,4 +1,4 @@
-module Move.Transpiler where
+module Move.Transpiler (transpiler) where
 
 import Control.Exception (ErrorCall, displayException, evaluate, try)
 import Control.Monad.State (runState)
