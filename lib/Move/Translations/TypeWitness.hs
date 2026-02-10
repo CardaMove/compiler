@@ -50,7 +50,7 @@ translateTParamsInRoot root = do
   let translatedRoot' = fst $ traverseRootPostOrder translateFunctionCall traversalIdentity translatedRoot ()
   return translatedRoot'
   where
-    -- FIXME: Maps any type arguments to a corresponding function argument
+    -- Maps any type argument to a corresponding function argument
     --
     -- Note that only type constructors can be used as type arguments. References and tuples are not allowed
     --

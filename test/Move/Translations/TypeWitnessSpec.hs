@@ -33,8 +33,6 @@ testTranslateTParamsInRoot = describe "Tests for the function `translateTParamsI
 
     let updated = evalState (annotateBindingsWithUUID parsed >>= translateTParamsInRoot) 0
 
-    print updated
-
     updated `shouldBe` toModule
 
 spec :: Spec

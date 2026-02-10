@@ -96,7 +96,7 @@ RModule
                                     ( Bindings
                                         { bindings = BindedTuple [BindIdentifier (Identifier "temp_7") (Just 7), BindIdentifier (Identifier "scopes") (Just (-1))],
                                           bindingsBindType = Just (TypeTuple [TypeTuple [], IntermediateTypeScopes]),
-                                          bindingsBindExpr = Just (IntermediateExprExpr (IntermediateMoveFrom (NameAccessChainExpr (LocalNameAccessChain (Identifier "a1"))) (TypeConstructor (LocalNameAccessChain (Identifier "F")) [TypeConstructor (LocalNameAccessChain (Identifier "u64")) []])))
+                                          bindingsBindExpr = Just (IntermediateExprExpr (IntermediateMoveFrom (NameAccessChainExpr (LocalNameAccessChain (Identifier "a1"))) (TypeConstructor (LocalNameAccessChain (Identifier "F")) [TypeConstructor (LocalNameAccessChain (Identifier "u64")) []]) (IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "F")) [IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "u64")) []])))
                                         }
                                     ),
                                   SequenceItemBindExpr
@@ -156,7 +156,7 @@ RModule
                                     ( Bindings
                                         { bindings = BindedTuple [BindIdentifier (Identifier "temp_8") (Just 8), BindIdentifier (Identifier "scopes") (Just (-1))],
                                           bindingsBindType = Just (TypeTuple [TypeTuple [], IntermediateTypeScopes]),
-                                          bindingsBindExpr = Just (IntermediateExprExpr (IntermediateMoveTo (NameAccessChainExpr (LocalNameAccessChain (Identifier "s"))) (NameAccessChainExpr (LocalNameAccessChain (Identifier "g"))) (TypeConstructor (LocalNameAccessChain (Identifier "G")) [TypeConstructor (LocalNameAccessChain (Identifier "bool")) []])))
+                                          bindingsBindExpr = Just (IntermediateExprExpr (IntermediateMoveTo (NameAccessChainExpr (LocalNameAccessChain (Identifier "s"))) (NameAccessChainExpr (LocalNameAccessChain (Identifier "g"))) (TypeConstructor (LocalNameAccessChain (Identifier "G")) [TypeConstructor (LocalNameAccessChain (Identifier "bool")) []]) (IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "G")) [IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "bool")) []])))
                                         }
                                     ),
                                   SequenceItemExpr (NameAccessChainExpr (LocalNameAccessChain (Identifier "temp_8"))),
@@ -198,6 +198,7 @@ RModule
                                                                                                 )
                                                                                             )
                                                                                             (TypeConstructor (LocalNameAccessChain (Identifier "G")) [TypeConstructor (LocalNameAccessChain (Identifier "bool")) []])
+                                                                                            (IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "G")) [IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "bool")) []])
                                                                                         )
                                                                                     )
                                                                                 )

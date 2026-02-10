@@ -24,7 +24,7 @@ module NamedAddr::TestingModule {
 
         // Extract `move_to`
         // unused temp_i expression
-        move_to(s, g);
+        move_to<G<bool>>(s, g);
 
         // Extract sequence `let (temp_i, scopes) = {...}`
         let a = {
