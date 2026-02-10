@@ -1,4 +1,4 @@
-module Move.Loader.Loader where
+module Move.Loader.Loader (loadToml) where
 
 import Control.Exception (ErrorCall, Exception (displayException), evaluate, try)
 import Move.AST (Root)

@@ -4,7 +4,7 @@ version = "1.0.0"
 authors = []
 
 [addresses]
-NamedAddress = "0xCAFE"
+NamedAddr = "0xCAFE"
 
 [dev-addresses]
 

@@ -1,6 +1,5 @@
 module Move.Loader.LoaderSpec (spec) where
 
-import Control.Exception (ErrorCall (ErrorCall), evaluate)
 import Data.List (sort)
 import Move.AST (Identifier (Identifier), Module (moduleIdentifier), Root (RModule, RScript))
 import Move.Loader.Loader (loadToml)
