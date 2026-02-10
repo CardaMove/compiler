@@ -50,6 +50,8 @@ library
     , base >=4.7 && <5
     , bytestring
     , containers
+    , directory
+    , filepath
     , megaparsec ==9.5.0
     , mtl
     , pretty-terminal
@@ -74,6 +76,8 @@ executable cardamove-cli
     , bytestring
     , cardamove
     , containers
+    , directory
+    , filepath
     , megaparsec ==9.5.0
     , mtl
     , optparse-applicative
@@ -89,6 +93,7 @@ test-suite cardamove-test
   other-modules:
       Aiken.UnLexerSpec
       Move.LexerSpec
+      Move.Loader.LoaderSpec
       Move.ParserSpec
       Move.Translations.LoopsSpec
       Move.Translations.ScopesSpec
@@ -109,6 +114,8 @@ test-suite cardamove-test
     , bytestring
     , cardamove
     , containers
+    , directory
+    , filepath
     , hspec ==2.11.*
     , megaparsec ==9.5.0
     , mtl
