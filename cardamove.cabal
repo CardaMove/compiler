@@ -28,6 +28,7 @@ library
       Aiken.UnParser
       Move.AST
       Move.Lexer
+      Move.Loader.Loader
       Move.Parser
       Move.Token
       Move.Translations.Loops
@@ -35,6 +36,7 @@ library
       Move.Translations.TraversalUtils
       Move.Translations.TypeWitness
       Move.Translations.Utils
+      Move.Transpiler
   other-modules:
       Paths_cardamove
   hs-source-dirs:
