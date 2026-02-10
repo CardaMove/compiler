@@ -8,7 +8,8 @@ import Move.Translations.Scopes (addLocalScopeInRoot, markVariablesForLocalScope
 import Move.Translations.TypeWitness (translateTParamsInRoot)
 import Move.Translations.Utils (annotateBindingsWithUUID)
 
-
+-- |
+-- Tries to execute an IO operation, intercepting any error if thrown and providing additional informations
 runStep :: String -> IO a -> IO a
 runStep stepName step = do
   res <- try step
