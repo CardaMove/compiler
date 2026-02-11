@@ -29,9 +29,9 @@ generateTopLevel (TopLevelNamedStruct NamedStruct {namedStructIdentifier, namedS
     }
   |]
   where
-    name :: Text = packIdent namedStructIdentifier
-    fields :: Text = join "" $ map packNamedField namedStructFields
-    tParams :: Text = packTypeParams namedStructTypeParameters
+    name = packIdent namedStructIdentifier
+    tParams = packTypeParams namedStructTypeParameters
+    fields = join "" $ map packNamedField namedStructFields
 
     -- Translates a field of a named struct into Aiken
     -- NOTE that each field ends with a final ',' even if it is the last
@@ -43,6 +43,19 @@ generateTopLevel (TopLevelNamedStruct NamedStruct {namedStructIdentifier, namedS
       where
         fieldName :: Text = packIdent fieldIdentifier
         packedType :: Text = generateType fieldType
+generateTopLevel (TopLevelPositionalStruct PositionalStruct {positionalStructIdentifier, positionalStructTypeParameters, positionalStructFields}) =
+  [trimming|
+    pub type $name$tParams {
+      $name($fields)
+    }
+  |]
+  where
+    name = packIdent positionalStructIdentifier
+    tParams = packTypeParams positionalStructTypeParameters
+    fields = intercalate (pack ", ") $ map packPositionalField positionalStructFields
+
+    packPositionalField :: PositionalField -> Text
+    packPositionalField (PositionalField t) = generateType t
 generateTopLevel _ = error "TODO:"
 
 -- |
