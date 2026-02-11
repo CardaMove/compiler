@@ -22,6 +22,7 @@ extra-source-files:
 
 library
   exposed-modules:
+      Aiken.CodeGenerator
       Move.AST
       Move.Lexer
       Move.Loader.Loader
@@ -50,6 +51,7 @@ library
     , filepath
     , megaparsec ==9.5.0
     , mtl
+    , neat-interpolation
     , pretty-terminal
     , text ==2.0.2
     , uniplate
@@ -76,6 +78,7 @@ executable cardamove-cli
     , filepath
     , megaparsec ==9.5.0
     , mtl
+    , neat-interpolation
     , optparse-applicative
     , pretty-terminal
     , text ==2.0.2
@@ -87,6 +90,7 @@ test-suite cardamove-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      Aiken.CodeGeneratorSpec
       Move.LexerSpec
       Move.Loader.LoaderSpec
       Move.ParserSpec
@@ -114,6 +118,7 @@ test-suite cardamove-test
     , hspec ==2.11.*
     , megaparsec ==9.5.0
     , mtl
+    , neat-interpolation
     , pretty-terminal
     , text ==2.0.2
     , uniplate

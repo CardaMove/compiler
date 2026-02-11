@@ -1,0 +1,33 @@
+TopLevelNamedStruct
+( NamedStruct
+    { namedStructIdentifier = Identifier "MyStruct1",
+        namedStructTypeParameters =
+        [ TypeParameter
+            { typeParameterIsPhantom = True,
+                typeIdentifier = Identifier "a",
+                typeConstraints = []
+            },
+            TypeParameter
+            { typeParameterIsPhantom = False,
+                typeIdentifier = Identifier "b",
+                typeConstraints = [Copy, Drop]
+            }
+        ],
+        namedStructAbilities = [Copy, Drop],
+        namedStructFields =
+        [ NamedField
+            { fieldIdentifier = Identifier "field1",
+                fieldType = TypeConstructor (LocalNameAccessChain (Identifier "u64")) []
+            },
+            NamedField
+            { fieldIdentifier = Identifier "field2",
+                fieldType =
+                TypeConstructor
+                    (LocalNameAccessChain (Identifier "MyStruct2"))
+                    [ TypeConstructor (LocalNameAccessChain (Identifier "bool")) [],
+                    TypeConstructor (LocalNameAccessChain (Identifier "b")) []
+                    ]
+            }
+        ]
+    }
+)

@@ -26,6 +26,7 @@ dependencies:
   #- iris == 0.1.0.0
   - megaparsec == 9.5.0
   - mtl
+  - neat-interpolation
   - pretty-terminal
   - text == 2.0.2
   - wide-word >=0.1.6 && <0.2
