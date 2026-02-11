@@ -26,6 +26,8 @@ testGenerateTopLevel = describe "Tests the function `generateTopLevel`" $ do
     to <- readFile "test/Aiken/files/CodeGeneratorSpec_3.ak"
 
     strip (unpack (generateTopLevel from)) `shouldBe` strip to
+  
+  -- TODO: Add test for top level constants after expressions are translated
 
 -- |
 -- Removes \n and \r characters from a String

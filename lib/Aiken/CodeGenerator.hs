@@ -11,15 +11,16 @@ import NeatInterpolation (trimming)
 --
 -- NOTE: the default indentation size for Aiken is two spaces
 generateRoot :: Root -> Text
-generateRoot (RModule Module {moduleAddress, moduleIdentifier, moduleTopLevels}) =
+generateRoot (RModule Module {moduleTopLevels}) =
   join "\n" $ filter (not . Data.Text.null) $ map generateTopLevel moduleTopLevels
 generateRoot (RScript Script {scriptTopLevels}) =
   join "\n" $ filter (not . Data.Text.null) $ map generateTopLevel scriptTopLevels
 
 -- |
 -- Given any top level, generates its corresponding Aiken code
+-- TODO: Add support for Use
 generateTopLevel :: TopLevel -> Text
-generateTopLevel (TopLevelUse _) = error "TODO:"
+generateTopLevel (TopLevelUse _) = error "Top level Use are not currently supported"
 -- Friends have no translations
 generateTopLevel (TopLevelFriend _) = empty
 generateTopLevel (TopLevelNamedStruct NamedStruct {namedStructIdentifier, namedStructTypeParameters, namedStructFields}) =
@@ -56,6 +57,14 @@ generateTopLevel (TopLevelPositionalStruct PositionalStruct {positionalStructIde
 
     packPositionalField :: PositionalField -> Text
     packPositionalField (PositionalField t) = generateType t
+generateTopLevel (TopLevelConstant Constant {constantIdentifier, constantType, constantExpression}) =
+  [trimming|
+    const $name: $t = $expr
+  |]
+  where
+    name = packIdent constantIdentifier
+    t = generateType constantType
+    expr = generateExpression constantExpression
 generateTopLevel _ = error "TODO:"
 
 -- |
@@ -121,3 +130,9 @@ packTypeParams tParams =
   |]
   where
     ts :: Text = intercalate (pack ", ") $ map (packIdent . typeIdentifier) tParams
+
+-- |
+-- Given any Move expression, generates its corresponding Aiken expression
+-- TODO:
+generateExpression :: Expr -> Text
+generateExpression _ = error "Expressions are currently not supported"
