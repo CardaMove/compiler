@@ -1,0 +1,30 @@
+TopLevelFunction
+( Function
+    { functionHasNativeModifier = False,
+        functionVisibilityModifier = Just VisibilityModifierPublic,
+        functionHasEntryModifier = True,
+        functionName = Identifier "myFunction1",
+        functionTypeParameters =
+        [ TypeParameter
+            { typeParameterIsPhantom = False,
+                typeIdentifier = Identifier "a",
+                typeConstraints = []
+            },
+            TypeParameter
+            { typeParameterIsPhantom = False,
+                typeIdentifier = Identifier "b",
+                typeConstraints = [Copy, Drop]
+            }
+        ],
+        functionParameters =
+        [ Parameter {parameterIdentifier = Identifier "x", parameterType = TypeConstructor (LocalNameAccessChain (Identifier "u256")) [], parameterUUID = Nothing},
+            Parameter {parameterIdentifier = Identifier "y", parameterType = TypeConstructor (LocalNameAccessChain (Identifier "bool")) [], parameterUUID = Nothing},
+            Parameter {parameterIdentifier = Identifier "c", parameterType = TypeConstructor (LocalNameAccessChain (Identifier "a")) [], parameterUUID = Nothing},
+            Parameter {parameterIdentifier = Identifier "d", parameterType = TypeConstructor (LocalNameAccessChain (Identifier "b")) [], parameterUUID = Nothing}
+        ],
+        functionReturnType = Nothing,
+        functionAcquires = [LocalNameAccessChain (Identifier "MyStruct")],
+        functionBody = Nothing,
+        functionUUID = Nothing
+    }
+)

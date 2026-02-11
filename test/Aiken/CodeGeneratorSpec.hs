@@ -29,6 +29,15 @@ testGenerateTopLevel = describe "Tests the function `generateTopLevel`" $ do
   
   -- TODO: Add test for top level constants after expressions are translated
 
+  it "Generates Text for a function with no body" $ do
+    input <- readFile "test/Aiken/files/CodeGeneratorSpec_4.txt"
+    let from = read input :: TopLevel
+
+    to <- readFile "test/Aiken/files/CodeGeneratorSpec_5.ak"
+
+    strip (unpack (generateTopLevel from)) `shouldBe` strip to
+
+
 -- |
 -- Removes \n and \r characters from a String
 -- Used to ignore those characters in test cases

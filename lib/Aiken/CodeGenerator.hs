@@ -4,6 +4,7 @@ module Aiken.CodeGenerator where
 
 import Data.Text (Text, empty, intercalate, null, pack)
 import Move.AST
+import Move.Translations.Utils (unitType)
 import NeatInterpolation (trimming)
 
 -- |
@@ -65,7 +66,40 @@ generateTopLevel (TopLevelConstant Constant {constantIdentifier, constantType, c
     name = packIdent constantIdentifier
     t = generateType constantType
     expr = generateExpression constantExpression
-generateTopLevel _ = error "TODO:"
+generateTopLevel (TopLevelFunction Function {functionHasNativeModifier = True}) = error "Native functions are not supported"
+generateTopLevel (TopLevelFunction Function {functionHasNativeModifier = False, functionVisibilityModifier, functionName, functionTypeParameters, functionParameters, functionReturnType, functionBody}) =
+  [trimming|
+    ${visibility}fn $name$tParams($fParams) -> $fReturn {
+      $fBody
+    }
+  |]
+  where
+    visibility = case functionVisibilityModifier of
+      Nothing -> empty
+      _ -> pack "pub "
+
+    name = packIdent functionName
+    tParams = packTypeParams functionTypeParameters
+    fParams = intercalate (pack ", ") $ map packFunctionParameter functionParameters
+
+    -- Functions with no return type default to unit
+    fReturn = case functionReturnType of
+      Nothing -> generateType unitType
+      Just t -> generateType t
+
+    -- Functions with no body default to returning unit
+    fBody = case functionBody of
+      Nothing -> generateExpression $ CommaExpr []
+      Just sqnc -> generateSequence sqnc
+
+    packFunctionParameter :: Parameter -> Text
+    packFunctionParameter Parameter {parameterIdentifier, parameterType} =
+      [trimming|
+        $paramName: $paramType
+      |]
+      where
+        paramName = packIdent parameterIdentifier
+        paramType = generateType parameterType
 
 -- |
 -- Joins multiple code lines as a single Text,
@@ -114,6 +148,8 @@ generateType (TypeConstructor (LocalNameAccessChain ident) tArgs) =
       |]
       where
         ts :: Text = intercalate (pack ", ") $ map generateType tArgs'
+-- The unit type () is translated to Void, like the unit expression
+generateType (TypeTuple []) = pack "Void"
 generateType _ = error "Unexpected Type"
 
 -- |
@@ -135,4 +171,13 @@ packTypeParams tParams =
 -- Given any Move expression, generates its corresponding Aiken expression
 -- TODO:
 generateExpression :: Expr -> Text
+-- The unit expression is translated as Void, like the unit type
+generateExpression (CommaExpr []) = pack "Void"
 generateExpression _ = error "Expressions are currently not supported"
+
+-- |
+-- Given a Move Sequence (not SequenceExpr), generates the corresponding Aiken code,
+-- without braces '{' '}'. Braces should be handled both by `generateExpression` and top level function
+-- TODO:
+generateSequence :: Sequence -> Text
+generateSequence _ = error "Sequences are currently not supported"
