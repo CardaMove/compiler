@@ -150,7 +150,17 @@ generateType (TypeConstructor (LocalNameAccessChain ident) tArgs) =
         ts :: Text = intercalate (pack ", ") $ map generateType tArgs'
 -- The unit type () is translated to Void, like the unit expression
 generateType (TypeTuple []) = pack "Void"
-generateType _ = error "Unexpected Type"
+generateType (TypeTuple ts) =
+  [trimming|
+    ($ts')
+  |]
+  where
+    ts' = intercalate (pack ", ") $ map generateType ts
+-- TODO: Other types
+-- It is possible that some types can not be inferred, so use a custom UNKNOWN_TYPE
+-- TODO: It might be an alias for Data, but in any case it would not compile
+generateType TypeUnknown = pack "UNKNOWN_TYPE"
+generateType t = error $ "Unexpected type: " ++ show t
 
 -- |
 -- Given some type parameters, generates the corresponding Aiken code
@@ -240,7 +250,7 @@ generateExpression (CastingTerm Casting {castingExpr, castingType}) =
     expr = generateExpression castingExpr
 -- Named structs
 -- Note that struct expressions in Aiken do not specify type arguments
-generateExpression (NamedStructExprExpr NamedStructExpr {nseNameAccessChain, nseTypeArgs, nseFields}) =
+generateExpression (NamedStructExprExpr NamedStructExpr {nseNameAccessChain, nseFields}) =
   [trimming|
     $name { $fields }
   |]
@@ -259,7 +269,7 @@ generateExpression (NamedStructExprExpr NamedStructExpr {nseNameAccessChain, nse
         fieldExpr = generateExpression $ fromMaybe (NameAccessChainExpr $ LocalNameAccessChain nsefIdentifier) nsefExpr
 -- Positional structs or function calls
 -- Note that neither struct expressions nor function calls in Aiken not specify type arguments
-generateExpression (PositionalStructExprOrFunctionCallExpr PositionalStructExprOrFunctionCall {pseofcNameAccessChain, pseofcTypeArgs, pseofcFields}) =
+generateExpression (PositionalStructExprOrFunctionCallExpr PositionalStructExprOrFunctionCall {pseofcNameAccessChain, pseofcFields}) =
   [trimming|
     $name$($fields)
   |]
@@ -287,13 +297,31 @@ generateExpression (SequenceExpr sqn) =
 generateExpression expr@(IfThenElseTerm IfThenElse {ifThenElseElseBranch = Nothing}) = error $ "Unexpected if-then-else with no else branch: " ++ show expr
 generateExpression (IfThenElseTerm IfThenElse {ifThenElseCondition, ifThenElseIfBranch, ifThenElseElseBranch = Just ifThenElseElseBranch'}) =
   [trimming|
-    if $cond $ifBranch
-    else $elseBranch
+    if $cond $ifBranch else $elseBranch
   |]
   where
     cond = generateExpression ifThenElseCondition
-    ifBranch = generateExpression ifThenElseIfBranch
-    elseBranch = generateExpression ifThenElseElseBranch'
+    -- Both branches must be encosed between braces, so check if they are a SequenceExpr and add them manually if not
+    ifBranch = case ifThenElseIfBranch of
+      SequenceExpr _ -> generateExpression ifThenElseIfBranch
+      _ ->
+        [trimming|
+          {
+            $branch
+          }
+        |]
+        where
+          branch = generateExpression ifThenElseIfBranch
+    elseBranch = case ifThenElseElseBranch' of
+      SequenceExpr _ -> generateExpression ifThenElseElseBranch'
+      _ ->
+        [trimming|
+          {
+            $branch
+          }
+        |]
+        where
+          branch = generateExpression ifThenElseElseBranch'
 -- Whiles should not be present
 generateExpression expr@(WhileTerm _) = error $ "Unexpected while: " ++ show expr
 -- Loops should not be present
@@ -310,7 +338,7 @@ generateExpression (Abort expr) =
 generateExpression Break = error "Unexpected break"
 generateExpression Continue = error "Unexpected continue"
 -- Intermediate expressions TODO:
-generateExpression _ = error "Expressions are currently not supported"
+generateExpression _ = error "Intermediate expressions are currently not supported"
 
 -- |
 -- Given a Move Sequence (not SequenceExpr), generates the corresponding Aiken code,
@@ -341,7 +369,7 @@ generateSequence sqn@Sequence {sequenceUses, sequenceItems, sequenceEndExpr} =
           Nothing -> empty
           Just bindingsBindType' ->
             [trimming|
-              :$t
+              : $t
             |]
             where
               t = generateType bindingsBindType'
@@ -352,7 +380,7 @@ generateSequence sqn@Sequence {sequenceUses, sequenceItems, sequenceEndExpr} =
         generateBind (BindIdentifier ident _) = packIdent ident
         generateBind (BindNamedStruct BindedNamedStruct {bnsNameAccessChain, bnsFields}) =
           [trimming|
-            $name {$fields}
+            $name { $fields }
           |]
           where
             name = generateNameAccessChain bnsNameAccessChain

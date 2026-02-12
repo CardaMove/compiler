@@ -1,0 +1,175 @@
+TopLevelFunction
+( Function
+    { functionHasNativeModifier = False,
+        functionVisibilityModifier = Nothing,
+        functionHasEntryModifier = False,
+        functionName = Identifier "test_expressions",
+        functionTypeParameters = [],
+        functionParameters =
+        [ Parameter
+            { parameterIdentifier = Identifier "a",
+                parameterType = TypeConstructor (LocalNameAccessChain (Identifier "u8")) [],
+                parameterUUID = Nothing
+            },
+            Parameter
+            { parameterIdentifier = Identifier "b",
+                parameterType = TypeConstructor (LocalNameAccessChain (Identifier "bool")) [],
+                parameterUUID = Nothing
+            }
+        ],
+        functionReturnType =
+        Just
+            ( TypeTuple
+                [ TypeConstructor (LocalNameAccessChain (Identifier "MyRecord")) [],
+                TypeConstructor (LocalNameAccessChain (Identifier "bool")) []
+                ]
+            ),
+        functionAcquires = [],
+        functionBody =
+        Just
+            ( Sequence
+                { sequenceUses = [],
+                sequenceItems =
+                    [ SequenceItemBindExpr
+                        ( Bindings
+                            { bindings =
+                                BindedSingle
+                                ( BindIdentifier (Identifier "c") Nothing
+                                ),
+                            bindingsBindType = Just (TypeConstructor (LocalNameAccessChain (Identifier "u8")) []),
+                            bindingsBindExpr =
+                                Just
+                                ( BinaryOpExprExpr
+                                    ( Add
+                                        ( NameAccessChainExpr (LocalNameAccessChain (Identifier "a"))
+                                        )
+                                        ( NameAccessChainExpr (LocalNameAccessChain (Identifier "a"))
+                                        )
+                                    )
+                                )
+                            }
+                        ),
+                    SequenceItemBindExpr
+                        ( Bindings
+                            { bindings =
+                                BindedSingle
+                                ( BindIdentifier (Identifier "c") Nothing
+                                ),
+                            bindingsBindType = Just (TypeConstructor (LocalNameAccessChain (Identifier "u8")) []),
+                            bindingsBindExpr =
+                                Just
+                                ( BinaryOpExprExpr
+                                    ( Div
+                                        ( NameAccessChainExpr (LocalNameAccessChain (Identifier "c"))
+                                        )
+                                        ( ValueLiteral (Numerical (LiteralIntDec 3))
+                                        )
+                                    )
+                                )
+                            }
+                        ),
+                    SequenceItemBindExpr
+                        ( Bindings
+                            { bindings =
+                                BindedTuple
+                                [ BindIdentifier (Identifier "my_record") Nothing,
+                                    BindIdentifier (Identifier "d") Nothing
+                                ],
+                            bindingsBindType =
+                                Just
+                                ( TypeTuple
+                                    [ TypeConstructor (LocalNameAccessChain (Identifier "MyRecord")) [],
+                                        TypeConstructor (LocalNameAccessChain (Identifier "u16")) []
+                                    ]
+                                ),
+                            bindingsBindExpr =
+                                Just
+                                ( CommaExpr
+                                    [ NamedStructExprExpr
+                                        ( NamedStructExpr
+                                            { nseNameAccessChain = LocalNameAccessChain (Identifier "MyRecord"),
+                                                nseTypeArgs = [],
+                                                nseFields =
+                                                [ NamedStructExprField {nsefIdentifier = Identifier "a", nsefExpr = Just (NameAccessChainExpr (LocalNameAccessChain (Identifier "c")))},
+                                                    NamedStructExprField {nsefIdentifier = Identifier "b", nsefExpr = Just (ValueLiteral (Boolean False))}
+                                                ]
+                                            }
+                                        ),
+                                        ValueLiteral (Numerical (LiteralIntDec 42))
+                                    ]
+                                )
+                            }
+                        ),
+                    SequenceItemBindExpr
+                        ( Bindings
+                            { bindings =
+                                BindedSingle
+                                ( BindNamedStruct
+                                    ( BindedNamedStruct
+                                        { bnsNameAccessChain = LocalNameAccessChain (Identifier "MyRecord"),
+                                            bnsTypeArgs = [],
+                                            bnsFields =
+                                            BindedFields
+                                                { hasPartialPattern = False,
+                                                bindedFields =
+                                                    [ BindedField {bindFieldIdentifier = Identifier "a", bindFieldInnerBind = Just (BindIdentifier (Identifier "my_a") Nothing), bindedFieldUUID = Nothing},
+                                                    BindedField {bindFieldIdentifier = Identifier "b", bindFieldInnerBind = Nothing, bindedFieldUUID = Nothing}
+                                                    ]
+                                                }
+                                        }
+                                    )
+                                ),
+                            bindingsBindType = Nothing,
+                            bindingsBindExpr =
+                                Just
+                                ( NameAccessChainExpr (LocalNameAccessChain (Identifier "my_record"))
+                                )
+                            }
+                        )
+                    ],
+                sequenceEndExpr =
+                    Just
+                    ( IfThenElseTerm
+                        ( IfThenElse
+                            { ifThenElseCondition =
+                                BinaryOpExprExpr
+                                    ( Gt
+                                        ( NameAccessChainExpr (LocalNameAccessChain (Identifier "c"))
+                                        )
+                                        ( ValueLiteral (Numerical (LiteralIntDec 10))
+                                        )
+                                    ),
+                                ifThenElseIfBranch =
+                                SequenceExpr
+                                    ( Sequence
+                                        { sequenceUses = [],
+                                        sequenceItems = [],
+                                        sequenceEndExpr =
+                                            Just
+                                            ( CommaExpr
+                                                [ NameAccessChainExpr (LocalNameAccessChain (Identifier "my_record")),
+                                                    DotOrIndexChainExpr
+                                                    ( DotAccess
+                                                        { dotAccessLeft = NameAccessChainExpr (LocalNameAccessChain (Identifier "my_record")),
+                                                            dotAccessRight = Identifier "b"
+                                                        }
+                                                    )
+                                                ]
+                                            )
+                                        }
+                                    ),
+                                ifThenElseElseBranch =
+                                Just
+                                    ( CommaExpr
+                                        [ NameAccessChainExpr (LocalNameAccessChain (Identifier "my_record")),
+                                        NameAccessChainExpr (LocalNameAccessChain (Identifier "b"))
+                                        ]
+                                    )
+                            }
+                        )
+                    )
+                }
+            ),
+        functionUUID = Nothing
+    }
+)

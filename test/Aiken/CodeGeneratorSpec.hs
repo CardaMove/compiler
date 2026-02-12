@@ -37,6 +37,14 @@ testGenerateTopLevel = describe "Tests the function `generateTopLevel`" $ do
 
     strip (unpack (generateTopLevel from)) `shouldBe` strip to
 
+  it "Generates Text for a function with let bindings, destructuring and if-then-else" $ do
+    input <- readFile "test/Aiken/files/CodeGeneratorSpec_6.txt"
+    let from = read input :: TopLevel
+
+    to <- readFile "test/Aiken/files/CodeGeneratorSpec_7.ak"
+
+    strip (unpack (generateTopLevel from)) `shouldBe` strip to
+
 
 -- |
 -- Removes \n and \r characters from a String
