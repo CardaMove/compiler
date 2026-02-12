@@ -755,6 +755,7 @@ CommaBindedField :: { BindedFields }
 
 
 -- Handle the case of an optional partial pattern
+-- FIXME: Positional structs can have partial patterns also at the start, but it no distinction is done here
 CommaBindedField_ :: { BindedFields }
   : BindedField                                    { 
     case $1 of

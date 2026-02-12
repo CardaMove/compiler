@@ -137,6 +137,17 @@ generateType (TypeConstructor (LocalNameAccessChain ident) tArgs) =
   where
     name = packIdent ident
     packedTArgs :: Text = packTypeArgs tArgs
+    -- Generates Aiken code corresponding to the given type arguments
+    -- TODO: Type arguments coming from type parameters should be lowercase.
+    -- Add this logic to the transpiler
+    packTypeArgs :: [Type] -> Text
+    packTypeArgs [] = empty
+    packTypeArgs tArgs' =
+      [trimming|
+        <$ts>
+      |]
+      where
+        ts :: Text = intercalate (pack ", ") $ map generateType tArgs'
 -- The unit type () is translated to Void, like the unit expression
 generateType (TypeTuple []) = pack "Void"
 generateType _ = error "Unexpected Type"
@@ -161,102 +172,24 @@ packTypeParams tParams =
 -- TODO:
 generateExpression :: Expr -> Text
 -- Binary operations
-generateExpression (BinaryOpExprExpr (Or left right)) =
-  [trimming|
-    $left' || $right'
-  |]
-  where
-    left' = generateExpression left
-    right' = generateExpression right
-generateExpression (BinaryOpExprExpr (And left right)) =
-  [trimming|
-    $left' && $right'
-  |]
-  where
-    left' = generateExpression left
-    right' = generateExpression right
-generateExpression (BinaryOpExprExpr (Eq left right)) =
-  [trimming|
-    $left' == $right'
-  |]
-  where
-    left' = generateExpression left
-    right' = generateExpression right
-generateExpression (BinaryOpExprExpr (Neq left right)) =
-  [trimming|
-    $left' != $right'
-  |]
-  where
-    left' = generateExpression left
-    right' = generateExpression right
-generateExpression (BinaryOpExprExpr (Lt left right)) =
-  [trimming|
-    $left' < $right'
-  |]
-  where
-    left' = generateExpression left
-    right' = generateExpression right
-generateExpression (BinaryOpExprExpr (Gt left right)) =
-  [trimming|
-    $left' > $right'
-  |]
-  where
-    left' = generateExpression left
-    right' = generateExpression right
-generateExpression (BinaryOpExprExpr (Leq left right)) =
-  [trimming|
-    $left' <= $right'
-  |]
-  where
-    left' = generateExpression left
-    right' = generateExpression right
-generateExpression (BinaryOpExprExpr (Geq left right)) =
-  [trimming|
-    $left' >= $right'
-  |]
-  where
-    left' = generateExpression left
-    right' = generateExpression right
+generateExpression (BinaryOpExprExpr (Or left right)) = binaryOpHelper left "||" right
+generateExpression (BinaryOpExprExpr (And left right)) = binaryOpHelper left "&&" right
+generateExpression (BinaryOpExprExpr (Eq left right)) = binaryOpHelper left "==" right
+generateExpression (BinaryOpExprExpr (Neq left right)) = binaryOpHelper left "!=" right
+generateExpression (BinaryOpExprExpr (Lt left right)) = binaryOpHelper left "<" right
+generateExpression (BinaryOpExprExpr (Gt left right)) = binaryOpHelper left ">" right
+generateExpression (BinaryOpExprExpr (Leq left right)) = binaryOpHelper left "<=" right
+generateExpression (BinaryOpExprExpr (Geq left right)) = binaryOpHelper left ">=" right
 generateExpression (BinaryOpExprExpr (BitwiseOr _ _)) = error "Bitwise operators unsupported"
 generateExpression (BinaryOpExprExpr (BitwiseXor _ _)) = error "Bitwise operators unsupported"
 generateExpression (BinaryOpExprExpr (BitwiseAnd _ _)) = error "Bitwise operators unsupported"
 generateExpression (BinaryOpExprExpr (ShiftLeft _ _)) = error "Bitshift operators unsupported"
 generateExpression (BinaryOpExprExpr (ShiftRight _ _)) = error "Bitshift operators unsupported"
-generateExpression (BinaryOpExprExpr (Add left right)) =
-  [trimming|
-    $left' + $right'
-  |]
-  where
-    left' = generateExpression left
-    right' = generateExpression right
-generateExpression (BinaryOpExprExpr (Sub left right)) =
-  [trimming|
-    $left' - $right'
-  |]
-  where
-    left' = generateExpression left
-    right' = generateExpression right
-generateExpression (BinaryOpExprExpr (Mult left right)) =
-  [trimming|
-    $left' * $right'
-  |]
-  where
-    left' = generateExpression left
-    right' = generateExpression right
-generateExpression (BinaryOpExprExpr (Div left right)) =
-  [trimming|
-    $left' / $right'
-  |]
-  where
-    left' = generateExpression left
-    right' = generateExpression right
-generateExpression (BinaryOpExprExpr (Mod left right)) =
-  [trimming|
-    $left' % $right'
-  |]
-  where
-    left' = generateExpression left
-    right' = generateExpression right
+generateExpression (BinaryOpExprExpr (Add left right)) = binaryOpHelper left "+" right
+generateExpression (BinaryOpExprExpr (Sub left right)) = binaryOpHelper left "-" right
+generateExpression (BinaryOpExprExpr (Mult left right)) = binaryOpHelper left "*" right
+generateExpression (BinaryOpExprExpr (Div left right)) = binaryOpHelper left "/" right
+generateExpression (BinaryOpExprExpr (Mod left right)) = binaryOpHelper left "%" right
 -- Assignments should not be present
 generateExpression expr@(AssignmentExpr _) = error $ "Unexpected assignment expression: " ++ show expr
 -- Unary operations
@@ -306,13 +239,13 @@ generateExpression (CastingTerm Casting {castingExpr, castingType}) =
     t = generateType castingType
     expr = generateExpression castingExpr
 -- Named structs
+-- Note that struct expressions in Aiken do not specify type arguments
 generateExpression (NamedStructExprExpr NamedStructExpr {nseNameAccessChain, nseTypeArgs, nseFields}) =
   [trimming|
-    $name$tArgs { $fields }
+    $name { $fields }
   |]
   where
     name = generateNameAccessChain nseNameAccessChain
-    tArgs = packTypeArgs nseTypeArgs
     fields = intercalate (pack ", ") $ map packNamedStructField nseFields
 
     packNamedStructField :: NamedStructExprField -> Text
@@ -325,13 +258,13 @@ generateExpression (NamedStructExprExpr NamedStructExpr {nseNameAccessChain, nse
         -- If the named field has no associated expression, it defaults to the field name itself
         fieldExpr = generateExpression $ fromMaybe (NameAccessChainExpr $ LocalNameAccessChain nsefIdentifier) nsefExpr
 -- Positional structs or function calls
+-- Note that neither struct expressions nor function calls in Aiken not specify type arguments
 generateExpression (PositionalStructExprOrFunctionCallExpr PositionalStructExprOrFunctionCall {pseofcNameAccessChain, pseofcTypeArgs, pseofcFields}) =
   [trimming|
-    $name$tArgs($fields)
+    $name$($fields)
   |]
   where
     name = generateNameAccessChain pseofcNameAccessChain
-    tArgs = packTypeArgs pseofcTypeArgs
     fields = intercalate (pack ", ") $ map generateExpression pseofcFields
 generateExpression (FunctionBangCallExpr FunctionBangCall {fbcNameAccessChain, fbcFields}) =
   [trimming|
@@ -382,9 +315,69 @@ generateExpression _ = error "Expressions are currently not supported"
 -- |
 -- Given a Move Sequence (not SequenceExpr), generates the corresponding Aiken code,
 -- without braces '{' '}'. Braces should be handled both by `generateExpression` and top level function
--- TODO:
 generateSequence :: Sequence -> Text
-generateSequence _ = error "Sequences are currently not supported"
+generateSequence sqn@Sequence {sequenceUses, sequenceItems, sequenceEndExpr} =
+  if not $ Prelude.null sequenceUses
+    then error $ "Unexpected sequence with Uses:" ++ show sqn
+    else join "" $ map generateSqnItem sequenceItems ++ [generateExpression $ fromMaybe (CommaExpr []) sequenceEndExpr]
+  where
+    generateSqnItem :: SequenceItem -> Text
+    generateSqnItem (SequenceItemExpr expr) = generateExpression expr
+    generateSqnItem item@(SequenceItemBindExpr Bindings {bindingsBindExpr = Nothing}) = error $ "Unexpected binding without expression: " ++ show item
+    generateSqnItem (SequenceItemBindExpr Bindings {bindings, bindingsBindType, bindingsBindExpr = Just bindingsBindExpr'}) =
+      [trimming|
+        let $bind'$bindType = $bindExpr
+      |]
+      where
+        bind' = case bindings of
+          BindedSingle bind'' -> generateBind bind''
+          BindedTuple binds ->
+            [trimming|
+              ($binds')
+            |]
+            where
+              binds' = intercalate (pack ", ") $ map generateBind binds
+        bindType = case bindingsBindType of
+          Nothing -> empty
+          Just bindingsBindType' ->
+            [trimming|
+              :$t
+            |]
+            where
+              t = generateType bindingsBindType'
+        bindExpr = generateExpression bindingsBindExpr'
+
+        -- Given a single bind, generates the corresponding Aiken code
+        generateBind :: Bind -> Text
+        generateBind (BindIdentifier ident _) = packIdent ident
+        generateBind (BindNamedStruct BindedNamedStruct {bnsNameAccessChain, bnsFields}) =
+          [trimming|
+            $name {$fields}
+          |]
+          where
+            name = generateNameAccessChain bnsNameAccessChain
+            fields = packBindedFields bnsFields
+        generateBind (BindPositionalStruct BindedPositionalStruct {bpsNameAccessChain, bpsFields}) =
+          [trimming|
+            $name ($fields)
+          |]
+          where
+            name = generateNameAccessChain bpsNameAccessChain
+            fields = packBindedFields bpsFields
+
+        packBindedFields :: BindedFields -> Text
+        packBindedFields bf@BindedFields {hasPartialPattern = True} = error $ "Binded fields with partial patterns are currently not supported: " ++ show bf
+        packBindedFields BindedFields {hasPartialPattern = False, bindedFields} = intercalate (pack ", ") $ map packBindedField bindedFields
+
+        packBindedField :: BindedField -> Text
+        packBindedField BindedField {bindFieldIdentifier, bindFieldInnerBind = Nothing} = packIdent bindFieldIdentifier
+        packBindedField BindedField {bindFieldIdentifier, bindFieldInnerBind = Just bindFieldInnerBind'} =
+          [trimming|
+            $name: $inner
+          |]
+          where
+            name = packIdent bindFieldIdentifier
+            inner = generateBind bindFieldInnerBind'
 
 -- |
 -- Given an access chain, generates the corresponding Aiken code
@@ -393,14 +386,17 @@ generateNameAccessChain :: NameAccessChain -> Text
 generateNameAccessChain (LocalNameAccessChain ident) = packIdent ident
 generateNameAccessChain nac = error $ "Non local name access chains are currently not supported" ++ show nac
 
--- Generates Aiken code corresponding to the given type arguments
--- TODO: Type arguments coming from type parameters should be lowercase.
--- Add this logic to the transpiler
-packTypeArgs :: [Type] -> Text
-packTypeArgs [] = empty
-packTypeArgs tArgs' =
+-- |
+-- Helper for generating Aiken for binary operations
+--
+-- It accepts the left and right operands and the String representation of the operator,
+-- returning `left op right`
+binaryOpHelper :: Expr -> String -> Expr -> Text
+binaryOpHelper left op right =
   [trimming|
-    <$ts>
+    $left' $op' $right'
   |]
   where
-    ts :: Text = intercalate (pack ", ") $ map generateType tArgs'
+    left' = generateExpression left
+    op' = pack op
+    right' = generateExpression right
