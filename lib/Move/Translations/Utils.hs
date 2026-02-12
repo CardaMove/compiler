@@ -1,4 +1,21 @@
-module Move.Translations.Utils where
+module Move.Translations.Utils
+  ( unitType,
+    booleanType,
+    numericType,
+    addressType,
+    VariableAnnotations (..),
+    Scope,
+    isIdentifierInScope,
+    getIdentifierFromScopes,
+    getUseIdentifiers,
+    extractVariablesFromBindings,
+    extractVariablesFromSingleBind,
+    annotateBindingsWithUUID,
+    inferExprType,
+    resolveParametricType,
+    mapTemporaryBindingsToScope,
+  )
+where
 
 import Control.Monad.State
   ( MonadState (get, put),

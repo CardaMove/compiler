@@ -1,4 +1,4 @@
-module Move.Translations.TypeWitness where
+module Move.Translations.TypeWitness (rewriteTopLevelsInRoot, translateTParamsInRoot) where
 
 import Control.Monad.State
 import Move.AST
