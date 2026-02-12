@@ -2,6 +2,7 @@
 
 module Aiken.CodeGenerator where
 
+import Data.Maybe (fromMaybe)
 import Data.Text (Text, empty, intercalate, null, pack)
 import Move.AST
 import Move.Translations.Utils (unitType)
@@ -136,18 +137,6 @@ generateType (TypeConstructor (LocalNameAccessChain ident) tArgs) =
   where
     name = packIdent ident
     packedTArgs :: Text = packTypeArgs tArgs
-
-    -- Generates Aiken code corresponding to the given type arguments
-    -- TODO: Type arguments coming from type parameters should be lowercase.
-    -- Add this logic to the transpiler
-    packTypeArgs :: [Type] -> Text
-    packTypeArgs [] = empty
-    packTypeArgs tArgs' =
-      [trimming|
-        <$ts>
-      |]
-      where
-        ts :: Text = intercalate (pack ", ") $ map generateType tArgs'
 -- The unit type () is translated to Void, like the unit expression
 generateType (TypeTuple []) = pack "Void"
 generateType _ = error "Unexpected Type"
@@ -171,8 +160,223 @@ packTypeParams tParams =
 -- Given any Move expression, generates its corresponding Aiken expression
 -- TODO:
 generateExpression :: Expr -> Text
+-- Binary operations
+generateExpression (BinaryOpExprExpr (Or left right)) =
+  [trimming|
+    $left' || $right'
+  |]
+  where
+    left' = generateExpression left
+    right' = generateExpression right
+generateExpression (BinaryOpExprExpr (And left right)) =
+  [trimming|
+    $left' && $right'
+  |]
+  where
+    left' = generateExpression left
+    right' = generateExpression right
+generateExpression (BinaryOpExprExpr (Eq left right)) =
+  [trimming|
+    $left' == $right'
+  |]
+  where
+    left' = generateExpression left
+    right' = generateExpression right
+generateExpression (BinaryOpExprExpr (Neq left right)) =
+  [trimming|
+    $left' != $right'
+  |]
+  where
+    left' = generateExpression left
+    right' = generateExpression right
+generateExpression (BinaryOpExprExpr (Lt left right)) =
+  [trimming|
+    $left' < $right'
+  |]
+  where
+    left' = generateExpression left
+    right' = generateExpression right
+generateExpression (BinaryOpExprExpr (Gt left right)) =
+  [trimming|
+    $left' > $right'
+  |]
+  where
+    left' = generateExpression left
+    right' = generateExpression right
+generateExpression (BinaryOpExprExpr (Leq left right)) =
+  [trimming|
+    $left' <= $right'
+  |]
+  where
+    left' = generateExpression left
+    right' = generateExpression right
+generateExpression (BinaryOpExprExpr (Geq left right)) =
+  [trimming|
+    $left' >= $right'
+  |]
+  where
+    left' = generateExpression left
+    right' = generateExpression right
+generateExpression (BinaryOpExprExpr (BitwiseOr _ _)) = error "Bitwise operators unsupported"
+generateExpression (BinaryOpExprExpr (BitwiseXor _ _)) = error "Bitwise operators unsupported"
+generateExpression (BinaryOpExprExpr (BitwiseAnd _ _)) = error "Bitwise operators unsupported"
+generateExpression (BinaryOpExprExpr (ShiftLeft _ _)) = error "Bitshift operators unsupported"
+generateExpression (BinaryOpExprExpr (ShiftRight _ _)) = error "Bitshift operators unsupported"
+generateExpression (BinaryOpExprExpr (Add left right)) =
+  [trimming|
+    $left' + $right'
+  |]
+  where
+    left' = generateExpression left
+    right' = generateExpression right
+generateExpression (BinaryOpExprExpr (Sub left right)) =
+  [trimming|
+    $left' - $right'
+  |]
+  where
+    left' = generateExpression left
+    right' = generateExpression right
+generateExpression (BinaryOpExprExpr (Mult left right)) =
+  [trimming|
+    $left' * $right'
+  |]
+  where
+    left' = generateExpression left
+    right' = generateExpression right
+generateExpression (BinaryOpExprExpr (Div left right)) =
+  [trimming|
+    $left' / $right'
+  |]
+  where
+    left' = generateExpression left
+    right' = generateExpression right
+generateExpression (BinaryOpExprExpr (Mod left right)) =
+  [trimming|
+    $left' % $right'
+  |]
+  where
+    left' = generateExpression left
+    right' = generateExpression right
+-- Assignments should not be present
+generateExpression expr@(AssignmentExpr _) = error $ "Unexpected assignment expression: " ++ show expr
+-- Unary operations
+generateExpression (UnaryOpExpr (Negation inner)) =
+  [trimming|
+    !$inner'
+  |]
+  where
+    inner' = generateExpression inner
+-- References should not be present
+generateExpression expr@(UnaryOpExpr (MutableReference _)) = error $ "Unexpected reference expression: " ++ show expr
+generateExpression expr@(UnaryOpExpr (ImmutableReference _)) = error $ "Unexpected reference expression: " ++ show expr
+generateExpression expr@(UnaryOpExpr (Dereference _)) = error $ "Unexpected dereference expression: " ++ show expr
+generateExpression (UnaryOpExpr (MoveExpr ident)) = packIdent ident
+generateExpression (UnaryOpExpr (CopyExpr ident)) = packIdent ident
+generateExpression (DotOrIndexChainExpr DotAccess {dotAccessLeft, dotAccessRight}) =
+  [trimming|
+    $left.$name
+  |]
+  where
+    left = generateExpression dotAccessLeft
+    name = packIdent dotAccessRight
+-- TODO: Address literals
+generateExpression (ValueLiteral (Address _)) = error "Address literals currently not supported"
+-- Booleans
+generateExpression (ValueLiteral (Boolean value)) = if value then pack "True" else pack "False"
+generateExpression (ValueLiteral (Numerical (LiteralIntDec value))) = pack $ show value
+generateExpression (ValueLiteral (Numerical (LiteralIntHex value))) = pack value
 -- The unit expression is translated as Void, like the unit type
 generateExpression (CommaExpr []) = pack "Void"
+generateExpression (CommaExpr exprs) =
+  [trimming|
+    ($exprs')
+  |]
+  where
+    exprs' = intercalate (pack ", ") $ map generateExpression exprs
+generateExpression (TypedExprTerm TypedExpr {typedExpr}) = generateExpression typedExpr
+-- Casting is translated as a non-exaustive pattern matchich via `expect`
+generateExpression (CastingTerm Casting {castingExpr, castingType}) =
+  [trimming|
+    {
+      expect val:$t = $expr
+      val
+    }
+  |]
+  where
+    t = generateType castingType
+    expr = generateExpression castingExpr
+-- Named structs
+generateExpression (NamedStructExprExpr NamedStructExpr {nseNameAccessChain, nseTypeArgs, nseFields}) =
+  [trimming|
+    $name$tArgs { $fields }
+  |]
+  where
+    name = generateNameAccessChain nseNameAccessChain
+    tArgs = packTypeArgs nseTypeArgs
+    fields = intercalate (pack ", ") $ map packNamedStructField nseFields
+
+    packNamedStructField :: NamedStructExprField -> Text
+    packNamedStructField NamedStructExprField {nsefIdentifier, nsefExpr} =
+      [trimming|
+        $fieldName: $fieldExpr
+      |]
+      where
+        fieldName = packIdent nsefIdentifier
+        -- If the named field has no associated expression, it defaults to the field name itself
+        fieldExpr = generateExpression $ fromMaybe (NameAccessChainExpr $ LocalNameAccessChain nsefIdentifier) nsefExpr
+-- Positional structs or function calls
+generateExpression (PositionalStructExprOrFunctionCallExpr PositionalStructExprOrFunctionCall {pseofcNameAccessChain, pseofcTypeArgs, pseofcFields}) =
+  [trimming|
+    $name$tArgs($fields)
+  |]
+  where
+    name = generateNameAccessChain pseofcNameAccessChain
+    tArgs = packTypeArgs pseofcTypeArgs
+    fields = intercalate (pack ", ") $ map generateExpression pseofcFields
+generateExpression (FunctionBangCallExpr FunctionBangCall {fbcNameAccessChain, fbcFields}) =
+  [trimming|
+    $name!($fields)
+  |]
+  where
+    name = generateNameAccessChain fbcNameAccessChain
+    fields = intercalate (pack ", ") $ map generateExpression fbcFields
+generateExpression (NameAccessChainExpr nac) = generateNameAccessChain nac
+-- Sequence expression
+generateExpression (SequenceExpr sqn) =
+  [trimming|
+    {
+      $sqn'
+    }
+  |]
+  where
+    sqn' = generateSequence sqn
+-- If then else
+generateExpression expr@(IfThenElseTerm IfThenElse {ifThenElseElseBranch = Nothing}) = error $ "Unexpected if-then-else with no else branch: " ++ show expr
+generateExpression (IfThenElseTerm IfThenElse {ifThenElseCondition, ifThenElseIfBranch, ifThenElseElseBranch = Just ifThenElseElseBranch'}) =
+  [trimming|
+    if $cond $ifBranch
+    else $elseBranch
+  |]
+  where
+    cond = generateExpression ifThenElseCondition
+    ifBranch = generateExpression ifThenElseIfBranch
+    elseBranch = generateExpression ifThenElseElseBranch'
+-- Whiles should not be present
+generateExpression expr@(WhileTerm _) = error $ "Unexpected while: " ++ show expr
+-- Loops should not be present
+generateExpression expr@(Loop _) = error $ "Unexpected loop: " ++ show expr
+-- A return is just the expression itself, defaulting to unit if not present
+generateExpression (Return expr) = generateExpression $ fromMaybe (CommaExpr []) expr
+-- Since failing in Aiken restricts the message to a String, the aborting expression is simply stringified
+generateExpression (Abort expr) =
+  [trimming|
+    fail @"Failing with custom expression $expr'"
+  |]
+  where
+    expr' = pack $ show expr
+generateExpression Break = error "Unexpected break"
+generateExpression Continue = error "Unexpected continue"
+-- Intermediate expressions TODO:
 generateExpression _ = error "Expressions are currently not supported"
 
 -- |
@@ -181,3 +385,22 @@ generateExpression _ = error "Expressions are currently not supported"
 -- TODO:
 generateSequence :: Sequence -> Text
 generateSequence _ = error "Sequences are currently not supported"
+
+-- |
+-- Given an access chain, generates the corresponding Aiken code
+-- TODO: add support for non local access chain
+generateNameAccessChain :: NameAccessChain -> Text
+generateNameAccessChain (LocalNameAccessChain ident) = packIdent ident
+generateNameAccessChain nac = error $ "Non local name access chains are currently not supported" ++ show nac
+
+-- Generates Aiken code corresponding to the given type arguments
+-- TODO: Type arguments coming from type parameters should be lowercase.
+-- Add this logic to the transpiler
+packTypeArgs :: [Type] -> Text
+packTypeArgs [] = empty
+packTypeArgs tArgs' =
+  [trimming|
+    <$ts>
+  |]
+  where
+    ts :: Text = intercalate (pack ", ") $ map generateType tArgs'
