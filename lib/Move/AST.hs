@@ -626,7 +626,9 @@ data IntermediateExpr
   | -- | Any `*a` on the left side
     IntermediatePutDereferenceLocalState Identifier Expr
   | -- | Any `a[.b.c]` where `a` is in the local state
-    IntermediateGetLocalState [Identifier] Type
+    -- Only the first identifier has to be actually retrieved,
+    -- The others are dot accesses
+    IntermediateGetLocalState Identifier Type
   | -- | Any `a[.b.c] = ...`
     -- FIXME: probably needs to know the type of the root identifier, so to downcast it and access nested fields
     IntermediatePutLocalState [Identifier] Expr

@@ -180,7 +180,7 @@ rewriteVars markedVars = rewriteVars'
         VariableAnnotations (Just identUUID) identType ->
           -- Replace the variable only if it is marked as such
           if Set.member identUUID markedVars
-            then (IntermediateExprExpr $ IntermediateGetLocalState [ident] identType, state)
+            then (IntermediateExprExpr $ IntermediateGetLocalState ident identType, state)
             else (expr, state)
         VariableAnnotations Nothing _ -> error $ "Found identifier without UUID when adding local state: " ++ show expr
     rewriteVars' expr _scopes state = (expr, state)

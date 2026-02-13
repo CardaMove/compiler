@@ -198,7 +198,7 @@ RModule
                                                                                                 { dotAccessLeft =
                                                                                                     DotOrIndexChainExpr
                                                                                                       ( DotAccess
-                                                                                                          { dotAccessLeft = IntermediateExprExpr (IntermediateGetLocalState [Identifier "c"] (TypeConstructor (LocalNameAccessChain (Identifier "B")) [])),
+                                                                                                          { dotAccessLeft = IntermediateExprExpr (IntermediateGetLocalState (Identifier "c") (TypeConstructor (LocalNameAccessChain (Identifier "B")) [])),
                                                                                                             dotAccessRight = Identifier "a"
                                                                                                           }
                                                                                                       ),
@@ -214,7 +214,7 @@ RModule
                                                                   }
                                                               )
                                                           ],
-                                                        sequenceEndExpr = Just (CommaExpr [IntermediateExprExpr (IntermediateGetLocalState [Identifier "c"] (TypeConstructor (LocalNameAccessChain (Identifier "B")) [])), IntermediateExprExpr (IntermediatePopScope (Identifier "scopes"))])
+                                                        sequenceEndExpr = Just (CommaExpr [IntermediateExprExpr (IntermediateGetLocalState (Identifier "c") (TypeConstructor (LocalNameAccessChain (Identifier "B")) [])), IntermediateExprExpr (IntermediatePopScope (Identifier "scopes"))])
                                                       }
                                                   )
                                               )

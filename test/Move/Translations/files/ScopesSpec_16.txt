@@ -224,7 +224,7 @@ RModule
                                                                                   bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePushScope (Identifier "scopes")))
                                                                                 }
                                                                           ],
-                                                                        sequenceEndExpr = Just (IntermediateExprExpr (IntermediateGetLocalState [Identifier "b"] (TypeConstructor (LocalNameAccessChain (Identifier "u256")) [])))
+                                                                        sequenceEndExpr = Just (IntermediateExprExpr (IntermediateGetLocalState (Identifier "b") (TypeConstructor (LocalNameAccessChain (Identifier "u256")) [])))
                                                                       },
                                                                   IntermediateExprExpr (IntermediatePopScope (Identifier "scopes"))
                                                                 ]

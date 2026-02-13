@@ -35,7 +35,7 @@ RModule
                                     ( Bindings
                                         { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
                                         bindingsBindType = Just IntermediateTypeScopes,
-                                        bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePutLocalState [Identifier "x"] (BinaryOpExprExpr (Add (IntermediateExprExpr (IntermediateGetLocalState [Identifier "a"] (TypeConstructor (LocalNameAccessChain (Identifier "u256")) []))) (ValueLiteral (Numerical (LiteralIntDec 1)))))))
+                                        bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePutLocalState [Identifier "x"] (BinaryOpExprExpr (Add (IntermediateExprExpr (IntermediateGetLocalState (Identifier "a") (TypeConstructor (LocalNameAccessChain (Identifier "u256")) []))) (ValueLiteral (Numerical (LiteralIntDec 1)))))))
                                         }
                                     ),
                                 SequenceItemBindExpr
@@ -62,7 +62,7 @@ RModule
                                 SequenceItemExpr
                                     ( IfThenElseTerm
                                         ( IfThenElse
-                                            { ifThenElseCondition = BinaryOpExprExpr (Gt (IntermediateExprExpr (IntermediateGetLocalState [Identifier "x"] (TypeConstructor (LocalNameAccessChain (Identifier "u64")) []))) (ValueLiteral (Numerical (LiteralIntDec 10)))),
+                                            { ifThenElseCondition = BinaryOpExprExpr (Gt (IntermediateExprExpr (IntermediateGetLocalState (Identifier "x") (TypeConstructor (LocalNameAccessChain (Identifier "u64")) []))) (ValueLiteral (Numerical (LiteralIntDec 10)))),
                                             ifThenElseIfBranch =
                                                 SequenceExpr
                                                 ( Sequence
@@ -98,7 +98,7 @@ RModule
                                             Just
                                             ( IfThenElseTerm
                                                 ( IfThenElse
-                                                    { ifThenElseCondition = BinaryOpExprExpr (Gt (IntermediateExprExpr (IntermediateGetLocalState [Identifier "x"] (TypeConstructor (LocalNameAccessChain (Identifier "u64")) []))) (ValueLiteral (Numerical (LiteralIntDec 10)))),
+                                                    { ifThenElseCondition = BinaryOpExprExpr (Gt (IntermediateExprExpr (IntermediateGetLocalState (Identifier "x") (TypeConstructor (LocalNameAccessChain (Identifier "u64")) []))) (ValueLiteral (Numerical (LiteralIntDec 10)))),
                                                         ifThenElseIfBranch =
                                                         SequenceExpr
                                                             ( Sequence
@@ -141,7 +141,7 @@ RModule
                                     ( Bindings
                                         { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
                                         bindingsBindType = Just IntermediateTypeScopes,
-                                        bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePutLocalState [Identifier "f"] (BinaryOpExprExpr (Add (IntermediateExprExpr (IntermediateGetLocalState [Identifier "f"] (TypeConstructor (LocalNameAccessChain (Identifier "u256")) []))) (ValueLiteral (Numerical (LiteralIntDec 1)))))))
+                                        bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePutLocalState [Identifier "f"] (BinaryOpExprExpr (Add (IntermediateExprExpr (IntermediateGetLocalState (Identifier "f") (TypeConstructor (LocalNameAccessChain (Identifier "u256")) []))) (ValueLiteral (Numerical (LiteralIntDec 1)))))))
                                         }
                                     )
                                 ],

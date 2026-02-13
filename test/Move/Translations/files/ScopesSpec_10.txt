@@ -73,7 +73,7 @@ RModule
                                     ( Bindings
                                         { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
                                           bindingsBindType = Just IntermediateTypeScopes,
-                                          bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePutLocalState [Identifier "x"] (BinaryOpExprExpr (Add (IntermediateExprExpr (IntermediateGetLocalState [Identifier "x"] (TypeConstructor (LocalNameAccessChain (Identifier "u64")) []))) (ValueLiteral (Numerical (LiteralIntDec 1)))))))
+                                          bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePutLocalState [Identifier "x"] (BinaryOpExprExpr (Add (IntermediateExprExpr (IntermediateGetLocalState (Identifier "x") (TypeConstructor (LocalNameAccessChain (Identifier "u64")) []))) (ValueLiteral (Numerical (LiteralIntDec 1)))))))
                                         }
                                     ),
                                   SequenceItemBindExpr
@@ -93,7 +93,7 @@ RModule
                                                                     nseFields =
                                                                       [ NamedStructExprField
                                                                           { nsefIdentifier = Identifier "num",
-                                                                            nsefExpr = Just (BinaryOpExprExpr (Add (IntermediateExprExpr (IntermediateGetLocalState [Identifier "x"] (TypeConstructor (LocalNameAccessChain (Identifier "u64")) []))) (ValueLiteral (Numerical (LiteralIntDec 1)))))
+                                                                            nsefExpr = Just (BinaryOpExprExpr (Add (IntermediateExprExpr (IntermediateGetLocalState (Identifier "x") (TypeConstructor (LocalNameAccessChain (Identifier "u64")) []))) (ValueLiteral (Numerical (LiteralIntDec 1)))))
                                                                           }
                                                                       ]
                                                                   }
@@ -119,7 +119,7 @@ RModule
                                         }
                                     )
                                 ],
-                              sequenceEndExpr = Just (CommaExpr [IntermediateExprExpr (IntermediateGetLocalState [Identifier "x"] (TypeConstructor (LocalNameAccessChain (Identifier "u64")) [])), IntermediateExprExpr (IntermediatePopScope (Identifier "scopes"))])
+                              sequenceEndExpr = Just (CommaExpr [IntermediateExprExpr (IntermediateGetLocalState (Identifier "x") (TypeConstructor (LocalNameAccessChain (Identifier "u64")) [])), IntermediateExprExpr (IntermediatePopScope (Identifier "scopes"))])
                             }
                         ),
                     functionUUID = Just 0
