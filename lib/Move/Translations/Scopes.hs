@@ -94,7 +94,7 @@ rewriteAssignments root scopeIdentifier scopeUUID = transformBi f root
             bindingsBindType = Just IntermediateTypeScopes,
             bindingsBindExpr = Just $ IntermediateExprExpr $ IntermediatePutLocalState (getDotAccessChain dotAccess) assignmentRight
           }
-    -- `*a = ...`, it can not be a dot access since references can not be labels in structs
+    -- `*a = ...`, it can not be a dot access, meaning `*(a.b)`, since references can not be labels in structs
     f (SequenceItemExpr (AssignmentExpr (Assignment {assignmentLeft = UnaryOpExpr (Dereference (NameAccessChainExpr (LocalNameAccessChain ident))), assignmentRight}))) =
       SequenceItemBindExpr
         Bindings
@@ -759,6 +759,9 @@ addLocalScopeInRoot root markedVars currUUID =
       -- `ref.a.b` is in fact identical to `(*ref).a.b`
       -- To support this, the runtime function to Get and Put LocalState need to check if the leftmost value is a reference,
       -- and if the access path is longer than one element, it means its actually a dot access so it mas meant to dereference the variable
+      -- TODO: Additionally to what written above regarding syntact sugar, there can be an initial passage to rewrite syntactic sugar `a.b` on both left and right side
+      -- as simple dereferences `(*a).b`. Then, on the right side nothing has to be changed. On the left side, the `rewriteAssignments` should consider this particular case
+      -- and rewrite it as a whole PUT-dereference 
 
       firstPass :: Root = rewriteAssignments root scopeIdentifier scopeUUID
       secondPass :: Root = fst $ traverseRootPostOrder rewriteRefs traversalIdentity firstPass ()
