@@ -24,18 +24,18 @@ main = do
 
   putStrLn $ "Loaded " ++ show nScripts ++ " scripts and " ++ show nModules ++ " modules"
 
-  transpiled <- transpiler $ map snd files
+  transpiled <- transpiler files
 
   putStrLn "Transpiled"
 
   -- TODO: force evaluation, throw error with file path that caused it
-  let aikenText = map generateRoot transpiled
+  aikenText <- mapM (uncurry generateRoot) transpiled
 
   putStrLn "Generated Aiken text"
 
   let outDir = "test/out"
 
-  -- TODO: NOTE: outDir must already exist
+  -- -- TODO: NOTE: outDir must already exist
 
   let outFiles = map ((((outDir </>) . (`replaceExtension` "ak")) . takeFileName) . fst) files
 

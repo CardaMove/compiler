@@ -2,6 +2,7 @@
 
 module Aiken.AikenGenerator (generateRoot, generateTopLevel) where
 
+import Control.Exception (ErrorCall, Exception (displayException), evaluate, try)
 import Data.Maybe (fromMaybe)
 import Data.Text (Text, empty, intercalate, null, pack)
 import Move.AST
@@ -9,14 +10,23 @@ import Move.Translations.Utils (unitType)
 import NeatInterpolation (trimming)
 
 -- |
+-- Tries to execute an IO operation, intercepting any error if thrown and providing additional informations
+runStep :: String -> IO a -> IO a
+runStep stepName step = do
+  res <- try step
+  case res of
+    Left err -> error $ "Aiken generator failed at step " ++ stepName ++ ": " ++ displayException (err :: ErrorCall)
+    Right val -> pure val
+
+-- |
 -- Given either a Script or a Module, generates its corresponding Aiken code
 --
 -- NOTE: the default indentation size for Aiken is two spaces
-generateRoot :: Root -> Text
-generateRoot (RModule Module {moduleTopLevels}) =
-  join "\n" $ filter (not . Data.Text.null) $ map generateTopLevel moduleTopLevels
-generateRoot (RScript Script {scriptTopLevels}) =
-  join "\n" $ filter (not . Data.Text.null) $ map generateTopLevel scriptTopLevels
+generateRoot :: FilePath -> Root -> IO Text
+generateRoot fileName (RModule Module {moduleTopLevels}) =
+  runStep fileName $ evaluate $ join "\n" $ filter (not . Data.Text.null) $ map generateTopLevel moduleTopLevels
+generateRoot fileName (RScript Script {scriptTopLevels}) =
+  runStep fileName $ evaluate $ join "\n" $ filter (not . Data.Text.null) $ map generateTopLevel scriptTopLevels
 
 -- |
 -- Given any top level, generates its corresponding Aiken code

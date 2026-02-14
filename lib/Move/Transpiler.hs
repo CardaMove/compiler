@@ -18,24 +18,26 @@ runStep stepName step = do
     Right val -> pure val
 
 -- |
--- Given the whole parsed ASTs, translates them, respecting the input order
+-- Given the whole parsed ASTs, translates them
 --
 -- TODO: For now, each AST is translated independently from each other
-transpiler :: [Root] -> IO [Root]
-transpiler = mapM transpileRoot
+-- NOTE: The transpiler needs to know the (final) file paths, since needs to generate imports
+-- quick note: imports in Move follow module name, while in Aiken follow file name, which has to be considered 
+transpiler :: [(FilePath, Root)] -> IO [(FilePath, Root)]
+transpiler = mapM $ uncurry transpileRoot
 
 -- |
 -- Translates a single AST root alone
-transpileRoot :: Root -> IO Root
-transpileRoot root = do
-  step1NoLoops <- runStep "translateWhilesToFunctionsInRoot" $ evaluate $ translateWhilesToFunctionsInRoot root
+transpileRoot :: FilePath -> Root -> IO (FilePath, Root)
+transpileRoot fileName root = do
+  step1NoLoops <- runStep (fileName ++ ": translateWhilesToFunctionsInRoot") $ evaluate $ translateWhilesToFunctionsInRoot root
 
   (step2Annotated, uuidAfterAnnotations) <-
-    runStep "annotateBindingsWithUUID" $ evaluate $ runState (annotateBindingsWithUUID step1NoLoops) 0
+    runStep (fileName ++ ": annotateBindingsWithUUID") $ evaluate $ runState (annotateBindingsWithUUID step1NoLoops) 0
 
   (step3TypeWitness, uuidAfterTypeWitness) <-
-    runStep "translateTParamsInRoot" $ evaluate $ runState (translateTParamsInRoot step2Annotated) uuidAfterAnnotations
+    runStep (fileName ++ ": translateTParamsInRoot") $ evaluate $ runState (translateTParamsInRoot step2Annotated) uuidAfterAnnotations
 
-  markedVars <- runStep "markVariablesForLocalScope" $ evaluate $ markVariablesForLocalScope step3TypeWitness
+  markedVars <- runStep (fileName ++ ": markVariablesForLocalScope") $ evaluate $ markVariablesForLocalScope step3TypeWitness
 
-  runStep "addLocalScopeInRoot" $ evaluate $ addLocalScopeInRoot step3TypeWitness markedVars uuidAfterTypeWitness
+  runStep (fileName ++ ": addLocalScopeInRoot") $ evaluate (fileName, addLocalScopeInRoot step3TypeWitness markedVars uuidAfterTypeWitness)
