@@ -18,14 +18,14 @@ runStep stepName step = do
 
 -- |
 -- Loads a single file and parses it
-loadFile :: String -> IO Root
+loadFile :: String -> IO (FilePath, Root)
 loadFile path = do
   file <- runStep ("File loading: " ++ show path) $ readFile path
-  runStep ("File parsing: " ++ show path) $ evaluate $ parse $ scan file
+  runStep ("File parsing: " ++ show path) $ return (path, parse $ scan file)
 
 -- |
 -- Given the path to a `Move.toml` file, loads the entire project files
-loadToml :: String -> IO [Root]
+loadToml :: String -> IO [(FilePath, Root)]
 loadToml tomlPath = do
   tomlExists <- doesFileExist tomlPath
   if tomlExists
@@ -37,7 +37,7 @@ loadToml tomlPath = do
       pure $ scripts ++ sources
     else error $ "Move.toml file not found at: " ++ show tomlPath
   where
-    loadFolder :: String -> IO [Root]
+    loadFolder :: String -> IO [(FilePath, Root)]
     loadFolder folderName = do
       let dirPath = takeDirectory tomlPath </> folderName
       filesInDir <- listDirectory dirPath

@@ -10,3 +10,6 @@ lib/Move/Parser.info
 
 # vscode logs
 .vscode/phoityne.log
+
+# Testing output code
+test/out

@@ -18,7 +18,7 @@ runStep stepName step = do
     Right val -> pure val
 
 -- |
--- Given the whole parsed ASTs, translates them
+-- Given the whole parsed ASTs, translates them, respecting the input order
 --
 -- TODO: For now, each AST is translated independently from each other
 transpiler :: [Root] -> IO [Root]

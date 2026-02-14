@@ -12,8 +12,8 @@ testLoadToml = describe "Tests the function `loadToml`" $ do
 
     files <- loadToml tomlPath
 
-    let scripts = [f | RScript f <- files]
-    let modules = [f | RModule f <- files]
+    let scripts = [f | (_, RScript f) <- files]
+    let modules = [f | (_, RModule f) <- files]
 
     length scripts `shouldBe` 1
 
