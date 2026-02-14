@@ -8,7 +8,7 @@ import Data.Text (unpack)
 import Move.AST (Root (RModule, RScript))
 import Move.Loader.Loader (loadToml)
 import Move.Transpiler (transpiler)
-import System.FilePath (replaceExtension)
+import System.FilePath (replaceExtension, takeFileName, (</>))
 
 main :: IO ()
 main = do
@@ -28,13 +28,16 @@ main = do
 
   putStrLn "Transpiled"
 
+  -- TODO: force evaluation, throw error with file path that caused it
   let aikenText = map generateRoot transpiled
 
   putStrLn "Generated Aiken text"
 
   let outDir = "test/out"
 
-  let outFiles = map (replaceExtension "ak" . fst) files
+  -- TODO: NOTE: outDir must already exist
+
+  let outFiles = map ((((outDir </>) . (`replaceExtension` "ak")) . takeFileName) . fst) files
 
   zipWithM_ writeFile outFiles (map unpack aikenText)
 
