@@ -1,6 +1,6 @@
 {-# LANGUAGE QuasiQuotes #-}
 
-module Aiken.CodeGenerator (generateRoot, generateTopLevel) where
+module Aiken.AikenGenerator (generateRoot, generateTopLevel) where
 
 import Data.Maybe (fromMaybe)
 import Data.Text (Text, empty, intercalate, null, pack)

@@ -1,6 +1,6 @@
-module Aiken.CodeGeneratorSpec (spec) where
+module Aiken.AikenGeneratorSpec (spec) where
 
-import Aiken.CodeGenerator (generateTopLevel)
+import Aiken.AikenGenerator (generateTopLevel)
 import Data.Text (unpack)
 import Move.AST
 import Test.Hspec
@@ -12,36 +12,36 @@ import Test.Hspec
 testGenerateTopLevel :: Spec
 testGenerateTopLevel = describe "Tests the function `generateTopLevel`" $ do
   it "Generates Text for TopLevelNamedStruct" $ do
-    input <- readFile "test/Aiken/files/CodeGeneratorSpec_0.txt"
+    input <- readFile "test/Aiken/files/AikenGeneratorSpec_0.txt"
     let from = read input :: TopLevel
 
-    to <- readFile "test/Aiken/files/CodeGeneratorSpec_1.ak"
+    to <- readFile "test/Aiken/files/AikenGeneratorSpec_1.ak"
 
     strip (unpack (generateTopLevel from)) `shouldBe` strip to
 
   it "Generates Text for TopLevelPositionalStruct" $ do
-    input <- readFile "test/Aiken/files/CodeGeneratorSpec_2.txt"
+    input <- readFile "test/Aiken/files/AikenGeneratorSpec_2.txt"
     let from = read input :: TopLevel
 
-    to <- readFile "test/Aiken/files/CodeGeneratorSpec_3.ak"
+    to <- readFile "test/Aiken/files/AikenGeneratorSpec_3.ak"
 
     strip (unpack (generateTopLevel from)) `shouldBe` strip to
   
   -- TODO: Add test for top level constants after expressions are translated
 
   it "Generates Text for a function with no body" $ do
-    input <- readFile "test/Aiken/files/CodeGeneratorSpec_4.txt"
+    input <- readFile "test/Aiken/files/AikenGeneratorSpec_4.txt"
     let from = read input :: TopLevel
 
-    to <- readFile "test/Aiken/files/CodeGeneratorSpec_5.ak"
+    to <- readFile "test/Aiken/files/AikenGeneratorSpec_5.ak"
 
     strip (unpack (generateTopLevel from)) `shouldBe` strip to
 
   it "Generates Text for a function with let bindings, destructuring and if-then-else" $ do
-    input <- readFile "test/Aiken/files/CodeGeneratorSpec_6.txt"
+    input <- readFile "test/Aiken/files/AikenGeneratorSpec_6.txt"
     let from = read input :: TopLevel
 
-    to <- readFile "test/Aiken/files/CodeGeneratorSpec_7.ak"
+    to <- readFile "test/Aiken/files/AikenGeneratorSpec_7.ak"
 
     strip (unpack (generateTopLevel from)) `shouldBe` strip to
 

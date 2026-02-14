@@ -22,7 +22,7 @@ extra-source-files:
 
 library
   exposed-modules:
-      Aiken.CodeGenerator
+      Aiken.AikenGenerator
       Move.AST
       Move.Lexer
       Move.Loader.Loader
@@ -90,7 +90,7 @@ test-suite cardamove-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      Aiken.CodeGeneratorSpec
+      Aiken.AikenGeneratorSpec
       Move.LexerSpec
       Move.Loader.LoaderSpec
       Move.ParserSpec
