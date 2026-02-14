@@ -620,6 +620,7 @@ type AnnotatedUUID = Int
 -- Nodes used as intermediate representations for some expressions
 data IntermediateExpr
   = -- | Any `&[mut] a[.b.c]`
+    -- TODO: Should track field indices to allow Aiken to unconstruct and reconstruct the fields
     IntermediateReferenceLocalState [Identifier] Type
   | -- | Any `*a` on the right side
     IntermediateGetDereferenceLocalState Expr Type
@@ -631,6 +632,7 @@ data IntermediateExpr
     IntermediateGetLocalState Identifier Type
   | -- | Any `a[.b.c] = ...`
     -- FIXME: probably needs to know the type of the root identifier, so to downcast it and access nested fields
+    -- TODO: Instead, it should track the indices of the fields and use Aiken data unconstruction
     IntermediatePutLocalState [Identifier] Expr
   | -- | Any `let a = ...` where `a` has to be inserted in the local state
     IntermediatePostLocalState Identifier (Maybe Expr)
@@ -653,6 +655,7 @@ data IntermediateExpr
   | -- | Represents a `move_to<T>(&signer, T)`
     --
     -- Includes the type of `T` both as type for downcasting and (runtime) type witness
+    -- TODO: At runtime, should probably remove any referenced resource from the original owner
     IntermediateMoveTo Expr Expr Type IntermediateTypeWitnessExpr
   | -- | Represents a `move_from<T>(address)`
     --

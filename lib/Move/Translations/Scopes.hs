@@ -59,9 +59,10 @@ getDotAccessChain = reverse . getDotAccessChain'
 --
 -- Given a reference to either a local identifier or a dot access chain `&[mut] a[.b.c]`,
 -- rewrites the node as an high level reference on the state, also preserving the resulting type
+-- TODO: track the indices of the fields, so to allow Aiken builtins to unconstruct the Data
 mapRightValueRef :: Expr -> Type -> Expr
-mapRightValueRef (NameAccessChainExpr (LocalNameAccessChain ident)) identType = IntermediateExprExpr $ IntermediateReferenceLocalState [ident] identType
-mapRightValueRef expr@(DotOrIndexChainExpr _) identType = IntermediateExprExpr $ IntermediateReferenceLocalState (getDotAccessChain expr) identType
+mapRightValueRef (NameAccessChainExpr (LocalNameAccessChain ident)) exprType = IntermediateExprExpr $ IntermediateReferenceLocalState [ident] exprType
+mapRightValueRef expr@(DotOrIndexChainExpr _) exprType = IntermediateExprExpr $ IntermediateReferenceLocalState (getDotAccessChain expr) exprType
 -- TODO: Similarly, only references to variables or dot access are supported, but can be inline values
 -- or also `(*a).b.c = ...`
 mapRightValueRef expr _ = error $ "More complex reference not supported: " ++ show expr
