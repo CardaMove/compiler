@@ -179,6 +179,11 @@ annotateBindingsWithUUID root = do
               functionBody = annotatedBody,
               functionUUID = Just functionUUID
             }
+    -- Also, annotate module constants
+    topLevelAnnotator (TopLevelConstant c@Constant {}) = do
+      constantUUID' <- get
+      put $ constantUUID' + 1
+      return $ TopLevelConstant c {constantUUID = Just constantUUID'}
     -- Every other top level node is ignored
     topLevelAnnotator otherTL = return otherTL
 

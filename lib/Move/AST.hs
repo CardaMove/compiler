@@ -316,7 +316,8 @@ data Constant
   = Constant
   { constantIdentifier :: Identifier,
     constantType :: Type,
-    constantExpression :: Expr
+    constantExpression :: Expr,
+    constantUUID :: Maybe AnnotatedUUID
   }
   deriving (Eq, Show, Read, Data, Typeable)
 

@@ -84,6 +84,16 @@ RModule
                         ),
                     functionUUID = Just 0
                 }
+            ),
+            TopLevelConstant (
+                Constant {
+                    constantIdentifier = Identifier "MY_CONST",
+                    constantType = TypeConstructor (LocalNameAccessChain (Identifier "u64")) [],
+                    constantExpression = ValueLiteral (
+                        Numerical (LiteralIntDec 1)
+                    ),
+                    constantUUID = Just 7
+                }
             )
         ]
     }

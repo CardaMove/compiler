@@ -5,4 +5,6 @@ module NamedAddr::UtilsSpc {
 
         let MyStruct(l1: d, l2) = something();
     }
+
+    const MY_CONST: u64 = 1;
 }

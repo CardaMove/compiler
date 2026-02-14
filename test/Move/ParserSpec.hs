@@ -284,7 +284,8 @@ testParseConstants =
               Constant
                 { constantIdentifier = Identifier "C1",
                   constantType = TypeConstructor (LocalNameAccessChain $ Identifier "u64") [],
-                  constantExpression = ValueLiteral $ Numerical $ LiteralIntDec 1
+                  constantExpression = ValueLiteral $ Numerical $ LiteralIntDec 1,
+                  constantUUID = Nothing
                 },
             TopLevelConstant $
               Constant
@@ -294,19 +295,22 @@ testParseConstants =
                     BinaryOpExprExpr $
                       Sub
                         (BinaryOpExprExpr $ Add (ValueLiteral $ Numerical $ LiteralIntDec 1) (ValueLiteral $ Numerical $ LiteralIntDec 2))
-                        (ValueLiteral $ Numerical $ LiteralIntDec 3)
+                        (ValueLiteral $ Numerical $ LiteralIntDec 3),
+                  constantUUID = Nothing
                 },
             TopLevelConstant $
               Constant
                 { constantIdentifier = Identifier "C3",
                   constantType = TypeConstructor (LocalNameAccessChain $ Identifier "bool") [],
-                  constantExpression = ValueLiteral $ Boolean False
+                  constantExpression = ValueLiteral $ Boolean False,
+                  constantUUID = Nothing
                 },
             TopLevelConstant $
               Constant
                 { constantIdentifier = Identifier "C4",
                   constantType = TypeConstructor (LocalNameAccessChain $ Identifier "address") [],
-                  constantExpression = ValueLiteral $ Address $ NumericalAddress $ LiteralIntHex "0xCAFFE"
+                  constantExpression = ValueLiteral $ Address $ NumericalAddress $ LiteralIntHex "0xCAFFE",
+                  constantUUID = Nothing
                 },
             TopLevelConstant $
               Constant
@@ -332,7 +336,8 @@ testParseConstants =
                             ShiftLeft
                               (ValueLiteral $ Numerical $ LiteralIntDec 2)
                               (ValueLiteral $ Numerical $ LiteralIntDec 4)
-                        )
+                        ),
+                  constantUUID = Nothing
                 },
             TopLevelConstant $
               Constant
@@ -346,7 +351,8 @@ testParseConstants =
                               (ValueLiteral $ Numerical $ LiteralIntDec 1)
                               (UnaryOpExpr $ Dereference $ NameAccessChainExpr $ LocalNameAccessChain $ Identifier "my_ref")
                         )
-                        (UnaryOpExpr $ MoveExpr $ Identifier "my_var")
+                        (UnaryOpExpr $ MoveExpr $ Identifier "my_var"),
+                  constantUUID = Nothing
                 },
             TopLevelConstant $
               Constant
@@ -358,7 +364,8 @@ testParseConstants =
                         { nseNameAccessChain = LocalNameAccessChain $ Identifier "A",
                           nseTypeArgs = [],
                           nseFields = [NamedStructExprField {nsefIdentifier = Identifier "b", nsefExpr = Just $ ValueLiteral $ Numerical $ LiteralIntDec 10}]
-                        }
+                        },
+                  constantUUID = Nothing
                 },
             TopLevelConstant $
               Constant
@@ -373,7 +380,8 @@ testParseConstants =
                             [ ValueLiteral $ Numerical $ LiteralIntDec 12,
                               ValueLiteral $ Boolean False
                             ]
-                        }
+                        },
+                  constantUUID = Nothing
                 }
           ]
       }

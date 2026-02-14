@@ -1,6 +1,6 @@
 module Move.Loader.Loader (loadToml) where
 
-import Control.Exception (ErrorCall, Exception (displayException), evaluate, try)
+import Control.Exception (ErrorCall, Exception (displayException), try)
 import Move.AST (Root)
 import Move.Lexer (scan)
 import Move.Parser (parse)

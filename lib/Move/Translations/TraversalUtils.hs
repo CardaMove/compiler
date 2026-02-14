@@ -133,7 +133,7 @@ traverseRootPostOrder exprMapper bindsMapper root state = case root of
               -- Additionally, type parameters are considered
               topLevelMap (TopLevelFunction (Function {functionName, functionUUID, functionParameters, functionReturnType, functionTypeParameters})) =
                 [(functionName, VariableAnnotations functionUUID $ TypeArrow (map typeIdentifier functionTypeParameters) (map parameterType functionParameters ++ [fromMaybe unitType functionReturnType]))]
-              topLevelMap (TopLevelConstant (Constant {constantIdentifier, constantType})) = [(constantIdentifier, VariableAnnotations Nothing constantType)]
+              topLevelMap (TopLevelConstant (Constant {constantIdentifier, constantType, constantUUID})) = [(constantIdentifier, VariableAnnotations constantUUID constantType)]
           moduleScope :: Scope = Map.fromList topLevelIdentifiersAnnotated
 
           -- Add the std lib to the scope

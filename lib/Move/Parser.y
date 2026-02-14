@@ -467,7 +467,8 @@ Constant :: { Constant }
     Constant {
       constantIdentifier = $2,
       constantType = $4,
-      constantExpression = $6
+      constantExpression = $6,
+      constantUUID = Nothing
     }
   }
 
