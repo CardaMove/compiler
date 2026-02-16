@@ -1,4 +1,4 @@
-module Move.Translations.Scopes where
+module Move.Translations.Scopes (markVariablesForLocalScope, rewriteAssignments, rewriteRefs, rewriteVars, rewriteLetBinds, rewriteInlineStateMutation, addLocalScopeInRoot) where
 
 import Data.Generics.Uniplate.Data (transformBi, universe)
 import Data.List (sortOn)

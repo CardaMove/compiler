@@ -17,7 +17,7 @@ testLoadToml = describe "Tests the function `loadToml`" $ do
 
     length scripts `shouldBe` 1
 
-    sort (map moduleIdentifier modules) `shouldBe` [Identifier "Module1", Identifier "Module2"]
+    sort (map moduleIdentifier modules) `shouldBe` [Identifier "Module1", Identifier "Module2", Identifier "Module3"]
 
   it "Throws an error when the Move.toml file does not exist" $ do
     let tomlPath = "test/Move/Loader/files/UnexistingProject/Move.toml"

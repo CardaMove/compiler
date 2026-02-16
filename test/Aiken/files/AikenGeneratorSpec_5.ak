@@ -1,3 +1,3 @@
-pub fn myFunction1<a, b>(x: Int, y: Bool, c: a, d: b) -> Void {
+pub fn myFunction1(x: Int, y: Bool, c: a, d: b) -> Void {
   Void
 }

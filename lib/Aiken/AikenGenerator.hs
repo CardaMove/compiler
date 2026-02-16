@@ -77,10 +77,12 @@ generateTopLevel (TopLevelConstant Constant {constantIdentifier, constantType, c
     name = packIdent constantIdentifier
     t = generateType constantType
     expr = generateExpression constantExpression
+-- Function declaration
+-- Note that type parameters should not be specified in Aiken
 generateTopLevel (TopLevelFunction Function {functionHasNativeModifier = True}) = error "Native functions are not supported"
-generateTopLevel (TopLevelFunction Function {functionHasNativeModifier = False, functionVisibilityModifier, functionName, functionTypeParameters, functionParameters, functionReturnType, functionBody}) =
+generateTopLevel (TopLevelFunction Function {functionHasNativeModifier = False, functionVisibilityModifier, functionName, functionParameters, functionReturnType, functionBody}) =
   [trimming|
-    ${visibility}fn $name$tParams($fParams) -> $fReturn {
+    ${visibility}fn $name($fParams) -> $fReturn {
       $fBody
     }
   |]
@@ -90,7 +92,6 @@ generateTopLevel (TopLevelFunction Function {functionHasNativeModifier = False, 
       _ -> pack "pub "
 
     name = packIdent functionName
-    tParams = packTypeParams functionTypeParameters
     fParams = intercalate (pack ", ") $ map packFunctionParameter functionParameters
 
     -- Functions with no return type default to unit
@@ -129,7 +130,7 @@ packIdent (Identifier ident) = pack ident
 -- Includes translating Move stdlib types into Aiken types,
 -- such as `u64`, `u256` into `Int`
 -- and `bool` into `Bool`
--- TODO: Add support for Address and Signer, also for non local names
+-- TODO: Add support for non local names, + Address and Signer on libraries
 generateType :: Type -> Text
 generateType (TypeConstructor (LocalNameAccessChain (Identifier "bool")) []) = pack "Bool"
 generateType (TypeConstructor (LocalNameAccessChain (Identifier "u8")) []) = pack "Int"
@@ -138,8 +139,9 @@ generateType (TypeConstructor (LocalNameAccessChain (Identifier "u32")) []) = pa
 generateType (TypeConstructor (LocalNameAccessChain (Identifier "u64")) []) = pack "Int"
 generateType (TypeConstructor (LocalNameAccessChain (Identifier "u128")) []) = pack "Int"
 generateType (TypeConstructor (LocalNameAccessChain (Identifier "u256")) []) = pack "Int"
-generateType (TypeConstructor (LocalNameAccessChain (Identifier "address")) []) = error "Address type currently not supported"
-generateType (TypeConstructor (LocalNameAccessChain (Identifier "signer")) []) = error "Signer type currently not supported"
+-- Address and Signer are mapped to custom Aiken types
+generateType (TypeConstructor (LocalNameAccessChain (Identifier "address")) []) = pack "Address"
+generateType (TypeConstructor (LocalNameAccessChain (Identifier "signer")) []) = pack "Signer"
 generateType (TypeConstructor (LocalNameAccessChain ident) tArgs) =
   [trimming|
     $name$packedTArgs
@@ -158,6 +160,20 @@ generateType (TypeConstructor (LocalNameAccessChain ident) tArgs) =
       |]
       where
         ts :: Text = intercalate (pack ", ") $ map generateType tArgs'
+-- Any reference type is mapped to a custom Aiken type
+-- TODO: Add support in Aiken lib
+generateType (TypeImmutableRef rType) =
+  [trimming|
+    Ref<$rType'>
+  |]
+  where
+    rType' = generateType rType
+generateType (TypeMutableRef rType) =
+  [trimming|
+    Ref<$rType'>
+  |]
+  where
+    rType' = generateType rType
 -- The unit type () is translated to Void, like the unit expression
 generateType (TypeTuple []) = pack "Void"
 generateType (TypeTuple ts) =
@@ -166,7 +182,11 @@ generateType (TypeTuple ts) =
   |]
   where
     ts' = intercalate (pack ", ") $ map generateType ts
--- TODO: Other types
+-- Type witness types are mapped to a custom Aiken type
+-- TODO: Add support in Aiken lib
+generateType IntermediateTypeWitnessType = pack "TWitness"
+-- Scopes are mapped to a custom Aiken type
+generateType IntermediateTypeScopes = pack "List<Scope>"
 -- It is possible that some types can not be inferred, so use a custom UNKNOWN_TYPE
 -- TODO: It might be an alias for Data, but in any case it would not compile
 generateType TypeUnknown = pack "UNKNOWN_TYPE"
@@ -281,7 +301,7 @@ generateExpression (NamedStructExprExpr NamedStructExpr {nseNameAccessChain, nse
 -- Note that neither struct expressions nor function calls in Aiken not specify type arguments
 generateExpression (PositionalStructExprOrFunctionCallExpr PositionalStructExprOrFunctionCall {pseofcNameAccessChain, pseofcFields}) =
   [trimming|
-    $name$($fields)
+    $name($fields)
   |]
   where
     name = generateNameAccessChain pseofcNameAccessChain
@@ -348,7 +368,20 @@ generateExpression (Abort expr) =
 generateExpression Break = error "Unexpected break"
 generateExpression Continue = error "Unexpected continue"
 -- Intermediate expressions TODO:
-generateExpression _ = error "Intermediate expressions are currently not supported"
+-- PUSH and POP operations on the scope
+-- TODO: Add support in Aiken lib
+generateExpression (IntermediateExprExpr (IntermediatePushScope ident)) =
+  [trimming|
+    push_scope($ident')
+  |]
+  where
+    ident' = packIdent ident
+generateExpression (IntermediateExprExpr (IntermediatePopScope ident)) =
+  [trimming|
+    pop_scope($ident')
+  |]
+  where
+    ident' = packIdent ident
 
 -- |
 -- Given a Move Sequence (not SequenceExpr), generates the corresponding Aiken code,
