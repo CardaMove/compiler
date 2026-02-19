@@ -36,6 +36,7 @@ main = do
   let outDir = "test/out"
 
   -- -- TODO: NOTE: outDir must already exist
+  -- TODO: Modules should be written in folder `ModuleName/ModuleIdent.ak`
 
   let outFiles = map ((((outDir </>) . (`replaceExtension` "ak")) . takeFileName) . fst) files
 
