@@ -39,6 +39,11 @@ main = do
 
   let outFiles = map ((((outDir </>) . (`replaceExtension` "ak")) . takeFileName) . fst) files
 
-  zipWithM_ writeFile outFiles (map unpack aikenText)
+  zipWithM_ writeFile outFiles (map (removeCarriage . unpack) aikenText)
 
   putStrLn $ "Written files at " ++ outDir
+
+-- |
+-- Used to remove `\r` characters inserted by the Aiken generator
+removeCarriage :: String -> String
+removeCarriage = filter (/= '\r')
