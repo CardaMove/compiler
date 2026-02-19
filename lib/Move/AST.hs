@@ -625,15 +625,16 @@ data IntermediateExpr
     IntermediateReferenceLocalState [Identifier] Type
   | -- | Any `*a` on the right side
     IntermediateGetDereferenceLocalState Expr Type
-  | -- | Any `*a` on the left side
+  | -- | Any `(*a)[.b.c]` on the left side
+    -- Nested fields are only present when desugaring `a.b.c = ...`
+    -- TODO: Include indices of nested fields
     IntermediatePutDereferenceLocalState Identifier Expr
   | -- | Any `a[.b.c]` where `a` is in the local state
     -- Only the first identifier has to be actually retrieved,
     -- The others are dot accesses
     IntermediateGetLocalState Identifier Type
   | -- | Any `a[.b.c] = ...`
-    -- FIXME: probably needs to know the type of the root identifier, so to downcast it and access nested fields
-    -- TODO: Instead, it should track the indices of the fields and use Aiken data unconstruction
+    -- TODO: It should track the indices of the fields and use Aiken data unconstruction
     IntermediatePutLocalState [Identifier] Expr
   | -- | Any `let a = ...` where `a` has to be inserted in the local state
     IntermediatePostLocalState Identifier (Maybe Expr)
@@ -656,7 +657,6 @@ data IntermediateExpr
   | -- | Represents a `move_to<T>(&signer, T)`
     --
     -- Includes the type of `T` both as type for downcasting and (runtime) type witness
-    -- TODO: At runtime, should probably remove any referenced resource from the original owner
     IntermediateMoveTo Expr Expr Type IntermediateTypeWitnessExpr
   | -- | Represents a `move_from<T>(address)`
     --
@@ -674,7 +674,7 @@ data IntermediateExpr
 -- meaning that a witnessed type either is a type parameter itself such as `T`, or is a name with optional type arguments,
 -- such as `MyType<T>`.
 --
--- Types as `MyType<&u64>`, `MyType<(u64, u64)` or `T<MyType` are forbidden
+-- Types as `MyType<&u64>`, `MyType<(u64, u64)>` or `T<MyType>` are forbidden
 --
 -- To distinguish the two cases, two variant instances have been defined
 --

@@ -9,6 +9,10 @@ import Move.AST
 import Move.Translations.Utils (unitType)
 import NeatInterpolation (trimming)
 
+--
+-- TODO: NOTE: some cases might be rewritten by a final translation step of the AST
+--
+
 -- |
 -- Tries to execute an IO operation, intercepting any error if thrown and providing additional informations
 runStep :: String -> IO a -> IO a
@@ -30,9 +34,29 @@ generateRoot fileName (RScript Script {scriptTopLevels}) =
 
 -- |
 -- Given any top level, generates its corresponding Aiken code
--- TODO: Add support for Use
 generateTopLevel :: TopLevel -> Text
-generateTopLevel (TopLevelUse _) = error "Top level Use are not currently supported"
+-- NOTE: module addresses are translated in folder names.
+-- TODO: this might be insufficient for named addresses since their value is set in the Toml file?
+generateTopLevel (TopLevelUse Use {useAddress, useIdentifier, useAlias, useMembers}) =
+  [trimming|
+    use $addr/$ident$members$alias
+  |]
+  where
+    addr = packAddress useAddress
+    ident = packIdent useIdentifier
+    alias = case useAlias of
+      Nothing -> empty
+      Just alias' -> pack " as " <> packIdent alias'
+
+    -- TODO: use members alias are currently not supported
+    members = case useMembers of
+      [] -> empty
+      _ ->
+        [trimming|
+          .{$members'}
+        |]
+        where
+          members' = intercalate (pack ", ") $ map (packIdent . useMemberIdentifier) useMembers
 -- Friends have no translations
 generateTopLevel (TopLevelFriend _) = empty
 generateTopLevel (TopLevelNamedStruct NamedStruct {namedStructIdentifier, namedStructTypeParameters, namedStructFields}) =
@@ -130,7 +154,6 @@ packIdent (Identifier ident) = pack ident
 -- Includes translating Move stdlib types into Aiken types,
 -- such as `u64`, `u256` into `Int`
 -- and `bool` into `Bool`
--- TODO: Add support for non local names, + Address and Signer on libraries
 generateType :: Type -> Text
 generateType (TypeConstructor (LocalNameAccessChain (Identifier "bool")) []) = pack "Bool"
 generateType (TypeConstructor (LocalNameAccessChain (Identifier "u8")) []) = pack "Int"
@@ -140,14 +163,14 @@ generateType (TypeConstructor (LocalNameAccessChain (Identifier "u64")) []) = pa
 generateType (TypeConstructor (LocalNameAccessChain (Identifier "u128")) []) = pack "Int"
 generateType (TypeConstructor (LocalNameAccessChain (Identifier "u256")) []) = pack "Int"
 -- Address and Signer are mapped to custom Aiken types
-generateType (TypeConstructor (LocalNameAccessChain (Identifier "address")) []) = pack "Address"
+generateType (TypeConstructor (LocalNameAccessChain (Identifier "address")) []) = pack "Addr"
 generateType (TypeConstructor (LocalNameAccessChain (Identifier "signer")) []) = pack "Signer"
-generateType (TypeConstructor (LocalNameAccessChain ident) tArgs) =
+generateType (TypeConstructor nac tArgs) =
   [trimming|
     $name$packedTArgs
   |]
   where
-    name = packIdent ident
+    name = generateNameAccessChain nac
     packedTArgs :: Text = packTypeArgs tArgs
     -- Generates Aiken code corresponding to the given type arguments
     -- TODO: Type arguments coming from type parameters should be lowercase.
@@ -161,16 +184,15 @@ generateType (TypeConstructor (LocalNameAccessChain ident) tArgs) =
       where
         ts :: Text = intercalate (pack ", ") $ map generateType tArgs'
 -- Any reference type is mapped to a custom Aiken type
--- TODO: Add support in Aiken lib
 generateType (TypeImmutableRef rType) =
   [trimming|
-    Ref<$rType'>
+    Reference<$rType'>
   |]
   where
     rType' = generateType rType
 generateType (TypeMutableRef rType) =
   [trimming|
-    Ref<$rType'>
+    Reference<$rType'>
   |]
   where
     rType' = generateType rType
@@ -183,14 +205,14 @@ generateType (TypeTuple ts) =
   where
     ts' = intercalate (pack ", ") $ map generateType ts
 -- Type witness types are mapped to a custom Aiken type
--- TODO: Add support in Aiken lib
 generateType IntermediateTypeWitnessType = pack "TWitness"
 -- Scopes are mapped to a custom Aiken type
-generateType IntermediateTypeScopes = pack "List<Scope>"
+generateType IntermediateTypeScopes = pack "CPS"
 -- It is possible that some types can not be inferred, so use a custom UNKNOWN_TYPE
--- TODO: It might be an alias for Data, but in any case it would not compile
+-- Note that this prevents compiling the Aiken code
 generateType TypeUnknown = pack "UNKNOWN_TYPE"
-generateType t = error $ "Unexpected type: " ++ show t
+generateType t@(TypeArrow _ _) = error $ "Unexpected TypeArrow: " ++ show t
+generateType t@(IntermediateTypeNamedStructDeclaration _ _) = error $ "Unexpected IntermediateTypeNamedStructDeclaration: " ++ show t
 
 -- |
 -- Given some type parameters, generates the corresponding Aiken code
@@ -209,7 +231,6 @@ packTypeParams tParams =
 
 -- |
 -- Given any Move expression, generates its corresponding Aiken expression
--- TODO:
 generateExpression :: Expr -> Text
 -- Binary operations
 generateExpression (BinaryOpExprExpr (Or left right)) = binaryOpHelper left "||" right
@@ -252,8 +273,7 @@ generateExpression (DotOrIndexChainExpr DotAccess {dotAccessLeft, dotAccessRight
   where
     left = generateExpression dotAccessLeft
     name = packIdent dotAccessRight
--- TODO: Address literals
-generateExpression (ValueLiteral (Address _)) = error "Address literals currently not supported"
+generateExpression (ValueLiteral (Address addr)) = packAddress addr
 -- Booleans
 generateExpression (ValueLiteral (Boolean value)) = if value then pack "True" else pack "False"
 generateExpression (ValueLiteral (Numerical (LiteralIntDec value))) = pack $ show value
@@ -367,9 +387,45 @@ generateExpression (Abort expr) =
     expr' = pack $ show expr
 generateExpression Break = error "Unexpected break"
 generateExpression Continue = error "Unexpected continue"
--- Intermediate expressions TODO:
+--
+-- Intermediate expressions
+--
+generateExpression (IntermediateExprExpr (IntermediateReferenceLocalState _ _)) = error "TODO: track field indices for IntermediateReferenceLocalState"
+-- Any `*a` on the right side
+-- Requires a manual casting after calling the Aiken lib
+generateExpression (IntermediateExprExpr (IntermediateGetDereferenceLocalState expr t)) =
+  [trimming|
+    {
+      expect val: $casted' = reference_utils.deref($expr', scopes)
+      val
+    }
+  |]
+  where
+    casted' = generateType t
+    expr' = generateExpression expr
+generateExpression (IntermediateExprExpr (IntermediatePutDereferenceLocalState _ _)) = error "TODO: track field indices for IntermediatePutDereferenceLocalState"
+-- Any `a[.b.c]` where `a` is in the local state
+-- Requires a manual casting after calling the Aiken lib
+generateExpression (IntermediateExprExpr (IntermediateGetLocalState ident t)) =
+  [trimming|
+    {
+      expect val: $casted' = scope_utils.get_scope($ident', scopes)
+      val
+    }
+  |]
+  where
+    casted' = generateType t
+    ident' = packIdent ident
+generateExpression (IntermediateExprExpr (IntermediatePutLocalState _ _)) = error "TODO: track field indices for IntermediatePutLocalState"
+-- Any `a[.b.c] = ...`
+generateExpression (IntermediateExprExpr (IntermediatePostLocalState ident expr)) =
+  [trimming|
+    scope_utils.post_scope($ident', $expr', scopes)
+  |]
+  where
+    ident' = packIdent ident
+    expr' = generateExpression $ fromMaybe (CommaExpr []) expr
 -- PUSH and POP operations on the scope
--- TODO: Add support in Aiken lib
 generateExpression (IntermediateExprExpr (IntermediatePushScope ident)) =
   [trimming|
     push_scope($ident')
@@ -382,6 +438,55 @@ generateExpression (IntermediateExprExpr (IntermediatePopScope ident)) =
   |]
   where
     ident' = packIdent ident
+-- `borrow_global_mut<T>(address)`
+generateExpression (IntermediateExprExpr (IntermediateBorrowGlobalMut expr _t tWitness)) =
+  [trimming|
+    move_utils.borrow_global($addr, $resourceType, scopes)
+  |]
+  where
+    addr = generateExpression expr
+    resourceType = generateTWitness tWitness
+-- `borrow_global<T>(address)`
+generateExpression (IntermediateExprExpr (IntermediateBorrowGlobal expr _t tWitness)) =
+  [trimming|
+    move_utils.borrow_global($addr, $resourceType, scopes)
+  |]
+  where
+    addr = generateExpression expr
+    resourceType = generateTWitness tWitness
+-- `exists<T>(address)`
+generateExpression (IntermediateExprExpr (IntermediateExists expr _t tWitness)) =
+  [trimming|
+    move_utils.exists($addr, $resourceType, scopes)
+  |]
+  where
+    addr = generateExpression expr
+    resourceType = generateTWitness tWitness
+-- `move_to<T>(&signer, T)`
+generateExpression (IntermediateExprExpr (IntermediateMoveTo signer expr _t tWitness)) =
+  [trimming|
+    move_utils.move_to($signer', $resourceType, $expr', scopes)
+  |]
+  where
+    signer' = generateExpression signer
+    resourceType = generateTWitness tWitness
+    expr' = generateExpression expr
+-- `move_from<T>(address)`
+-- Requires a manual casting after calling the Aiken lib
+generateExpression (IntermediateExprExpr (IntermediateMoveFrom expr t tWitness)) =
+  [trimming|
+    {
+      expect (val, scopes): ($casted', $scopeT) = move_utils.move_from($addr, $resourceType, scopes)
+      (val, scopes)
+    }
+  |]
+  where
+    casted' = generateType t
+    scopeT = generateType IntermediateTypeScopes
+    addr = generateExpression expr
+    resourceType = generateTWitness tWitness
+-- Type witnesses expressions
+generateExpression (IntermediateExprExpr (IntermediateTypeWitnessExprExpr tWitness)) = generateTWitness tWitness
 
 -- |
 -- Given a Move Sequence (not SequenceExpr), generates the corresponding Aiken code,
@@ -452,10 +557,13 @@ generateSequence sqn@Sequence {sequenceUses, sequenceItems, sequenceEndExpr} =
 
 -- |
 -- Given an access chain, generates the corresponding Aiken code
--- TODO: add support for non local access chain
 generateNameAccessChain :: NameAccessChain -> Text
 generateNameAccessChain (LocalNameAccessChain ident) = packIdent ident
-generateNameAccessChain nac = error $ "Non local name access chains are currently not supported" ++ show nac
+generateNameAccessChain (AliasedNameAccessChain addr ident) =
+  packAddress addr <> pack "." <> packIdent ident
+-- Note that in Aiken, modules are referred just by their name
+generateNameAccessChain (UnaliasedNameAccessChain _addr moduleIdent ident) =
+  packIdent moduleIdent <> pack "." <> packIdent ident
 
 -- |
 -- Helper for generating Aiken for binary operations
@@ -471,3 +579,34 @@ binaryOpHelper left op right =
     left' = generateExpression left
     op' = pack op
     right' = generateExpression right
+
+-- |
+-- Maps an Address to Text
+--
+-- An address is always mapped as a Byterray string
+packAddress :: Address -> Text
+packAddress (NamedAddress ident) = packStringify $ packIdent ident
+packAddress (NumericalAddress (LiteralIntDec val)) = packStringify $ pack (show val)
+packAddress (NumericalAddress (LiteralIntHex val)) = packStringify $ pack val
+
+-- |
+-- Maps a Type Witness to Text
+generateTWitness :: IntermediateTypeWitnessExpr -> Text
+generateTWitness (IntermediateTypeWithnessC nac tWitnessArgs) =
+  [trimming|
+    TypeWithnessC($nac', [$tWitnessArgs'])
+  |]
+  where
+    nac' = packStringify $ generateNameAccessChain nac
+    tWitnessArgs' = intercalate (pack ", ") $ map generateTWitness tWitnessArgs
+generateTWitness (IntermediateTypeWitnessIdent ident) =
+  [trimming|
+    TypeWithnessC($ident', [])
+  |]
+  where
+    ident' = packIdent ident
+
+-- |
+-- Given any Text, encloses it in string apices like "text"
+packStringify :: Text -> Text
+packStringify txt = pack "\"" <> txt <> pack "\""
