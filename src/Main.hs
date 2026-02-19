@@ -10,6 +10,8 @@ import Move.Loader.Loader (loadToml)
 import Move.Transpiler (transpiler)
 import System.FilePath (replaceExtension, takeFileName, (</>))
 
+-- FIXME: Something wrong in `module1.ak` when multiple return types are `((Void, CPS), CPS)`
+
 main :: IO ()
 main = do
   putStrLn "CardaMove ready"
