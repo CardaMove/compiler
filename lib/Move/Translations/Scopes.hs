@@ -7,7 +7,7 @@ import Data.Maybe (fromMaybe)
 import Data.Set qualified as Set
 import Move.AST
 import Move.Translations.TraversalUtils (TraversalMapper, traversalIdentity, traverseRootPostOrder)
-import Move.Translations.Utils (Scope, VariableAnnotations (VariableAnnotations), getIdentifierFromScopes, inferExprType, mapTemporaryBindingsToScope, unitType)
+import Move.Translations.Utils (Scope, VariableAnnotations (VariableAnnotations), cpsIdentifier, getIdentifierFromScopes, inferExprType, mapTemporaryBindingsToScope, unitType)
 
 -- |
 -- Given the AST, marks all the variables that need to be inserted in the explicit local scope
@@ -76,14 +76,14 @@ mapRightValueRef expr _ = error $ "More complex reference not supported: " ++ sh
 --    such as `... (a = 1) ...`, but cases like this should never be present anyway
 --
 -- Possible assignment are `a[.b.c] = ...`, tuple destructuring `(a, b[.c]) = ...` or dereferences `*a`
-rewriteAssignments :: Root -> Identifier -> AnnotatedUUID -> Root
-rewriteAssignments root scopeIdentifier scopeUUID = transformBi f root
+rewriteAssignments :: Root -> AnnotatedUUID -> Root
+rewriteAssignments root scopeUUID = transformBi f root
   where
     -- `a = ...`
     f (SequenceItemExpr (AssignmentExpr (Assignment {assignmentLeft = NameAccessChainExpr (LocalNameAccessChain ident), assignmentRight}))) =
       SequenceItemBindExpr
         Bindings
-          { bindings = BindedSingle $ BindIdentifier scopeIdentifier $ Just scopeUUID,
+          { bindings = BindedSingle $ BindIdentifier cpsIdentifier $ Just scopeUUID,
             bindingsBindType = Just IntermediateTypeScopes,
             bindingsBindExpr = Just $ IntermediateExprExpr $ IntermediatePutLocalState [ident] assignmentRight
           }
@@ -91,7 +91,7 @@ rewriteAssignments root scopeIdentifier scopeUUID = transformBi f root
     f (SequenceItemExpr (AssignmentExpr (Assignment {assignmentLeft = dotAccess@(DotOrIndexChainExpr _), assignmentRight}))) =
       SequenceItemBindExpr
         Bindings
-          { bindings = BindedSingle $ BindIdentifier scopeIdentifier $ Just scopeUUID,
+          { bindings = BindedSingle $ BindIdentifier cpsIdentifier $ Just scopeUUID,
             bindingsBindType = Just IntermediateTypeScopes,
             bindingsBindExpr = Just $ IntermediateExprExpr $ IntermediatePutLocalState (getDotAccessChain dotAccess) assignmentRight
           }
@@ -99,7 +99,7 @@ rewriteAssignments root scopeIdentifier scopeUUID = transformBi f root
     f (SequenceItemExpr (AssignmentExpr (Assignment {assignmentLeft = UnaryOpExpr (Dereference (NameAccessChainExpr (LocalNameAccessChain ident))), assignmentRight}))) =
       SequenceItemBindExpr
         Bindings
-          { bindings = BindedSingle $ BindIdentifier scopeIdentifier $ Just scopeUUID,
+          { bindings = BindedSingle $ BindIdentifier cpsIdentifier $ Just scopeUUID,
             bindingsBindType = Just IntermediateTypeScopes,
             bindingsBindExpr = Just $ IntermediateExprExpr $ IntermediatePutDereferenceLocalState ident assignmentRight
           }
@@ -193,8 +193,8 @@ rewriteVars markedVars = rewriteVars'
 -- (must be done as last so to preserve type inference)
 -- only for variables that need to be inserted in the local scope
 -- (note that the variable for the local state is not marked as such so will be automatically ignored)
-rewriteLetBinds :: Set.Set AnnotatedUUID -> Identifier -> AnnotatedUUID -> TraversalMapper Bindings ()
-rewriteLetBinds markedVars scopeIdentifier scopeUUID = rewriteLetBinds'
+rewriteLetBinds :: Set.Set AnnotatedUUID -> AnnotatedUUID -> TraversalMapper Bindings ()
+rewriteLetBinds markedVars scopeUUID = rewriteLetBinds'
   where
     rewriteLetBinds' expr@(Bindings {bindings = BindedSingle (BindIdentifier ident identUUID), bindingsBindExpr}) _scopes state =
       case identUUID of
@@ -202,7 +202,7 @@ rewriteLetBinds markedVars scopeIdentifier scopeUUID = rewriteLetBinds'
           if Set.member identUUID' markedVars
             then
               ( Bindings
-                  { bindings = BindedSingle $ BindIdentifier scopeIdentifier $ Just scopeUUID,
+                  { bindings = BindedSingle $ BindIdentifier cpsIdentifier $ Just scopeUUID,
                     bindingsBindType = Just IntermediateTypeScopes,
                     bindingsBindExpr = Just $ IntermediateExprExpr $ IntermediatePostLocalState ident bindingsBindExpr
                   },
@@ -224,8 +224,8 @@ rewriteLetBinds markedVars scopeIdentifier scopeUUID = rewriteLetBinds'
 -- This is always performed on function calls, since they might mutate the global storage and it is not possible to know in advance (at least without a proper static analysis).
 --
 -- Similar for a sequence: `let (temp_i, scopes) = {...}`
-rewriteInlineStateMutation :: Identifier -> AnnotatedUUID -> TraversalMapper Expr (AnnotatedUUID, Map.Map Identifier Bindings)
-rewriteInlineStateMutation scopeIdentifier scopeUUID = rewriteInlineStateMutation'
+rewriteInlineStateMutation :: AnnotatedUUID -> TraversalMapper Expr (AnnotatedUUID, Map.Map Identifier Bindings)
+rewriteInlineStateMutation scopeUUID = rewriteInlineStateMutation'
   where
     tempIdentifier = Identifier "temp_"
 
@@ -266,7 +266,7 @@ rewriteInlineStateMutation scopeIdentifier scopeUUID = rewriteInlineStateMutatio
                 { bindings =
                     BindedTuple
                       [ BindIdentifier tempIdentifier' (Just currUUID),
-                        BindIdentifier scopeIdentifier (Just scopeUUID)
+                        BindIdentifier cpsIdentifier (Just scopeUUID)
                       ],
                   bindingsBindType =
                     Just $
@@ -307,7 +307,7 @@ rewriteInlineStateMutation scopeIdentifier scopeUUID = rewriteInlineStateMutatio
                 { bindings =
                     BindedTuple
                       [ BindIdentifier tempIdentifier' (Just currUUID),
-                        BindIdentifier scopeIdentifier (Just scopeUUID)
+                        BindIdentifier cpsIdentifier (Just scopeUUID)
                       ],
                   bindingsBindType =
                     Just $
@@ -340,7 +340,7 @@ rewriteInlineStateMutation scopeIdentifier scopeUUID = rewriteInlineStateMutatio
                   { bindings =
                       BindedTuple
                         [ BindIdentifier tempIdentifier' (Just currUUID),
-                          BindIdentifier scopeIdentifier (Just scopeUUID)
+                          BindIdentifier cpsIdentifier (Just scopeUUID)
                         ],
                     bindingsBindType =
                       Just $
@@ -355,7 +355,7 @@ rewriteInlineStateMutation scopeIdentifier scopeUUID = rewriteInlineStateMutatio
                       Just $
                         PositionalStructExprOrFunctionCallExpr
                           funcCall
-                            { pseofcFields = pseofcFields ++ [NameAccessChainExpr $ LocalNameAccessChain scopeIdentifier]
+                            { pseofcFields = pseofcFields ++ [NameAccessChainExpr $ LocalNameAccessChain cpsIdentifier]
                             }
                   }
            in -- and replace the function call with the temp variable
@@ -369,7 +369,7 @@ rewriteInlineStateMutation scopeIdentifier scopeUUID = rewriteInlineStateMutatio
     rewriteInlineStateMutation' (SequenceExpr seqnce) scopes (currUUID, bindingsToAdd) =
       let --
           -- Rewrite the sequence
-          (seq', bindingsToAdd', mutatesState) = rewriteInlineStateMutationInSequence seqnce scopeIdentifier scopeUUID bindingsToAdd True False
+          (seq', bindingsToAdd', mutatesState) = rewriteInlineStateMutationInSequence seqnce scopeUUID bindingsToAdd True False
 
           -- Similar to the function invocation, the sequence is removed from the inline if it modifies the state
           (expr, (currUUID', bindingstoAdd'')) =
@@ -383,7 +383,7 @@ rewriteInlineStateMutation scopeIdentifier scopeUUID = rewriteInlineStateMutatio
                         { bindings =
                             BindedTuple
                               [ BindIdentifier tempIdentifier' (Just currUUID),
-                                BindIdentifier scopeIdentifier (Just scopeUUID)
+                                BindIdentifier cpsIdentifier (Just scopeUUID)
                               ],
                           bindingsBindType =
                             Just $
@@ -428,15 +428,15 @@ rewriteInlineStateMutation scopeIdentifier scopeUUID = rewriteInlineStateMutatio
                     -- Push a new scope
                     SequenceItemBindExpr
                       ( Bindings
-                          { bindings = BindedSingle $ BindIdentifier scopeIdentifier (Just scopeUUID),
+                          { bindings = BindedSingle $ BindIdentifier cpsIdentifier (Just scopeUUID),
                             bindingsBindType = Just IntermediateTypeScopes,
-                            bindingsBindExpr = Just $ IntermediateExprExpr $ IntermediatePushScope scopeIdentifier
+                            bindingsBindExpr = Just $ IntermediateExprExpr $ IntermediatePushScope cpsIdentifier
                           }
                       )
                       -- Add the temporary bindings
                       : tempBindings,
                   -- Return the pair `(end_expr, tail scopes)`
-                  sequenceEndExpr = Just $ CommaExpr [branch, IntermediateExprExpr $ IntermediatePopScope scopeIdentifier]
+                  sequenceEndExpr = Just $ CommaExpr [branch, IntermediateExprExpr $ IntermediatePopScope cpsIdentifier]
                 }
        in case (tempBindsOfIfBranch, tempBindsOfElseBranch) of
             -- In this case, both branches are pure
@@ -454,7 +454,7 @@ rewriteInlineStateMutation scopeIdentifier scopeUUID = rewriteInlineStateMutatio
                       { bindings =
                           BindedTuple
                             [ BindIdentifier tempIdentifier' (Just currUUID),
-                              BindIdentifier scopeIdentifier (Just scopeUUID)
+                              BindIdentifier cpsIdentifier (Just scopeUUID)
                             ],
                         bindingsBindType =
                           Just $
@@ -479,7 +479,7 @@ rewriteInlineStateMutation scopeIdentifier scopeUUID = rewriteInlineStateMutatio
                                           Sequence
                                             { sequenceUses = [],
                                               sequenceItems = [],
-                                              sequenceEndExpr = Just $ CommaExpr [CommaExpr [], NameAccessChainExpr $ LocalNameAccessChain scopeIdentifier]
+                                              sequenceEndExpr = Just $ CommaExpr [CommaExpr [], NameAccessChainExpr $ LocalNameAccessChain cpsIdentifier]
                                             }
                                     Just ifThenElseElseBranch' -> Just $ rewriteBranch ifThenElseElseBranch' tempBindsOfElseBranch
                                 }
@@ -538,8 +538,8 @@ getTemporaryBindingsOfExpr expr' bindingsToAdd''' =
 -- Note that it does not need to know the scope since types have already been inferred
 --
 -- In fact, this function does not create any new binding, it only adds bindings that have already been created
-rewriteInlineStateMutationInSequence :: Sequence -> Identifier -> AnnotatedUUID -> Map.Map Identifier Bindings -> Bool -> Bool -> (Sequence, Map.Map Identifier Bindings, Bool)
-rewriteInlineStateMutationInSequence (Sequence {sequenceUses, sequenceItems, sequenceEndExpr}) scopeIdentifier scopeUUID bindingsToAdd doPushScope forceMutatesState =
+rewriteInlineStateMutationInSequence :: Sequence -> AnnotatedUUID -> Map.Map Identifier Bindings -> Bool -> Bool -> (Sequence, Map.Map Identifier Bindings, Bool)
+rewriteInlineStateMutationInSequence (Sequence {sequenceUses, sequenceItems, sequenceEndExpr}) scopeUUID bindingsToAdd doPushScope forceMutatesState =
   let --
       -- For each sequence item, prepend its temporary let bindings
       -- Here it forces the optional `forceMutatesState`, so that the subsequent logic will be the same unregarding that parameter
@@ -581,14 +581,14 @@ rewriteInlineStateMutationInSequence (Sequence {sequenceUses, sequenceItems, seq
                 then case sequenceEndExpr'' of
                   -- There is the case where the expression is a return. In this case, remove the `return` keyword
                   Return sequenceEndExpr''' ->
-                    ( Just $ CommaExpr [fromMaybe (CommaExpr []) sequenceEndExpr''', IntermediateExprExpr $ IntermediatePopScope scopeIdentifier],
+                    ( Just $ CommaExpr [fromMaybe (CommaExpr []) sequenceEndExpr''', IntermediateExprExpr $ IntermediatePopScope cpsIdentifier],
                       sequenceItems' ++ sortedBinds,
                       bindingsToAdd''',
                       True
                     )
                   -- Otherwise, just return the `(end_expr, tail scopes)`
                   _ ->
-                    ( Just $ CommaExpr [sequenceEndExpr'', IntermediateExprExpr $ IntermediatePopScope scopeIdentifier],
+                    ( Just $ CommaExpr [sequenceEndExpr'', IntermediateExprExpr $ IntermediatePopScope cpsIdentifier],
                       sequenceItems' ++ sortedBinds,
                       bindingsToAdd''',
                       True
@@ -600,7 +600,7 @@ rewriteInlineStateMutationInSequence (Sequence {sequenceUses, sequenceItems, seq
             -- If there is no ending expression but the state is still modified,
             -- return `((), tail scopes)`
             then
-              ( Just $ CommaExpr [CommaExpr [], IntermediateExprExpr $ IntermediatePopScope scopeIdentifier],
+              ( Just $ CommaExpr [CommaExpr [], IntermediateExprExpr $ IntermediatePopScope cpsIdentifier],
                 sequenceItems',
                 bindingsToAdd',
                 True
@@ -614,9 +614,9 @@ rewriteInlineStateMutationInSequence (Sequence {sequenceUses, sequenceItems, seq
           then
             ( SequenceItemBindExpr $
                 Bindings
-                  { bindings = BindedSingle $ BindIdentifier scopeIdentifier (Just scopeUUID),
+                  { bindings = BindedSingle $ BindIdentifier cpsIdentifier (Just scopeUUID),
                     bindingsBindType = Just IntermediateTypeScopes,
-                    bindingsBindExpr = Just $ IntermediateExprExpr $ IntermediatePushScope scopeIdentifier
+                    bindingsBindExpr = Just $ IntermediateExprExpr $ IntermediatePushScope cpsIdentifier
                   }
             )
               : sequenceItems''
@@ -637,8 +637,8 @@ rewriteInlineStateMutationInSequence (Sequence {sequenceUses, sequenceItems, seq
 -- since they might mutate the global storage and it is not possible to know in advance (at least without a proper static analysis)
 --
 -- Also, if a parameter has to be inserted into the state, it prepends the corresponding let binding at the start of the body
-rewriteFunctionDeclaration :: Root -> Set.Set AnnotatedUUID -> Map.Map Identifier Bindings -> Identifier -> AnnotatedUUID -> Root
-rewriteFunctionDeclaration root markedVars bindingsToAdd scopeIdentifier scopeUUID = case root of
+rewriteFunctionDeclaration :: Root -> Set.Set AnnotatedUUID -> Map.Map Identifier Bindings -> AnnotatedUUID -> Root
+rewriteFunctionDeclaration root markedVars bindingsToAdd scopeUUID = case root of
   RModule rModule@Module {moduleTopLevels} -> RModule $ rModule {moduleTopLevels = map rewriteTopLevel moduleTopLevels}
   RScript rScript@Script {scriptTopLevels} -> RScript $ rScript {scriptTopLevels = map rewriteTopLevel scriptTopLevels}
   where
@@ -667,7 +667,7 @@ rewriteFunctionDeclaration root markedVars bindingsToAdd scopeIdentifier scopeUU
           functionBody' =
             fmap
               ( \functionBody''' ->
-                  fst3 $ rewriteInlineStateMutationInSequence functionBody''' scopeIdentifier scopeUUID bindingsToAdd False True
+                  fst3 $ rewriteInlineStateMutationInSequence functionBody''' scopeUUID bindingsToAdd False True
               )
               functionBody
 
@@ -680,9 +680,9 @@ rewriteFunctionDeclaration root markedVars bindingsToAdd scopeIdentifier scopeUU
                         -- First, push the new scope in the body
                         ( SequenceItemBindExpr $
                             Bindings
-                              { bindings = BindedSingle $ BindIdentifier scopeIdentifier (Just scopeUUID),
+                              { bindings = BindedSingle $ BindIdentifier cpsIdentifier (Just scopeUUID),
                                 bindingsBindType = Just IntermediateTypeScopes,
-                                bindingsBindExpr = Just $ IntermediateExprExpr $ IntermediatePushScope scopeIdentifier
+                                bindingsBindExpr = Just $ IntermediateExprExpr $ IntermediatePushScope cpsIdentifier
                               }
                         )
                           :
@@ -691,7 +691,7 @@ rewriteFunctionDeclaration root markedVars bindingsToAdd scopeIdentifier scopeUU
                             ( \Parameter {parameterIdentifier} ->
                                 SequenceItemBindExpr $
                                   Bindings
-                                    { bindings = BindedSingle $ BindIdentifier scopeIdentifier $ Just scopeUUID,
+                                    { bindings = BindedSingle $ BindIdentifier cpsIdentifier $ Just scopeUUID,
                                       bindingsBindType = Just IntermediateTypeScopes,
                                       bindingsBindExpr = Just $ IntermediateExprExpr $ IntermediatePostLocalState parameterIdentifier (Just $ NameAccessChainExpr $ LocalNameAccessChain parameterIdentifier)
                                     }
@@ -711,7 +711,7 @@ rewriteFunctionDeclaration root markedVars bindingsToAdd scopeIdentifier scopeUU
           functionParameters' =
             functionParameters
               ++ [ Parameter
-                     { parameterIdentifier = scopeIdentifier,
+                     { parameterIdentifier = cpsIdentifier,
                        parameterType = IntermediateTypeScopes,
                        parameterUUID = Just scopeUUID
                      }
@@ -753,8 +753,7 @@ rewriteFunctionDeclaration root markedVars bindingsToAdd scopeIdentifier scopeUU
 --    - Dot accesses expect the left part to always be a struct, inline values are currently not supported
 addLocalScopeInRoot :: Root -> Set.Set AnnotatedUUID -> AnnotatedUUID -> Root
 addLocalScopeInRoot root markedVars currUUID =
-  let scopeIdentifier = Identifier "scopes"
-      scopeUUID :: AnnotatedUUID = -1
+  let scopeUUID :: AnnotatedUUID = -1
 
       -- TODO: NOTE: the dot chain can be used as a syntactic sugar for references, both on the left value and right value:
       -- `ref.a.b` is in fact identical to `(*ref).a.b`
@@ -762,13 +761,13 @@ addLocalScopeInRoot root markedVars currUUID =
       -- and if the access path is longer than one element, it means its actually a dot access so it mas meant to dereference the variable
       -- TODO: Additionally to what written above regarding syntact sugar, there can be an initial passage to rewrite syntactic sugar `a.b` on both left and right side
       -- as simple dereferences `(*a).b`. Then, on the right side nothing has to be changed. On the left side, the `rewriteAssignments` should consider this particular case
-      -- and rewrite it as a whole PUT-dereference 
+      -- and rewrite it as a whole PUT-dereference
 
-      firstPass :: Root = rewriteAssignments root scopeIdentifier scopeUUID
+      firstPass :: Root = rewriteAssignments root scopeUUID
       secondPass :: Root = fst $ traverseRootPostOrder rewriteRefs traversalIdentity firstPass ()
       thirdPass :: Root = fst $ traverseRootPostOrder (rewriteVars markedVars) traversalIdentity secondPass ()
-      fourthPass :: Root = fst $ traverseRootPostOrder traversalIdentity (rewriteLetBinds markedVars scopeIdentifier scopeUUID) thirdPass ()
-      (fifthPass, (_, bindingsToAdd)) = traverseRootPostOrder (rewriteInlineStateMutation scopeIdentifier scopeUUID) traversalIdentity fourthPass (currUUID, Map.empty)
-      sixthPass = rewriteFunctionDeclaration fifthPass markedVars bindingsToAdd scopeIdentifier scopeUUID
+      fourthPass :: Root = fst $ traverseRootPostOrder traversalIdentity (rewriteLetBinds markedVars scopeUUID) thirdPass ()
+      (fifthPass, (_, bindingsToAdd)) = traverseRootPostOrder (rewriteInlineStateMutation scopeUUID) traversalIdentity fourthPass (currUUID, Map.empty)
+      sixthPass = rewriteFunctionDeclaration fifthPass markedVars bindingsToAdd scopeUUID
    in -- TODO: Also missing liftings
       sixthPass

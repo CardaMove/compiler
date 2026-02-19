@@ -17,7 +17,7 @@ RModule
                           parameterUUID = Just 1
                         },
                       Parameter
-                        { parameterIdentifier = Identifier "scopes",
+                        { parameterIdentifier = Identifier "cps_state",
                           parameterType = IntermediateTypeScopes,
                           parameterUUID = Just (-1)
                         }
@@ -31,18 +31,18 @@ RModule
                           sequenceItems =
                             [ SequenceItemBindExpr
                                 Bindings
-                                  { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
+                                  { bindings = BindedSingle (BindIdentifier (Identifier "cps_state") (Just (-1))),
                                     bindingsBindType = Just IntermediateTypeScopes,
-                                    bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePushScope (Identifier "scopes")))
+                                    bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePushScope (Identifier "cps_state")))
                                   },
                               SequenceItemBindExpr
                                 Bindings
-                                  { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
+                                  { bindings = BindedSingle (BindIdentifier (Identifier "cps_state") (Just (-1))),
                                     bindingsBindType = Just IntermediateTypeScopes,
                                     bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePutDereferenceLocalState (Identifier "r") (ValueLiteral (Numerical (LiteralIntDec 6)))))
                                   }
                             ],
-                          sequenceEndExpr = Just (CommaExpr [ValueLiteral (Numerical (LiteralIntDec 12)), IntermediateExprExpr (IntermediatePopScope (Identifier "scopes"))])
+                          sequenceEndExpr = Just (CommaExpr [ValueLiteral (Numerical (LiteralIntDec 12)), IntermediateExprExpr (IntermediatePopScope (Identifier "cps_state"))])
                         },
                   functionUUID = Just 0
                 },
@@ -60,7 +60,7 @@ RModule
                           parameterUUID = Just 3
                         },
                       Parameter
-                        { parameterIdentifier = Identifier "scopes",
+                        { parameterIdentifier = Identifier "cps_state",
                           parameterType = IntermediateTypeScopes,
                           parameterUUID = Just (-1)
                         }
@@ -74,18 +74,18 @@ RModule
                           sequenceItems =
                             [ SequenceItemBindExpr
                                 Bindings
-                                  { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
+                                  { bindings = BindedSingle (BindIdentifier (Identifier "cps_state") (Just (-1))),
                                     bindingsBindType = Just IntermediateTypeScopes,
-                                    bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePushScope (Identifier "scopes")))
+                                    bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePushScope (Identifier "cps_state")))
                                   },
                               SequenceItemBindExpr
                                 Bindings
-                                  { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
+                                  { bindings = BindedSingle (BindIdentifier (Identifier "cps_state") (Just (-1))),
                                     bindingsBindType = Just IntermediateTypeScopes,
                                     bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePutDereferenceLocalState (Identifier "r") (ValueLiteral (Numerical (LiteralIntDec 6)))))
                                   }
                             ],
-                          sequenceEndExpr = Just (CommaExpr [CommaExpr [], IntermediateExprExpr (IntermediatePopScope (Identifier "scopes"))])
+                          sequenceEndExpr = Just (CommaExpr [CommaExpr [], IntermediateExprExpr (IntermediatePopScope (Identifier "cps_state"))])
                         },
                   functionUUID = Just 2
                 },
@@ -103,7 +103,7 @@ RModule
                           parameterUUID = Just 5
                         },
                       Parameter
-                        { parameterIdentifier = Identifier "scopes",
+                        { parameterIdentifier = Identifier "cps_state",
                           parameterType = IntermediateTypeScopes,
                           parameterUUID = Just (-1)
                         }
@@ -117,13 +117,13 @@ RModule
                           sequenceItems =
                             [ SequenceItemBindExpr
                                 Bindings
-                                  { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
+                                  { bindings = BindedSingle (BindIdentifier (Identifier "cps_state") (Just (-1))),
                                     bindingsBindType = Just IntermediateTypeScopes,
-                                    bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePushScope (Identifier "scopes")))
+                                    bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePushScope (Identifier "cps_state")))
                                   },
                               SequenceItemBindExpr
                                 Bindings
-                                  { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
+                                  { bindings = BindedSingle (BindIdentifier (Identifier "cps_state") (Just (-1))),
                                     bindingsBindType = Just IntermediateTypeScopes,
                                     bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePostLocalState (Identifier "b") (Just (ValueLiteral (Numerical (LiteralIntDec 12))))))
                                   },
@@ -135,7 +135,7 @@ RModule
                                   },
                               SequenceItemBindExpr
                                 Bindings
-                                  { bindings = BindedTuple [BindIdentifier (Identifier "temp_11") (Just 11), BindIdentifier (Identifier "scopes") (Just (-1))],
+                                  { bindings = BindedTuple [BindIdentifier (Identifier "temp_11") (Just 11), BindIdentifier (Identifier "cps_state") (Just (-1))],
                                     bindingsBindType = Just (TypeTuple [TypeTuple [], IntermediateTypeScopes]),
                                     bindingsBindExpr =
                                       Just
@@ -149,13 +149,13 @@ RModule
                                                         sequenceItems =
                                                           [ SequenceItemBindExpr
                                                               Bindings
-                                                                { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
+                                                                { bindings = BindedSingle (BindIdentifier (Identifier "cps_state") (Just (-1))),
                                                                   bindingsBindType = Just IntermediateTypeScopes,
-                                                                  bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePushScope (Identifier "scopes")))
+                                                                  bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePushScope (Identifier "cps_state")))
                                                                 },
                                                             SequenceItemBindExpr
                                                               Bindings
-                                                                { bindings = BindedTuple [BindIdentifier (Identifier "temp_10") (Just 10), BindIdentifier (Identifier "scopes") (Just (-1))],
+                                                                { bindings = BindedTuple [BindIdentifier (Identifier "temp_10") (Just 10), BindIdentifier (Identifier "cps_state") (Just (-1))],
                                                                   bindingsBindType = Just (TypeTuple [TypeTuple [], IntermediateTypeScopes]),
                                                                   bindingsBindExpr =
                                                                     Just
@@ -163,14 +163,14 @@ RModule
                                                                           PositionalStructExprOrFunctionCall
                                                                             { pseofcNameAccessChain = LocalNameAccessChain (Identifier "my_unit"),
                                                                               pseofcTypeArgs = [],
-                                                                              pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "r")), NameAccessChainExpr (LocalNameAccessChain (Identifier "scopes"))]
+                                                                              pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "r")), NameAccessChainExpr (LocalNameAccessChain (Identifier "cps_state"))]
                                                                             }
                                                                       )
                                                                 }
                                                           ],
-                                                        sequenceEndExpr = Just (CommaExpr [NameAccessChainExpr (LocalNameAccessChain (Identifier "temp_10")), IntermediateExprExpr (IntermediatePopScope (Identifier "scopes"))])
+                                                        sequenceEndExpr = Just (CommaExpr [NameAccessChainExpr (LocalNameAccessChain (Identifier "temp_10")), IntermediateExprExpr (IntermediatePopScope (Identifier "cps_state"))])
                                                       },
-                                                ifThenElseElseBranch = Just (SequenceExpr Sequence { sequenceUses = [], sequenceItems = [], sequenceEndExpr = Just (CommaExpr [CommaExpr [], NameAccessChainExpr (LocalNameAccessChain (Identifier "scopes"))]) })
+                                                ifThenElseElseBranch = Just (SequenceExpr Sequence { sequenceUses = [], sequenceItems = [], sequenceEndExpr = Just (CommaExpr [CommaExpr [], NameAccessChainExpr (LocalNameAccessChain (Identifier "cps_state"))]) })
                                               }
                                         )
                                   },
@@ -191,7 +191,7 @@ RModule
                                   },
                               SequenceItemBindExpr
                                 Bindings
-                                  { bindings = BindedTuple [BindIdentifier (Identifier "temp_14") (Just 14), BindIdentifier (Identifier "scopes") (Just (-1))],
+                                  { bindings = BindedTuple [BindIdentifier (Identifier "temp_14") (Just 14), BindIdentifier (Identifier "cps_state") (Just (-1))],
                                     bindingsBindType = Just (TypeTuple [TypeConstructor (LocalNameAccessChain (Identifier "u256")) [], IntermediateTypeScopes]),
                                     bindingsBindExpr =
                                       Just
@@ -205,9 +205,9 @@ RModule
                                                         sequenceItems =
                                                           [ SequenceItemBindExpr
                                                               Bindings
-                                                                { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
+                                                                { bindings = BindedSingle (BindIdentifier (Identifier "cps_state") (Just (-1))),
                                                                   bindingsBindType = Just IntermediateTypeScopes,
-                                                                  bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePushScope (Identifier "scopes")))
+                                                                  bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePushScope (Identifier "cps_state")))
                                                                 }
                                                           ],
                                                         sequenceEndExpr =
@@ -219,14 +219,14 @@ RModule
                                                                         sequenceItems =
                                                                           [ SequenceItemBindExpr
                                                                               Bindings
-                                                                                { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
+                                                                                { bindings = BindedSingle (BindIdentifier (Identifier "cps_state") (Just (-1))),
                                                                                   bindingsBindType = Just IntermediateTypeScopes,
-                                                                                  bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePushScope (Identifier "scopes")))
+                                                                                  bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePushScope (Identifier "cps_state")))
                                                                                 }
                                                                           ],
                                                                         sequenceEndExpr = Just (IntermediateExprExpr (IntermediateGetLocalState (Identifier "b") (TypeConstructor (LocalNameAccessChain (Identifier "u256")) [])))
                                                                       },
-                                                                  IntermediateExprExpr (IntermediatePopScope (Identifier "scopes"))
+                                                                  IntermediateExprExpr (IntermediatePopScope (Identifier "cps_state"))
                                                                 ]
                                                             )
                                                       },
@@ -238,13 +238,13 @@ RModule
                                                             sequenceItems =
                                                               [ SequenceItemBindExpr
                                                                   Bindings
-                                                                    { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
+                                                                    { bindings = BindedSingle (BindIdentifier (Identifier "cps_state") (Just (-1))),
                                                                       bindingsBindType = Just IntermediateTypeScopes,
-                                                                      bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePushScope (Identifier "scopes")))
+                                                                      bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePushScope (Identifier "cps_state")))
                                                                     },
                                                                 SequenceItemBindExpr
                                                                   Bindings
-                                                                    { bindings = BindedTuple [BindIdentifier (Identifier "temp_13") (Just 13), BindIdentifier (Identifier "scopes") (Just (-1))],
+                                                                    { bindings = BindedTuple [BindIdentifier (Identifier "temp_13") (Just 13), BindIdentifier (Identifier "cps_state") (Just (-1))],
                                                                       bindingsBindType = Just (TypeTuple [TypeTuple [TypeConstructor (LocalNameAccessChain (Identifier "u64")) [], IntermediateTypeScopes], IntermediateTypeScopes]),
                                                                       bindingsBindExpr =
                                                                         Just
@@ -254,13 +254,13 @@ RModule
                                                                                   sequenceItems =
                                                                                     [ SequenceItemBindExpr
                                                                                         Bindings
-                                                                                          { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
+                                                                                          { bindings = BindedSingle (BindIdentifier (Identifier "cps_state") (Just (-1))),
                                                                                             bindingsBindType = Just IntermediateTypeScopes,
-                                                                                            bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePushScope (Identifier "scopes")))
+                                                                                            bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePushScope (Identifier "cps_state")))
                                                                                           },
                                                                                       SequenceItemBindExpr
                                                                                         Bindings
-                                                                                          { bindings = BindedTuple [BindIdentifier (Identifier "temp_12") (Just 12), BindIdentifier (Identifier "scopes") (Just (-1))],
+                                                                                          { bindings = BindedTuple [BindIdentifier (Identifier "temp_12") (Just 12), BindIdentifier (Identifier "cps_state") (Just (-1))],
                                                                                             bindingsBindType = Just (TypeTuple [TypeConstructor (LocalNameAccessChain (Identifier "u64")) [], IntermediateTypeScopes]),
                                                                                             bindingsBindExpr =
                                                                                               Just
@@ -268,17 +268,17 @@ RModule
                                                                                                     PositionalStructExprOrFunctionCall
                                                                                                       { pseofcNameAccessChain = LocalNameAccessChain (Identifier "my_fun"),
                                                                                                         pseofcTypeArgs = [],
-                                                                                                        pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "r")), NameAccessChainExpr (LocalNameAccessChain (Identifier "scopes"))]
+                                                                                                        pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "r")), NameAccessChainExpr (LocalNameAccessChain (Identifier "cps_state"))]
                                                                                                       }
                                                                                                 )
                                                                                           }
                                                                                     ],
-                                                                                  sequenceEndExpr = Just (CommaExpr [NameAccessChainExpr (LocalNameAccessChain (Identifier "temp_12")), IntermediateExprExpr (IntermediatePopScope (Identifier "scopes"))])
+                                                                                  sequenceEndExpr = Just (CommaExpr [NameAccessChainExpr (LocalNameAccessChain (Identifier "temp_12")), IntermediateExprExpr (IntermediatePopScope (Identifier "cps_state"))])
                                                                                 }
                                                                           )
                                                                     }
                                                               ],
-                                                            sequenceEndExpr = Just (CommaExpr [NameAccessChainExpr (LocalNameAccessChain (Identifier "temp_13")), IntermediateExprExpr (IntermediatePopScope (Identifier "scopes"))])
+                                                            sequenceEndExpr = Just (CommaExpr [NameAccessChainExpr (LocalNameAccessChain (Identifier "temp_13")), IntermediateExprExpr (IntermediatePopScope (Identifier "cps_state"))])
                                                           }
                                                     )
                                               }
@@ -291,7 +291,7 @@ RModule
                                     bindingsBindExpr = Just (NameAccessChainExpr (LocalNameAccessChain (Identifier "temp_14")))
                                   }
                             ],
-                          sequenceEndExpr = Just (CommaExpr [CommaExpr [], IntermediateExprExpr (IntermediatePopScope (Identifier "scopes"))])
+                          sequenceEndExpr = Just (CommaExpr [CommaExpr [], IntermediateExprExpr (IntermediatePopScope (Identifier "cps_state"))])
                         },
                   functionUUID = Just 4
                 }

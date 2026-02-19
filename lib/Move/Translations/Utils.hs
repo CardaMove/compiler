@@ -5,6 +5,7 @@ module Move.Translations.Utils
     addressType,
     VariableAnnotations (..),
     Scope,
+    cpsIdentifier,
     isIdentifierInScope,
     getIdentifierFromScopes,
     getUseIdentifiers,
@@ -51,6 +52,12 @@ data VariableAnnotations = VariableAnnotations (Maybe AnnotatedUUID) Type
 
 -- | Represents a local scope
 type Scope = Map.Map Identifier VariableAnnotations
+
+-- |
+-- The identifier to use for the whole CPS state,
+-- that includes both scopes and global storage
+cpsIdentifier :: Identifier
+cpsIdentifier = Identifier "cps_state"
 
 -- |
 -- Checks if the identifier is present in any of the input scopes

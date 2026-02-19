@@ -43,7 +43,7 @@ RModule
                             parameterUUID = Just 1
                           },
                         Parameter
-                          { parameterIdentifier = Identifier "scopes",
+                          { parameterIdentifier = Identifier "cps_state",
                             parameterType = IntermediateTypeScopes,
                             parameterUUID = Just (-1)
                           }
@@ -57,28 +57,28 @@ RModule
                               sequenceItems =
                                 [ SequenceItemBindExpr
                                     ( Bindings
-                                        { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
+                                        { bindings = BindedSingle (BindIdentifier (Identifier "cps_state") (Just (-1))),
                                           bindingsBindType = Just IntermediateTypeScopes,
-                                          bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePushScope (Identifier "scopes")))
+                                          bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePushScope (Identifier "cps_state")))
                                         }
                                     ),
                                   SequenceItemBindExpr
                                     ( Bindings
-                                        { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
+                                        { bindings = BindedSingle (BindIdentifier (Identifier "cps_state") (Just (-1))),
                                           bindingsBindType = Just IntermediateTypeScopes,
                                           bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePostLocalState (Identifier "x") (Just (NameAccessChainExpr (LocalNameAccessChain (Identifier "x"))))))
                                         }
                                     ),
                                   SequenceItemBindExpr
                                     ( Bindings
-                                        { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
+                                        { bindings = BindedSingle (BindIdentifier (Identifier "cps_state") (Just (-1))),
                                           bindingsBindType = Just IntermediateTypeScopes,
                                           bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePutLocalState [Identifier "x"] (BinaryOpExprExpr (Add (IntermediateExprExpr (IntermediateGetLocalState (Identifier "x") (TypeConstructor (LocalNameAccessChain (Identifier "u64")) []))) (ValueLiteral (Numerical (LiteralIntDec 1)))))))
                                         }
                                     ),
                                   SequenceItemBindExpr
                                     ( Bindings
-                                        { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
+                                        { bindings = BindedSingle (BindIdentifier (Identifier "cps_state") (Just (-1))),
                                           bindingsBindType = Just IntermediateTypeScopes,
                                           bindingsBindExpr =
                                             Just
@@ -113,13 +113,13 @@ RModule
                                     ),
                                   SequenceItemBindExpr
                                     ( Bindings
-                                        { bindings = BindedSingle (BindIdentifier (Identifier "scopes") (Just (-1))),
+                                        { bindings = BindedSingle (BindIdentifier (Identifier "cps_state") (Just (-1))),
                                           bindingsBindType = Just IntermediateTypeScopes,
                                           bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePutDereferenceLocalState (Identifier "n") (BinaryOpExprExpr (Add (IntermediateExprExpr (IntermediateGetDereferenceLocalState (NameAccessChainExpr (LocalNameAccessChain (Identifier "n"))) (TypeConstructor (LocalNameAccessChain (Identifier "u64")) []))) (ValueLiteral (Numerical (LiteralIntDec 1)))))))
                                         }
                                     )
                                 ],
-                              sequenceEndExpr = Just (CommaExpr [IntermediateExprExpr (IntermediateGetLocalState (Identifier "x") (TypeConstructor (LocalNameAccessChain (Identifier "u64")) [])), IntermediateExprExpr (IntermediatePopScope (Identifier "scopes"))])
+                              sequenceEndExpr = Just (CommaExpr [IntermediateExprExpr (IntermediateGetLocalState (Identifier "x") (TypeConstructor (LocalNameAccessChain (Identifier "u64")) [])), IntermediateExprExpr (IntermediatePopScope (Identifier "cps_state"))])
                             }
                         ),
                     functionUUID = Just 0

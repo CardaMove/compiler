@@ -390,7 +390,7 @@ generateExpression Continue = error "Unexpected continue"
 --
 -- Intermediate expressions
 --
-generateExpression (IntermediateExprExpr (IntermediateReferenceLocalState _ _)) = error "TODO: track field indices for IntermediateReferenceLocalState"
+generateExpression (IntermediateExprExpr (IntermediateReferenceLocalState _ _)) = pack "TODO_IntermediateReferenceLocalState" --FIXME: error "TODO: track field indices for IntermediateReferenceLocalState"
 -- Any `*a` on the right side
 -- Requires a manual casting after calling the Aiken lib
 generateExpression (IntermediateExprExpr (IntermediateGetDereferenceLocalState expr t)) =
@@ -403,7 +403,7 @@ generateExpression (IntermediateExprExpr (IntermediateGetDereferenceLocalState e
   where
     casted' = generateType t
     expr' = generateExpression expr
-generateExpression (IntermediateExprExpr (IntermediatePutDereferenceLocalState _ _)) = error "TODO: track field indices for IntermediatePutDereferenceLocalState"
+generateExpression (IntermediateExprExpr (IntermediatePutDereferenceLocalState _ _)) = pack "TODO_IntermediatePutDereferenceLocalState" --FIXME: error "TODO: track field indices for IntermediatePutDereferenceLocalState"
 -- Any `a[.b.c]` where `a` is in the local state
 -- Requires a manual casting after calling the Aiken lib
 generateExpression (IntermediateExprExpr (IntermediateGetLocalState ident t)) =
@@ -416,7 +416,7 @@ generateExpression (IntermediateExprExpr (IntermediateGetLocalState ident t)) =
   where
     casted' = generateType t
     ident' = packIdent ident
-generateExpression (IntermediateExprExpr (IntermediatePutLocalState _ _)) = error "TODO: track field indices for IntermediatePutLocalState"
+generateExpression (IntermediateExprExpr (IntermediatePutLocalState _ _)) = pack "TODO_IntermediatePutLocalState" --FIXME: error "TODO: track field indices for IntermediatePutLocalState"
 -- Any `a[.b.c] = ...`
 generateExpression (IntermediateExprExpr (IntermediatePostLocalState ident expr)) =
   [trimming|

@@ -35,10 +35,9 @@ testRewriteAssignments = describe "Tests the function `rewriteAssignments`" $ do
 
     let annotated = evalState (annotateBindingsWithUUID parsed >>= translateTParamsInRoot) 0
 
-    let scopeIdentifier = Identifier "scopes"
     let scopeUUID :: AnnotatedUUID = -1
 
-    rewriteAssignments annotated scopeIdentifier scopeUUID `shouldBe` toModule
+    rewriteAssignments annotated scopeUUID `shouldBe` toModule
 
 
 testRewriteRefs :: Spec
@@ -53,10 +52,9 @@ testRewriteRefs = describe "Tests the function `rewriteRefs`" $ do
 
     let annotated = evalState (annotateBindingsWithUUID parsed >>= translateTParamsInRoot) 0
 
-    let scopeIdentifier = Identifier "scopes"
     let scopeUUID :: AnnotatedUUID = -1
 
-    let firstPass :: Root = rewriteAssignments annotated scopeIdentifier scopeUUID
+    let firstPass :: Root = rewriteAssignments annotated scopeUUID
     let secondPass :: Root = fst $ traverseRootPostOrder rewriteRefs traversalIdentity firstPass ()
     secondPass `shouldBe` toModule
 
@@ -74,10 +72,9 @@ testRewriteVars = describe "Tests the function `rewriteVars`" $ do
 
     let markedVars = markVariablesForLocalScope annotated
 
-    let scopeIdentifier = Identifier "scopes"
     let scopeUUID :: AnnotatedUUID = -1
 
-    let firstPass :: Root = rewriteAssignments annotated scopeIdentifier scopeUUID
+    let firstPass :: Root = rewriteAssignments annotated scopeUUID
     let secondPass :: Root = fst $ traverseRootPostOrder rewriteRefs traversalIdentity firstPass ()
     let thirdPass :: Root = fst $ traverseRootPostOrder (rewriteVars markedVars) traversalIdentity secondPass ()
 
@@ -98,13 +95,12 @@ testRewriteLetBinds = describe "Tests the function `rewriteLetBinds`" $ do
 
     let markedVars = markVariablesForLocalScope annotated
 
-    let scopeIdentifier = Identifier "scopes"
     let scopeUUID :: AnnotatedUUID = -1
 
-    let firstPass :: Root = rewriteAssignments annotated scopeIdentifier scopeUUID
+    let firstPass :: Root = rewriteAssignments annotated scopeUUID
     let secondPass :: Root = fst $ traverseRootPostOrder rewriteRefs traversalIdentity firstPass ()
     let thirdPass :: Root = fst $ traverseRootPostOrder (rewriteVars markedVars) traversalIdentity secondPass ()
-    let fourthPass :: Root = fst $ traverseRootPostOrder traversalIdentity (rewriteLetBinds markedVars scopeIdentifier scopeUUID) thirdPass ()
+    let fourthPass :: Root = fst $ traverseRootPostOrder traversalIdentity (rewriteLetBinds markedVars scopeUUID) thirdPass ()
 
     fourthPass `shouldBe` toModule
 
