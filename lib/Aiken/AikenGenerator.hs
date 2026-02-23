@@ -173,8 +173,7 @@ generateType (TypeConstructor nac tArgs) =
     name = generateNameAccessChain nac
     packedTArgs :: Text = packTypeArgs tArgs
     -- Generates Aiken code corresponding to the given type arguments
-    -- TODO: Type arguments coming from type parameters should be lowercase.
-    -- Add this logic to the transpiler
+    -- Note that type params are expected to be already in snake_case
     packTypeArgs :: [Type] -> Text
     packTypeArgs [] = empty
     packTypeArgs tArgs' =
@@ -218,8 +217,7 @@ generateType t@(IntermediateTypeNamedStructDeclaration _ _) = error $ "Unexpecte
 -- Given some type parameters, generates the corresponding Aiken code
 -- consisting in `<...>`.
 --
--- TODO: Note that it does not enforce the identifiers to be lowercase,
--- Since it has to be done by the transpiler
+-- Note that type params are expected to be already in snake_case
 packTypeParams :: [TypeParameter] -> Text
 packTypeParams [] = empty
 packTypeParams tParams =
