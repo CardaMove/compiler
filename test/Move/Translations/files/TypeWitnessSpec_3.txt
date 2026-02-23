@@ -3,7 +3,7 @@ RModule
     { moduleAddress = NamedAddress (Identifier "NamedAddr"),
         moduleIdentifier = Identifier "TestingModule",
         moduleTopLevels =
-        [ TopLevelNamedStruct (NamedStruct {namedStructIdentifier = Identifier "MyCoin", namedStructTypeParameters = [TypeParameter {typeParameterIsPhantom = True, typeIdentifier = Identifier "CoinType", typeConstraints = []}], namedStructAbilities = [Key, Store], namedStructFields = [NamedField {fieldIdentifier = Identifier "val", fieldType = TypeConstructor (LocalNameAccessChain (Identifier "u64")) []}]}),
+        [ TopLevelNamedStruct (NamedStruct {namedStructIdentifier = Identifier "MyCoin", namedStructTypeParameters = [TypeParameter {typeParameterIsPhantom = True, typeIdentifier = Identifier "tw_coin_type", typeConstraints = []}], namedStructAbilities = [Key, Store], namedStructFields = [NamedField {fieldIdentifier = Identifier "val", fieldType = TypeConstructor (LocalNameAccessChain (Identifier "u64")) []}]}),
             TopLevelFunction
             ( Function
                 { functionHasNativeModifier = False,

@@ -2,14 +2,12 @@ module Move.Translations.TypeWitness (translateTParamsInRoot, toSnake) where
 
 import Control.Monad.State
 import Data.Char (toLower)
-import Data.Generics.Uniplate.Data (transformBi, transformBiM)
+import Data.Generics.Uniplate.Data (transformBi)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
 import Data.Set qualified as Set
 import GHC.Unicode (isUpper)
 import Move.AST
-
--- TODO: also rename types in structs (even if not type witness themselves)
 
 -- |
 -- Given an AST, rewrites all type parameters in function declarations as an additional
@@ -69,6 +67,13 @@ translateTParamsInRoot root = do
           IntermediateTypeWithnessC tCons $ map mapTArgToFArg tArgs
         mapTArgToFArg t = error $ "Unexpected type argument: " ++ show t
 
+    -- Given the map of renamed type parameter identifiers and a type param to renamed, ensures it is present and returns the renamed version
+    assertRenamed :: Map.Map Identifier Identifier -> TypeParameter -> TypeParameter
+    assertRenamed renames tp@TypeParameter {typeIdentifier} =
+      case Map.lookup typeIdentifier renames of
+        Nothing -> error $ "Expected a type parameter to have been renamed: " ++ show tp
+        Just typeIdentifier' -> tp {typeIdentifier = typeIdentifier'}
+
     -- Rewrites any top level
     --
     -- Note how type parameters are always kept in the rewritten function (but in snake_case),
@@ -82,7 +87,7 @@ translateTParamsInRoot root = do
       -- Then, create the new function parameters
       newParams <- mapM mapTParamToFParam functionTypeParameters
       -- Also remap the type parameters since the transformBi does not apply to them
-      let functionTypeParameters' = map (\tp -> tp {typeIdentifier = toSnake $ typeIdentifier tp}) functionTypeParameters
+      let functionTypeParameters' = map (assertRenamed renames) functionTypeParameters
 
       -- `func'` contains the updated parameters and type parameters
       let func' =
@@ -103,6 +108,28 @@ translateTParamsInRoot root = do
 
       return $ TopLevelFunction func'''
 
+    -- Also named and positional structs should be rewritten
+    -- not with type witnesses by just snake_case-ing their type arguments
+    rewriteTopLevel (TopLevelNamedStruct ns@NamedStruct {namedStructTypeParameters, namedStructFields}) =
+      let renames = Map.fromList $ map (\tp -> (typeIdentifier tp, toSnake $ typeIdentifier tp)) namedStructTypeParameters
+          namedStructTypeParameters' = map (assertRenamed renames) namedStructTypeParameters
+          namedStructFields' = transformBi (helperTrTypes renames) namedStructFields
+       in return $
+            TopLevelNamedStruct $
+              ns
+                { namedStructTypeParameters = namedStructTypeParameters',
+                  namedStructFields = namedStructFields'
+                }
+    rewriteTopLevel (TopLevelPositionalStruct ps@PositionalStruct {positionalStructTypeParameters, positionalStructFields}) =
+      let renames = Map.fromList $ map (\tp -> (typeIdentifier tp, toSnake $ typeIdentifier tp)) positionalStructTypeParameters
+          positionalStructTypeParameters' = map (assertRenamed renames) positionalStructTypeParameters
+          positionalStructFields' = transformBi (helperTrTypes renames) positionalStructFields
+       in return $
+            TopLevelPositionalStruct $
+              ps
+                { positionalStructTypeParameters = positionalStructTypeParameters',
+                  positionalStructFields = positionalStructFields'
+                }
     -- Otherwise, leaves the top level unchanged
     rewriteTopLevel tl = return tl
 

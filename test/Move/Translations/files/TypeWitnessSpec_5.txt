@@ -1,0 +1,42 @@
+RModule
+    ( Module
+        { moduleAddress = NamedAddress (Identifier "NamedAddr"),
+          moduleIdentifier = Identifier "TestingModule",
+          moduleTopLevels =
+            [ TopLevelNamedStruct
+                ( NamedStruct
+                    { namedStructIdentifier = Identifier "MyCoin",
+                      namedStructTypeParameters =
+                        [ TypeParameter {typeParameterIsPhantom = True, typeIdentifier = Identifier "tw_coin_type", typeConstraints = []},
+                          TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "tw_b", typeConstraints = []}
+                        ],
+                      namedStructAbilities = [Key, Store],
+                      namedStructFields =
+                        [ NamedField {fieldIdentifier = Identifier "val", fieldType = TypeConstructor (LocalNameAccessChain (Identifier "u64")) []},
+                          NamedField {fieldIdentifier = Identifier "val", fieldType = TypeConstructor (LocalNameAccessChain (Identifier "tw_b")) []}
+                        ]
+                    }
+                ),
+              TopLevelPositionalStruct
+                ( PositionalStruct
+                    { positionalStructIdentifier = Identifier "PosStr",
+                      positionalStructTypeParameters =
+                        [ TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "tw_a", typeConstraints = []},
+                          TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "tw_b", typeConstraints = []}
+                        ],
+                      positionalStructAbilities = [],
+                      positionalStructFields =
+                        [ PositionalField (TypeConstructor (LocalNameAccessChain (Identifier "tw_a")) []),
+                          PositionalField
+                            ( TypeConstructor
+                                (LocalNameAccessChain (Identifier "MyCoin"))
+                                [ TypeConstructor (LocalNameAccessChain (Identifier "u64")) [],
+                                  TypeConstructor (LocalNameAccessChain (Identifier "tw_b")) []
+                                ]
+                            )
+                        ]
+                    }
+                )
+            ]
+        }
+    )

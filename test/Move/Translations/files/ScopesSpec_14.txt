@@ -22,7 +22,7 @@ RModule
                     namedStructTypeParameters =
                       [ TypeParameter
                           { typeParameterIsPhantom = False,
-                            typeIdentifier = Identifier "T1",
+                            typeIdentifier = Identifier "tw_t1",
                             typeConstraints = []
                           }
                       ],
@@ -30,7 +30,7 @@ RModule
                     namedStructFields =
                       [ NamedField
                           { fieldIdentifier = Identifier "val",
-                            fieldType = TypeConstructor (LocalNameAccessChain (Identifier "T1")) []
+                            fieldType = TypeConstructor (LocalNameAccessChain (Identifier "tw_t1")) []
                           }
                       ]
                   }
@@ -41,7 +41,7 @@ RModule
                     namedStructTypeParameters =
                       [ TypeParameter
                           { typeParameterIsPhantom = True,
-                            typeIdentifier = Identifier "T2",
+                            typeIdentifier = Identifier "tw_t2",
                             typeConstraints = []
                           }
                       ],
