@@ -623,12 +623,7 @@ generateTWitness (IntermediateTypeWithnessC nac tWitnessArgs) =
   where
     nac' = packStringify $ generateNameAccessChain nac
     tWitnessArgs' = intercalate (pack ", ") $ map generateTWitness tWitnessArgs
-generateTWitness (IntermediateTypeWitnessIdent ident) =
-  [trimming|
-    TypeWithnessC($ident', [])
-  |]
-  where
-    ident' = packIdent ident
+generateTWitness (IntermediateTypeWitnessIdent ident) = packIdent ident
 
 -- |
 -- Given any Text, encloses it in string apices like "text"
