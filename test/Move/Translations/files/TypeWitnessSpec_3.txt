@@ -10,9 +10,9 @@ RModule
                     functionVisibilityModifier = Nothing,
                     functionHasEntryModifier = False,
                     functionName = Identifier "withdraw",
-                    functionTypeParameters = [TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "CoinType", typeConstraints = []}],
-                    functionParameters = [Parameter {parameterIdentifier = Identifier "from", parameterType = TypeConstructor (LocalNameAccessChain (Identifier "address")) [], parameterUUID = Just 1}, Parameter {parameterIdentifier = Identifier "CoinType", parameterType = IntermediateTypeWitnessType, parameterUUID = Just 9}],
-                    functionReturnType = Just (TypeConstructor (LocalNameAccessChain (Identifier "MyCoin")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []]),
+                    functionTypeParameters = [TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "tw_coin_type", typeConstraints = []}],
+                    functionParameters = [Parameter {parameterIdentifier = Identifier "from", parameterType = TypeConstructor (LocalNameAccessChain (Identifier "address")) [], parameterUUID = Just 1}, Parameter {parameterIdentifier = Identifier "tw_coin_type", parameterType = IntermediateTypeWitnessType, parameterUUID = Just 9}],
+                    functionReturnType = Just (TypeConstructor (LocalNameAccessChain (Identifier "MyCoin")) [TypeConstructor (LocalNameAccessChain (Identifier "tw_coin_type")) []]),
                     functionAcquires = [LocalNameAccessChain (Identifier "MyCoin")],
                     functionBody =
                     Just
@@ -24,8 +24,8 @@ RModule
                                 ( PositionalStructExprOrFunctionCallExpr
                                     ( PositionalStructExprOrFunctionCall
                                         { pseofcNameAccessChain = LocalNameAccessChain (Identifier "move_from"),
-                                            pseofcTypeArgs = [TypeConstructor (LocalNameAccessChain (Identifier "MyCoin")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []]],
-                                            pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "from")), IntermediateExprExpr (IntermediateTypeWitnessExprExpr (IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "MyCoin")) [IntermediateTypeWitnessIdent (Identifier "CoinType")]))]
+                                            pseofcTypeArgs = [TypeConstructor (LocalNameAccessChain (Identifier "MyCoin")) [TypeConstructor (LocalNameAccessChain (Identifier "tw_coin_type")) []]],
+                                            pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "from")), IntermediateExprExpr (IntermediateTypeWitnessExprExpr (IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "MyCoin")) [IntermediateTypeWitnessIdent (Identifier "tw_coin_type")]))]
                                         }
                                     )
                                 )
@@ -40,8 +40,8 @@ RModule
                     functionVisibilityModifier = Nothing,
                     functionHasEntryModifier = False,
                     functionName = Identifier "deposit",
-                    functionTypeParameters = [TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "CoinType", typeConstraints = []}, TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "UnusedType", typeConstraints = []}],
-                    functionParameters = [Parameter {parameterIdentifier = Identifier "to", parameterType = TypeImmutableRef (TypeConstructor (LocalNameAccessChain (Identifier "signer")) []), parameterUUID = Just 3}, Parameter {parameterIdentifier = Identifier "coin", parameterType = TypeConstructor (LocalNameAccessChain (Identifier "MyCoin")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []], parameterUUID = Just 4}, Parameter {parameterIdentifier = Identifier "CoinType", parameterType = IntermediateTypeWitnessType, parameterUUID = Just 10}, Parameter {parameterIdentifier = Identifier "UnusedType", parameterType = IntermediateTypeWitnessType, parameterUUID = Just 11}],
+                    functionTypeParameters = [TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "tw_coin_type", typeConstraints = []}, TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "tw_unused_type", typeConstraints = []}],
+                    functionParameters = [Parameter {parameterIdentifier = Identifier "to", parameterType = TypeImmutableRef (TypeConstructor (LocalNameAccessChain (Identifier "signer")) []), parameterUUID = Just 3}, Parameter {parameterIdentifier = Identifier "coin", parameterType = TypeConstructor (LocalNameAccessChain (Identifier "MyCoin")) [TypeConstructor (LocalNameAccessChain (Identifier "tw_coin_type")) []], parameterUUID = Just 4}, Parameter {parameterIdentifier = Identifier "tw_coin_type", parameterType = IntermediateTypeWitnessType, parameterUUID = Just 10}, Parameter {parameterIdentifier = Identifier "tw_unused_type", parameterType = IntermediateTypeWitnessType, parameterUUID = Just 11}],
                     functionReturnType = Nothing,
                     functionAcquires = [],
                     functionBody =
@@ -54,8 +54,8 @@ RModule
                                 ( PositionalStructExprOrFunctionCallExpr
                                     ( PositionalStructExprOrFunctionCall
                                         { pseofcNameAccessChain = LocalNameAccessChain (Identifier "move_to"),
-                                            pseofcTypeArgs = [TypeConstructor (LocalNameAccessChain (Identifier "MyCoin")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []]],
-                                            pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "to")), NameAccessChainExpr (LocalNameAccessChain (Identifier "coin")), IntermediateExprExpr (IntermediateTypeWitnessExprExpr (IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "MyCoin")) [IntermediateTypeWitnessIdent (Identifier "CoinType")]))]
+                                            pseofcTypeArgs = [TypeConstructor (LocalNameAccessChain (Identifier "MyCoin")) [TypeConstructor (LocalNameAccessChain (Identifier "tw_coin_type")) []]],
+                                            pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "to")), NameAccessChainExpr (LocalNameAccessChain (Identifier "coin")), IntermediateExprExpr (IntermediateTypeWitnessExprExpr (IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "MyCoin")) [IntermediateTypeWitnessIdent (Identifier "tw_coin_type")]))]
                                         }
                                     )
                                 )
@@ -70,8 +70,8 @@ RModule
                     functionVisibilityModifier = Nothing,
                     functionHasEntryModifier = False,
                     functionName = Identifier "my_pay",
-                    functionTypeParameters = [TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "CoinType", typeConstraints = []}],
-                    functionParameters = [Parameter {parameterIdentifier = Identifier "from", parameterType = TypeConstructor (LocalNameAccessChain (Identifier "address")) [], parameterUUID = Just 6}, Parameter {parameterIdentifier = Identifier "to", parameterType = TypeImmutableRef (TypeConstructor (LocalNameAccessChain (Identifier "signer")) []), parameterUUID = Just 7}, Parameter {parameterIdentifier = Identifier "CoinType", parameterType = IntermediateTypeWitnessType, parameterUUID = Just 12}],
+                    functionTypeParameters = [TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "tw_coin_type", typeConstraints = []}],
+                    functionParameters = [Parameter {parameterIdentifier = Identifier "from", parameterType = TypeConstructor (LocalNameAccessChain (Identifier "address")) [], parameterUUID = Just 6}, Parameter {parameterIdentifier = Identifier "to", parameterType = TypeImmutableRef (TypeConstructor (LocalNameAccessChain (Identifier "signer")) []), parameterUUID = Just 7}, Parameter {parameterIdentifier = Identifier "tw_coin_type", parameterType = IntermediateTypeWitnessType, parameterUUID = Just 12}],
                     functionReturnType = Nothing,
                     functionAcquires = [LocalNameAccessChain (Identifier "MyCoin")],
                     functionBody =
@@ -88,8 +88,8 @@ RModule
                                             ( PositionalStructExprOrFunctionCallExpr
                                                 ( PositionalStructExprOrFunctionCall
                                                     { pseofcNameAccessChain = LocalNameAccessChain (Identifier "withdraw"),
-                                                        pseofcTypeArgs = [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []],
-                                                        pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "from")), IntermediateExprExpr (IntermediateTypeWitnessExprExpr (IntermediateTypeWitnessIdent (Identifier "CoinType")))]
+                                                        pseofcTypeArgs = [TypeConstructor (LocalNameAccessChain (Identifier "tw_coin_type")) []],
+                                                        pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "from")), IntermediateExprExpr (IntermediateTypeWitnessExprExpr (IntermediateTypeWitnessIdent (Identifier "tw_coin_type")))]
                                                     }
                                                 )
                                             )
@@ -101,8 +101,8 @@ RModule
                                 ( PositionalStructExprOrFunctionCallExpr
                                     ( PositionalStructExprOrFunctionCall
                                         { pseofcNameAccessChain = LocalNameAccessChain (Identifier "deposit"),
-                                            pseofcTypeArgs = [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) [], TypeConstructor (LocalNameAccessChain (Identifier "MyCoin")) [TypeConstructor (LocalNameAccessChain (Identifier "u64")) []]],
-                                            pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "to")), NameAccessChainExpr (LocalNameAccessChain (Identifier "c")), IntermediateExprExpr (IntermediateTypeWitnessExprExpr (IntermediateTypeWitnessIdent (Identifier "CoinType"))), IntermediateExprExpr (IntermediateTypeWitnessExprExpr (IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "MyCoin")) [IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "u64")) []]))]
+                                            pseofcTypeArgs = [TypeConstructor (LocalNameAccessChain (Identifier "tw_coin_type")) [], TypeConstructor (LocalNameAccessChain (Identifier "MyCoin")) [TypeConstructor (LocalNameAccessChain (Identifier "u64")) []]],
+                                            pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "to")), NameAccessChainExpr (LocalNameAccessChain (Identifier "c")), IntermediateExprExpr (IntermediateTypeWitnessExprExpr (IntermediateTypeWitnessIdent (Identifier "tw_coin_type"))), IntermediateExprExpr (IntermediateTypeWitnessExprExpr (IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "MyCoin")) [IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "u64")) []]))]
                                         }
                                     )
                                 )

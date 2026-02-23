@@ -3,23 +3,23 @@ module Move.Translations.TypeWitnessSpec (spec) where
 import Move.AST
 import Move.Lexer (scan)
 import Move.Parser (parse)
-import Move.Translations.TypeWitness (rewriteTopLevelsInRoot, translateTParamsInRoot)
+import Move.Translations.TypeWitness (translateTParamsInRoot, toSnake)
 import Test.Hspec
 import Control.Monad.State (evalState)
 import Move.Translations.Utils (annotateBindingsWithUUID)
 
-testRewriteTopLevelsInRoot :: Spec
-testRewriteTopLevelsInRoot = describe "Tests for the function `rewriteTopLevelsInRoot`" $ do
-  it "Appends parameters to function declarations for type witnesses" $ do
-    fromModuleStr <- readFile "test/Move/Translations/files/TypeWitnessSpec_0.move"
-    toModuleStr <- readFile "test/Move/Translations/files/TypeWitnessSpec_1.txt"
+-- testRewriteTopLevelsInRoot :: Spec
+-- testRewriteTopLevelsInRoot = describe "Tests for the function `rewriteTopLevelsInRoot`" $ do
+--   it "Appends parameters to function declarations for type witnesses" $ do
+--     fromModuleStr <- readFile "test/Move/Translations/files/TypeWitnessSpec_0.move"
+--     toModuleStr <- readFile "test/Move/Translations/files/TypeWitnessSpec_1.txt"
 
-    let parsed = parse $ scan fromModuleStr
-    let toModule = read toModuleStr :: Root
+--     let parsed = parse $ scan fromModuleStr
+--     let toModule = read toModuleStr :: Root
 
-    let updated = evalState (annotateBindingsWithUUID parsed >>= rewriteTopLevelsInRoot) 0
+--     let updated = evalState (annotateBindingsWithUUID parsed >>= rewriteTopLevelsInRoot) 0
 
-    updated `shouldBe` toModule
+--     updated `shouldBe` toModule
 
 
 testTranslateTParamsInRoot :: Spec
@@ -35,7 +35,13 @@ testTranslateTParamsInRoot = describe "Tests for the function `translateTParamsI
 
     updated `shouldBe` toModule
 
+testToSnake :: Spec
+testToSnake = describe "Tests the function `toSnake`" $ do
+  it "Should compute the snake_case version of an Identifier, prepended by `tw_` to avoid name clashes" $ do
+    toSnake (Identifier "MyString123Hello") `shouldBe` Identifier "tw_my_string123_hello"
+
 spec :: Spec
 spec = do
-  testRewriteTopLevelsInRoot
+  -- testRewriteTopLevelsInRoot
   testTranslateTParamsInRoot
+  testToSnake

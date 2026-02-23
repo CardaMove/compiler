@@ -31,9 +31,9 @@ RModule
                     functionVisibilityModifier = Nothing,
                     functionHasEntryModifier = False,
                     functionName = Identifier "twoT",
-                    functionTypeParameters = [TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "T", typeConstraints = []}, TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "AnotherT", typeConstraints = []}],
-                    functionParameters = [Parameter {parameterIdentifier = Identifier "a", parameterType = TypeConstructor (LocalNameAccessChain (Identifier "u64")) [], parameterUUID = Just 3}, Parameter {parameterIdentifier = Identifier "b", parameterType = TypeConstructor (LocalNameAccessChain (Identifier "bool")) [], parameterUUID = Just 4}, Parameter {parameterIdentifier = Identifier "T", parameterType = IntermediateTypeWitnessType, parameterUUID = Just 5}, Parameter {parameterIdentifier = Identifier "AnotherT", parameterType = IntermediateTypeWitnessType, parameterUUID = Just 6}],
-                    functionReturnType = Just (TypeConstructor (LocalNameAccessChain (Identifier "F")) [TypeConstructor (LocalNameAccessChain (Identifier "AnotherT")) []]),
+                    functionTypeParameters = [TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "tw_t", typeConstraints = []}, TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "tw_another_t", typeConstraints = []}],
+                    functionParameters = [Parameter {parameterIdentifier = Identifier "a", parameterType = TypeConstructor (LocalNameAccessChain (Identifier "u64")) [], parameterUUID = Just 3}, Parameter {parameterIdentifier = Identifier "b", parameterType = TypeConstructor (LocalNameAccessChain (Identifier "bool")) [], parameterUUID = Just 4}, Parameter {parameterIdentifier = Identifier "tw_t", parameterType = IntermediateTypeWitnessType, parameterUUID = Just 5}, Parameter {parameterIdentifier = Identifier "tw_another_t", parameterType = IntermediateTypeWitnessType, parameterUUID = Just 6}],
+                    functionReturnType = Just (TypeConstructor (LocalNameAccessChain (Identifier "F")) [TypeConstructor (LocalNameAccessChain (Identifier "tw_another_t")) []]),
                     functionAcquires = [],
                     functionBody = Just (Sequence {sequenceUses = [], sequenceItems = [], sequenceEndExpr = Nothing}),
                     functionUUID = Just 2

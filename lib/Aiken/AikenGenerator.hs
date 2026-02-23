@@ -318,7 +318,7 @@ generateExpression (NamedStructExprExpr NamedStructExpr {nseNameAccessChain, nse
         -- If the named field has no associated expression, it defaults to the field name itself
         fieldExpr = generateExpression $ fromMaybe (NameAccessChainExpr $ LocalNameAccessChain nsefIdentifier) nsefExpr
 -- Positional structs or function calls
--- Note that neither struct expressions nor function calls in Aiken not specify type arguments
+-- Note that neither struct expressions nor function calls in Aiken do specify type arguments
 generateExpression (PositionalStructExprOrFunctionCallExpr PositionalStructExprOrFunctionCall {pseofcNameAccessChain, pseofcFields}) =
   [trimming|
     $name($fields)
