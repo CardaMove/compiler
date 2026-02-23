@@ -13,7 +13,7 @@ RModule
                       namedStructAbilities = [Key, Store],
                       namedStructFields =
                         [ NamedField {fieldIdentifier = Identifier "val", fieldType = TypeConstructor (LocalNameAccessChain (Identifier "u64")) []},
-                          NamedField {fieldIdentifier = Identifier "val", fieldType = TypeConstructor (LocalNameAccessChain (Identifier "tw_b")) []}
+                          NamedField {fieldIdentifier = Identifier "b", fieldType = TypeConstructor (LocalNameAccessChain (Identifier "tw_b")) []}
                         ]
                     }
                 ),
