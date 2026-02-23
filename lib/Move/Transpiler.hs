@@ -7,6 +7,7 @@ import Move.Translations.Loops (translateWhilesToFunctionsInRoot)
 import Move.Translations.Scopes (addLocalScopeInRoot, markVariablesForLocalScope)
 import Move.Translations.TypeWitness (translateTParamsInRoot)
 import Move.Translations.Utils (annotateBindingsWithUUID)
+import Move.Translations.PostProcessing (postProcessRoot)
 
 -- |
 -- Tries to execute an IO operation, intercepting any error if thrown and providing additional informations
@@ -40,4 +41,6 @@ transpileRoot fileName root = do
 
   markedVars <- runStep (fileName ++ ": markVariablesForLocalScope") $ evaluate $ markVariablesForLocalScope step3TypeWitness
 
-  runStep (fileName ++ ": addLocalScopeInRoot") $ evaluate (fileName, addLocalScopeInRoot step3TypeWitness markedVars uuidAfterTypeWitness)
+  step4LocalScope <- runStep (fileName ++ ": addLocalScopeInRoot") $ evaluate $ addLocalScopeInRoot step3TypeWitness markedVars uuidAfterTypeWitness
+
+  runStep (fileName ++ ": postProcessing") $ evaluate (fileName, postProcessRoot step4LocalScope)

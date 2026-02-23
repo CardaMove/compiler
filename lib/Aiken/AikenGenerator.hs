@@ -6,12 +6,14 @@ import Control.Exception (ErrorCall, Exception (displayException), evaluate, try
 import Data.Maybe (fromMaybe)
 import Data.Text (Text, empty, intercalate, null, pack)
 import Move.AST
-import Move.Translations.Utils (unitType, cpsIdentifier)
+import Move.Translations.PostProcessing (gsUtilsIdent, refUtilsIdent, scopeUtilsIdent)
+import Move.Translations.Utils (cpsIdentifier, unitType)
 import NeatInterpolation (trimming)
 
 --
 -- TODO: NOTE: some cases might be rewritten by a final translation step of the AST
 --
+-- TODO: Signer module?
 
 -- |
 -- Tries to execute an IO operation, intercepting any error if thrown and providing additional informations
@@ -42,7 +44,13 @@ generateTopLevel (TopLevelUse Use {useAddress, useIdentifier, useAlias, useMembe
     use $addr/$ident$members$alias
   |]
   where
-    addr = packAddress useAddress
+    -- Only in this case, the identifier should not be encosed by string quotes
+    -- since just the name is needed
+    -- So `packAddress` is not used
+    addr = case useAddress of
+      NamedAddress addrIdent -> packIdent addrIdent
+      NumericalAddress (LiteralIntDec numAddr) -> pack $ show numAddr
+      NumericalAddress (LiteralIntHex numAddr) -> pack numAddr
     ident = packIdent useIdentifier
     alias = case useAlias of
       Nothing -> empty
@@ -388,90 +396,99 @@ generateExpression Continue = error "Unexpected continue"
 --
 -- Intermediate expressions
 --
-generateExpression (IntermediateExprExpr (IntermediateReferenceLocalState _ _)) = pack "TODO_IntermediateReferenceLocalState" --FIXME: error "TODO: track field indices for IntermediateReferenceLocalState"
+generateExpression (IntermediateExprExpr (IntermediateReferenceLocalState _ _)) = pack "TODO_IntermediateReferenceLocalState" -- FIXME: error "TODO: track field indices for IntermediateReferenceLocalState"
 -- Any `*a` on the right side
 -- Requires a manual casting after calling the Aiken lib
 generateExpression (IntermediateExprExpr (IntermediateGetDereferenceLocalState expr t)) =
   [trimming|
     {
-      expect val: $casted' = reference_utils.deref($expr', $cpsIdentifier')
+      expect val: $casted' = $lib.deref($expr', $cpsIdentifier')
       val
     }
   |]
   where
     casted' = generateType t
+    lib = packIdent refUtilsIdent
     expr' = generateExpression expr
     cpsIdentifier' = packIdent cpsIdentifier
-generateExpression (IntermediateExprExpr (IntermediatePutDereferenceLocalState _ _)) = pack "TODO_IntermediatePutDereferenceLocalState" --FIXME: error "TODO: track field indices for IntermediatePutDereferenceLocalState"
+generateExpression (IntermediateExprExpr (IntermediatePutDereferenceLocalState _ _)) = pack "TODO_IntermediatePutDereferenceLocalState" -- FIXME: error "TODO: track field indices for IntermediatePutDereferenceLocalState"
 -- Any `a[.b.c]` where `a` is in the local state
 -- Requires a manual casting after calling the Aiken lib
 generateExpression (IntermediateExprExpr (IntermediateGetLocalState ident t)) =
   [trimming|
     {
-      expect val: $casted' = scope_utils.get_scope($ident', $cpsIdentifier')
+      expect val: $casted' = $lib.get_scope($ident', $cpsIdentifier')
       val
     }
   |]
   where
     casted' = generateType t
+    lib = packIdent scopeUtilsIdent
     ident' = packIdent ident
     cpsIdentifier' = packIdent cpsIdentifier
-generateExpression (IntermediateExprExpr (IntermediatePutLocalState _ _)) = pack "TODO_IntermediatePutLocalState" --FIXME: error "TODO: track field indices for IntermediatePutLocalState"
+generateExpression (IntermediateExprExpr (IntermediatePutLocalState _ _)) = pack "TODO_IntermediatePutLocalState" -- FIXME: error "TODO: track field indices for IntermediatePutLocalState"
 -- Any `a[.b.c] = ...`
 generateExpression (IntermediateExprExpr (IntermediatePostLocalState ident expr)) =
   [trimming|
-    scope_utils.post_scope($ident', $expr', $cpsIdentifier')
+    $lib.post_scope($ident', $expr', $cpsIdentifier')
   |]
   where
+    lib = packIdent scopeUtilsIdent
     ident' = packIdent ident
     expr' = generateExpression $ fromMaybe (CommaExpr []) expr
     cpsIdentifier' = packIdent cpsIdentifier
 -- PUSH and POP operations on the scope
 generateExpression (IntermediateExprExpr (IntermediatePushScope ident)) =
   [trimming|
-    push_scope($ident')
+    $lib.push_scope($ident')
   |]
   where
+    lib = packIdent scopeUtilsIdent
     ident' = packIdent ident
 generateExpression (IntermediateExprExpr (IntermediatePopScope ident)) =
   [trimming|
-    pop_scope($ident')
+    $lib.pop_scope($ident')
   |]
   where
+    lib = packIdent scopeUtilsIdent
     ident' = packIdent ident
 -- `borrow_global_mut<T>(address)`
 generateExpression (IntermediateExprExpr (IntermediateBorrowGlobalMut expr _t tWitness)) =
   [trimming|
-    move_utils.borrow_global($addr, $resourceType, $cpsIdentifier')
+    $lib.borrow_global($addr, $resourceType, $cpsIdentifier')
   |]
   where
+    lib = packIdent gsUtilsIdent
     addr = generateExpression expr
     resourceType = generateTWitness tWitness
     cpsIdentifier' = packIdent cpsIdentifier
 -- `borrow_global<T>(address)`
 generateExpression (IntermediateExprExpr (IntermediateBorrowGlobal expr _t tWitness)) =
   [trimming|
-    move_utils.borrow_global($addr, $resourceType, $cpsIdentifier')
+    $lib.borrow_global($addr, $resourceType, $cpsIdentifier')
   |]
   where
+    lib = packIdent gsUtilsIdent
     addr = generateExpression expr
     resourceType = generateTWitness tWitness
     cpsIdentifier' = packIdent cpsIdentifier
 -- `exists<T>(address)`
 generateExpression (IntermediateExprExpr (IntermediateExists expr _t tWitness)) =
   [trimming|
-    move_utils.exists($addr, $resourceType, $cpsIdentifier')
+    $lib.exists($addr, $resourceType, $cpsIdentifier')
   |]
   where
+    lib = packIdent gsUtilsIdent
     addr = generateExpression expr
     resourceType = generateTWitness tWitness
     cpsIdentifier' = packIdent cpsIdentifier
 -- `move_to<T>(&signer, T)`
 generateExpression (IntermediateExprExpr (IntermediateMoveTo signer expr _t tWitness)) =
   [trimming|
-    move_utils.move_to($signer', $resourceType, $expr', $cpsIdentifier')
+    $lib.move_to($signer', $resourceType, $expr', $cpsIdentifier')
   |]
   where
+    lib = packIdent gsUtilsIdent
     signer' = generateExpression signer
     resourceType = generateTWitness tWitness
     expr' = generateExpression expr
@@ -481,13 +498,14 @@ generateExpression (IntermediateExprExpr (IntermediateMoveTo signer expr _t tWit
 generateExpression (IntermediateExprExpr (IntermediateMoveFrom expr t tWitness)) =
   [trimming|
     {
-      expect (val, $cpsIdentifier'): ($casted', $scopeT) = move_utils.move_from($addr, $resourceType, $cpsIdentifier')
+      expect (val, $cpsIdentifier'): ($casted', $scopeT) = $lib.move_from($addr, $resourceType, $cpsIdentifier')
       (val, $cpsIdentifier')
     }
   |]
   where
     casted' = generateType t
     scopeT = generateType IntermediateTypeScopes
+    lib = packIdent gsUtilsIdent
     addr = generateExpression expr
     resourceType = generateTWitness tWitness
     cpsIdentifier' = packIdent cpsIdentifier

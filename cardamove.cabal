@@ -29,6 +29,7 @@ library
       Move.Parser
       Move.Token
       Move.Translations.Loops
+      Move.Translations.PostProcessing
       Move.Translations.Scopes
       Move.Translations.TraversalUtils
       Move.Translations.TypeWitness
