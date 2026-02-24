@@ -17,7 +17,7 @@ main = do
   putStrLn "CardaMove ready"
 
   -- Load files
-  let tomlPath = "test/Move/Loader/files/Move.toml"
+  let tomlPath = "test\\Move\\Loader\\files\\Move.toml"
 
   files <- loadToml tomlPath
 
