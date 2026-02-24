@@ -145,7 +145,7 @@ RModule
                                   SequenceItemBindExpr
                                     ( Bindings
                                         { bindings = BindedTuple [BindIdentifier (Identifier "temp_7") (Just 7), BindIdentifier (Identifier "cps_state") (Just (-1))],
-                                          bindingsBindType = Just (TypeTuple [TypeTuple [TypeConstructor (LocalNameAccessChain (Identifier "B")) [], IntermediateTypeScopes], IntermediateTypeScopes]),
+                                          bindingsBindType = Just (TypeTuple [TypeConstructor (LocalNameAccessChain (Identifier "B")) [], IntermediateTypeScopes]),
                                           bindingsBindExpr =
                                             Just
                                               ( SequenceExpr

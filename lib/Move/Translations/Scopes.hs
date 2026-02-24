@@ -144,7 +144,7 @@ rewriteAssignments root scopeUUID = transformBi helperBindRewriter $ fst $ trave
         Bindings
           { bindings = BindedSingle $ BindIdentifier cpsIdentifier $ Just scopeUUID,
             bindingsBindType = Just IntermediateTypeScopes,
-            bindingsBindExpr = Just $ IntermediateExprExpr $ rightVal
+            bindingsBindExpr = Just $ IntermediateExprExpr rightVal
           }
     helperBindRewriter bind = bind
 
@@ -394,6 +394,8 @@ rewriteInlineStateMutation scopeUUID = rewriteInlineStateMutation'
                           [ -- To correctly infer the type, it might be needed to access some temporary variables,
                             -- so they have been added as a new scope.
                             -- Adding a scope on top does not cause issues in this step
+                            -- FIXME: Maybe it is needed to check if the function already updates the state, before creating a tuple?
+                            -- similar to the bug dolved for inline sequences in `rewriteInlineStateMutation'`
                             inferExprType expr (scopes ++ [mapTemporaryBindingsToScope bindingsToAdd]),
                             IntermediateTypeScopes
                           ],
@@ -431,15 +433,11 @@ rewriteInlineStateMutation scopeUUID = rewriteInlineStateMutation'
                               [ BindIdentifier tempIdentifier' (Just currUUID),
                                 BindIdentifier cpsIdentifier (Just scopeUUID)
                               ],
+                          -- To correctly infer the type, it might be needed to access some temporary variables,
+                          -- so they have been added as a new scope.
+                          -- Adding a scope on top does not cause issues in this step
                           bindingsBindType =
-                            Just $
-                              TypeTuple
-                                -- To correctly infer the type, it might be needed to access some temporary variables,
-                                -- so they have been added as a new scope.
-                                -- Adding a scope on top does not cause issues in this step
-                                [ inferExprType (SequenceExpr seq') (scopes ++ [mapTemporaryBindingsToScope bindingsToAdd]),
-                                  IntermediateTypeScopes
-                                ],
+                            Just $ inferExprType (SequenceExpr seq') (scopes ++ [mapTemporaryBindingsToScope bindingsToAdd]),
                           bindingsBindExpr = Just $ SequenceExpr seq'
                         }
                  in ( NameAccessChainExpr $ LocalNameAccessChain tempIdentifier',
