@@ -29,10 +29,11 @@ module NamedAddr::TestingModule {
         // Extract sequence `let (temp_i, scopes) = {...}`
         let a = {
             // Push scope
-            // POST g2 (this is because ge.f.val marks it as mutated, even if it is a syntactic sugar)
+            // POST g2 (this is because g2.f.val marks it as mutated, even if it is a syntactic sugar)
             let g2 = borrow_global_mut<G<bool>>(address_of(s));
 
-            // (GET g2).f.val, PUT (g2.f.val)
+            // (GET g2).f.val, PUT-deref (g2.f.val)
+            // Note syntactic sugar for dereferencing g2
             g2.f.val = g2.f.val * 5;
 
             // (GET g2).f.val

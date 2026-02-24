@@ -62,14 +62,14 @@ RModule
                                     ( Bindings
                                         { bindings = BindedSingle (BindIdentifier (Identifier "r") (Just 3)),
                                         bindingsBindType = Nothing,
-                                        bindingsBindExpr = Just (IntermediateExprExpr (IntermediateReferenceLocalState [Identifier "x"] (TypeMutableRef (TypeConstructor (LocalNameAccessChain (Identifier "bool")) []))))
+                                        bindingsBindExpr = Just (IntermediateExprExpr (IntermediateReferenceLocalState (Identifier "x") [] (TypeMutableRef (TypeConstructor (LocalNameAccessChain (Identifier "bool")) []))))
                                         }
                                     ),
                                 SequenceItemBindExpr
                                     ( Bindings
                                         { bindings = BindedSingle (BindIdentifier (Identifier "r2") (Just 4)),
                                         bindingsBindType = Nothing,
-                                        bindingsBindExpr = Just (IntermediateExprExpr (IntermediateReferenceLocalState [Identifier "s", Identifier "s"] (TypeImmutableRef (TypeConstructor (LocalNameAccessChain (Identifier "u64")) []))))
+                                        bindingsBindExpr = Just (IntermediateExprExpr (IntermediateReferenceLocalState (Identifier "s") [0] (TypeImmutableRef (TypeConstructor (LocalNameAccessChain (Identifier "u64")) []))))
                                         }
                                     ),
                                 SequenceItemBindExpr
@@ -92,7 +92,7 @@ RModule
                                     ( Bindings
                                         { bindings = BindedSingle (BindIdentifier (Identifier "b") (Just 6)),
                                         bindingsBindType = Nothing,
-                                        bindingsBindExpr = Just (IntermediateExprExpr (IntermediateGetDereferenceLocalState (CommaExpr [IntermediateExprExpr (IntermediateReferenceLocalState [Identifier "a"] (TypeImmutableRef (TypeConstructor (LocalNameAccessChain (Identifier "bool")) [])))]) (TypeConstructor (LocalNameAccessChain (Identifier "bool")) [])))
+                                        bindingsBindExpr = Just (IntermediateExprExpr (IntermediateGetDereferenceLocalState (CommaExpr [IntermediateExprExpr (IntermediateReferenceLocalState (Identifier "a") [] (TypeImmutableRef (TypeConstructor (LocalNameAccessChain (Identifier "bool")) [])))]) (TypeConstructor (LocalNameAccessChain (Identifier "bool")) [])))
                                         }
                                     )
                                 ],

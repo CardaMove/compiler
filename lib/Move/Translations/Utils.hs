@@ -308,6 +308,7 @@ inferExprType (NamedStructExprExpr expr@(NamedStructExpr {nseNameAccessChain = L
         then error $ "Found a named struct expression with wrong number of type arguments: " ++ show expr
         else TypeConstructor (LocalNameAccessChain structName) nseTypeArgs
     _ -> error $ "Found a named struct expression that does not correspond to a struct declaration: " ++ show expr
+-- TODO: non local nac
 inferExprType (NamedStructExprExpr (NamedStructExpr {nseNameAccessChain = _})) scopes = TypeUnknown
 -- Positional struct expression or function call
 -- TODO: type parameters for now are ignored (for structs), also non-local name access chains
@@ -324,6 +325,7 @@ inferExprType (PositionalStructExprOrFunctionCallExpr expr@(PositionalStructExpr
         else resolveParametricType (last ts) (zip typeParams pseofcTypeArgs)
     -- Otherwise, for a struct, it is the name of the struct
     VariableAnnotations _ structType -> structType
+-- TODO: non local nac
 inferExprType (PositionalStructExprOrFunctionCallExpr (PositionalStructExprOrFunctionCall {pseofcNameAccessChain = _})) scopes = TypeUnknown
 -- Function bang call has unit type
 inferExprType (FunctionBangCallExpr _) _ = unitType
@@ -358,11 +360,11 @@ inferExprType Break _ = TypeUnknown
 -- Continue
 inferExprType Continue _ = TypeUnknown
 -- Intermediate AST expressions
-inferExprType (IntermediateExprExpr (IntermediateReferenceLocalState _ exprType)) _ = exprType
+inferExprType (IntermediateExprExpr (IntermediateReferenceLocalState _ _ exprType)) _ = exprType
 inferExprType (IntermediateExprExpr (IntermediateGetDereferenceLocalState _ exprType)) _ = exprType
-inferExprType (IntermediateExprExpr (IntermediatePutDereferenceLocalState _ _)) _ = IntermediateTypeScopes
+inferExprType (IntermediateExprExpr (IntermediatePutDereferenceLocalState {})) _ = IntermediateTypeScopes
 inferExprType (IntermediateExprExpr (IntermediateGetLocalState _ exprType)) _ = exprType
-inferExprType (IntermediateExprExpr (IntermediatePutLocalState _ _)) _ = IntermediateTypeScopes
+inferExprType (IntermediateExprExpr (IntermediatePutLocalState {})) _ = IntermediateTypeScopes
 inferExprType (IntermediateExprExpr (IntermediatePostLocalState _ _)) _ = IntermediateTypeScopes
 inferExprType (IntermediateExprExpr (IntermediatePushScope _)) _ = IntermediateTypeScopes
 inferExprType (IntermediateExprExpr (IntermediatePopScope _)) _ = IntermediateTypeScopes
@@ -372,6 +374,7 @@ inferExprType (IntermediateExprExpr (IntermediateExists {})) _ = booleanType
 inferExprType (IntermediateExprExpr (IntermediateMoveTo {})) _ = unitType
 inferExprType (IntermediateExprExpr (IntermediateMoveFrom _ t _)) _ = t
 inferExprType (IntermediateExprExpr (IntermediateTypeWitnessExprExpr _)) _ = IntermediateTypeWitnessType
+inferExprType (IntermediateExprExpr expr@(IntermediateScopeBinding _)) _ = error $ "An IntermediateScopeBinding should never be present in the AST: " ++ show expr
 
 -- |
 -- Given a type that might be parametric, along with the type parameters of the record (or function) and their respective type arguments,

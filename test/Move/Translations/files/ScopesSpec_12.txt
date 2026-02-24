@@ -169,7 +169,7 @@ RModule
                                                                             ( PositionalStructExprOrFunctionCall
                                                                                 { pseofcNameAccessChain = LocalNameAccessChain (Identifier "test2"),
                                                                                   pseofcTypeArgs = [],
-                                                                                  pseofcFields = [IntermediateExprExpr (IntermediateReferenceLocalState [Identifier "a"] (TypeImmutableRef (TypeConstructor (LocalNameAccessChain (Identifier "A")) []))), NameAccessChainExpr (LocalNameAccessChain (Identifier "cps_state"))]
+                                                                                  pseofcFields = [IntermediateExprExpr (IntermediateReferenceLocalState (Identifier "a") [] (TypeImmutableRef (TypeConstructor (LocalNameAccessChain (Identifier "A")) []))), NameAccessChainExpr (LocalNameAccessChain (Identifier "cps_state"))]
                                                                                 }
                                                                             )
                                                                         )
@@ -190,7 +190,7 @@ RModule
                                                                       Just
                                                                         ( IntermediateExprExpr
                                                                             ( IntermediatePutLocalState
-                                                                                [Identifier "c", Identifier "a", Identifier "num"]
+                                                                                (Identifier "c")
                                                                                 ( BinaryOpExprExpr
                                                                                     ( Add
                                                                                         ( DotOrIndexChainExpr
@@ -209,6 +209,7 @@ RModule
                                                                                         (ValueLiteral (Numerical (LiteralIntDec 1)))
                                                                                     )
                                                                                 )
+                                                                                [0, 0]
                                                                             )
                                                                         )
                                                                   }

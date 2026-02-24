@@ -39,7 +39,7 @@ RModule
                                 Bindings
                                   { bindings = BindedSingle (BindIdentifier (Identifier "cps_state") (Just (-1))),
                                     bindingsBindType = Just IntermediateTypeScopes,
-                                    bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePutDereferenceLocalState (Identifier "r") (ValueLiteral (Numerical (LiteralIntDec 6)))))
+                                    bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePutDereferenceLocalState (Identifier "r") (ValueLiteral (Numerical (LiteralIntDec 6))) []))
                                   }
                             ],
                           sequenceEndExpr = Just (CommaExpr [ValueLiteral (Numerical (LiteralIntDec 12)), IntermediateExprExpr (IntermediatePopScope (Identifier "cps_state"))])
@@ -82,7 +82,7 @@ RModule
                                 Bindings
                                   { bindings = BindedSingle (BindIdentifier (Identifier "cps_state") (Just (-1))),
                                     bindingsBindType = Just IntermediateTypeScopes,
-                                    bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePutDereferenceLocalState (Identifier "r") (ValueLiteral (Numerical (LiteralIntDec 6)))))
+                                    bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePutDereferenceLocalState (Identifier "r") (ValueLiteral (Numerical (LiteralIntDec 6))) []))
                                   }
                             ],
                           sequenceEndExpr = Just (CommaExpr [CommaExpr [], IntermediateExprExpr (IntermediatePopScope (Identifier "cps_state"))])
@@ -131,7 +131,7 @@ RModule
                                 Bindings
                                   { bindings = BindedSingle (BindIdentifier (Identifier "r") (Just 7)),
                                     bindingsBindType = Nothing,
-                                    bindingsBindExpr = Just (IntermediateExprExpr (IntermediateReferenceLocalState [Identifier "b"] (TypeMutableRef (TypeConstructor (LocalNameAccessChain (Identifier "u256")) []))))
+                                    bindingsBindExpr = Just (IntermediateExprExpr (IntermediateReferenceLocalState (Identifier "b") [] (TypeMutableRef (TypeConstructor (LocalNameAccessChain (Identifier "u256")) []))))
                                   },
                               SequenceItemBindExpr
                                 Bindings

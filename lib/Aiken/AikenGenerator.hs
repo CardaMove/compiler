@@ -396,7 +396,15 @@ generateExpression Continue = error "Unexpected continue"
 --
 -- Intermediate expressions
 --
-generateExpression (IntermediateExprExpr (IntermediateReferenceLocalState _ _)) = pack "TODO_IntermediateReferenceLocalState" -- FIXME: error "TODO: track field indices for IntermediateReferenceLocalState"
+generateExpression (IntermediateExprExpr (IntermediateReferenceLocalState ident fields _)) =
+  [trimming|
+    $lib.make_ref($ident', $fields', $cpsIdentifier')
+  |]
+  where
+    lib = packIdent refUtilsIdent
+    ident' = packIdent ident
+    fields' = pack $ show fields
+    cpsIdentifier' = packIdent cpsIdentifier
 -- Any `*a` on the right side
 -- Requires a manual casting after calling the Aiken lib
 generateExpression (IntermediateExprExpr (IntermediateGetDereferenceLocalState expr t)) =
@@ -411,7 +419,16 @@ generateExpression (IntermediateExprExpr (IntermediateGetDereferenceLocalState e
     lib = packIdent refUtilsIdent
     expr' = generateExpression expr
     cpsIdentifier' = packIdent cpsIdentifier
-generateExpression (IntermediateExprExpr (IntermediatePutDereferenceLocalState _ _)) = pack "TODO_IntermediatePutDereferenceLocalState" -- FIXME: error "TODO: track field indices for IntermediatePutDereferenceLocalState"
+generateExpression (IntermediateExprExpr (IntermediatePutDereferenceLocalState ident expr fields)) =
+  [trimming|
+    $lib.put_deref($ident', $fields', $expr', $cpsIdentifier')
+  |]
+  where
+    lib = packIdent refUtilsIdent
+    ident' = packIdent ident
+    fields' = pack $ show fields
+    expr' = generateExpression expr
+    cpsIdentifier' = packIdent cpsIdentifier
 -- Any `a[.b.c]` where `a` is in the local state
 -- Requires a manual casting after calling the Aiken lib
 generateExpression (IntermediateExprExpr (IntermediateGetLocalState ident t)) =
@@ -426,7 +443,16 @@ generateExpression (IntermediateExprExpr (IntermediateGetLocalState ident t)) =
     lib = packIdent scopeUtilsIdent
     ident' = packIdent ident
     cpsIdentifier' = packIdent cpsIdentifier
-generateExpression (IntermediateExprExpr (IntermediatePutLocalState _ _)) = pack "TODO_IntermediatePutLocalState" -- FIXME: error "TODO: track field indices for IntermediatePutLocalState"
+generateExpression (IntermediateExprExpr (IntermediatePutLocalState ident expr fields)) = 
+  [trimming|
+    $lib.put_scope($ident', $fields', $expr', $cpsIdentifier')
+  |]
+  where
+    lib = packIdent scopeUtilsIdent
+    ident' = packIdent ident
+    fields' = pack $ show fields
+    expr' = generateExpression expr
+    cpsIdentifier' = packIdent cpsIdentifier
 -- Any `a[.b.c] = ...`
 generateExpression (IntermediateExprExpr (IntermediatePostLocalState ident expr)) =
   [trimming|
@@ -511,6 +537,7 @@ generateExpression (IntermediateExprExpr (IntermediateMoveFrom expr t tWitness))
     cpsIdentifier' = packIdent cpsIdentifier
 -- Type witnesses expressions
 generateExpression (IntermediateExprExpr (IntermediateTypeWitnessExprExpr tWitness)) = generateTWitness tWitness
+generateExpression (IntermediateExprExpr expr@(IntermediateScopeBinding _)) = error $ "IntermediateScopeBinding should never be present when generating Aiken: " ++ show expr
 
 -- |
 -- Given a Move Sequence (not SequenceExpr), generates the corresponding Aiken code,

@@ -621,21 +621,22 @@ type AnnotatedUUID = Int
 -- Nodes used as intermediate representations for some expressions
 data IntermediateExpr
   = -- | Any `&[mut] a[.b.c]`
-    -- TODO: Should track field indices to allow Aiken to unconstruct and reconstruct the fields
-    IntermediateReferenceLocalState [Identifier] Type
+    -- Fields are tracked by their index when considering the struct as a tuple
+    -- There is no need to track the whole name access chain since references can be done only on local names
+    IntermediateReferenceLocalState Identifier [Int] Type
   | -- | Any `*a` on the right side
     IntermediateGetDereferenceLocalState Expr Type
-  | -- | Any `(*a)[.b.c]` on the left side
-    -- Nested fields are only present when desugaring `a.b.c = ...`
-    -- TODO: Include indices of nested fields
-    IntermediatePutDereferenceLocalState Identifier Expr
+  | -- | Either `*a = ...` or `a.b[.c] = ...` acting as a syntactic sugar
+    -- Fields are tracked by their index when considering the struct as a tuple
+    -- There is no need to track the whole name access chain since references can be done only on local names
+    IntermediatePutDereferenceLocalState Identifier Expr [Int]
   | -- | Any `a[.b.c]` where `a` is in the local state
     -- Only the first identifier has to be actually retrieved,
     -- The others are dot accesses
     IntermediateGetLocalState Identifier Type
-  | -- | Any `a[.b.c] = ...`
-    -- TODO: It should track the indices of the fields and use Aiken data unconstruction
-    IntermediatePutLocalState [Identifier] Expr
+  | -- | Any `a[.b.c] = ...` that is also not a syntactic sugar for references
+    -- There is no need to track the whole name access chain since references can be done only on local names
+    IntermediatePutLocalState Identifier Expr [Int]
   | -- | Any `let a = ...` where `a` has to be inserted in the local state
     IntermediatePostLocalState Identifier (Maybe Expr)
   | -- | Represents pushing a new local scope on top of the existing ones
@@ -662,8 +663,15 @@ data IntermediateExpr
     --
     -- Includes the type of `T` both as type for downcasting and (runtime) type witness
     IntermediateMoveFrom Expr Type IntermediateTypeWitnessExpr
-  -- | Represents the expression holding a type witness
-  | IntermediateTypeWitnessExprExpr IntermediateTypeWitnessExpr
+  | -- | Represents the expression holding a type witness
+    IntermediateTypeWitnessExprExpr IntermediateTypeWitnessExpr
+  | -- | An intermediate node that is used only when converting an assignment into let binding
+    -- It should never be encountered outside the `rewriteAssignments` function since has no actual
+    -- meaning other than convenience when performing the rewrite
+    --
+    -- Each of the intermediate expression must be a PUT on the state (either IntermediatePutLocalState or IntermediatePutDereferenceLocalState)
+    -- Multiple intermediate expressions can be passed, used to chain them in a single binding
+    IntermediateScopeBinding [IntermediateExpr]
   deriving (Eq, Show, Read, Data, Typeable, Ord)
 
 -- |

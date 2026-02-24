@@ -41,7 +41,7 @@ RModule
                                     Bindings
                                     { bindings = BindedSingle (BindIdentifier (Identifier "cps_state") (Just (-1))),
                                         bindingsBindType = Just IntermediateTypeScopes,
-                                        bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePutLocalState [Identifier "x"] (BinaryOpExprExpr (Add (NameAccessChainExpr (LocalNameAccessChain (Identifier "x"))) (ValueLiteral (Numerical (LiteralIntDec 1)))))))
+                                        bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePutLocalState (Identifier "x") (BinaryOpExprExpr (Add (NameAccessChainExpr (LocalNameAccessChain (Identifier "x"))) (ValueLiteral (Numerical (LiteralIntDec 1))))) []))
                                     },
                                 SequenceItemBindExpr
                                     ( Bindings
@@ -54,7 +54,7 @@ RModule
                                     ( Bindings
                                         { bindings = BindedSingle (BindIdentifier (Identifier "cps_state") (Just (-1))),
                                         bindingsBindType = Just IntermediateTypeScopes,
-                                        bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePutDereferenceLocalState (Identifier "a") (BinaryOpExprExpr (Add (UnaryOpExpr (Dereference (NameAccessChainExpr (LocalNameAccessChain (Identifier "a"))))) (ValueLiteral (Numerical (LiteralIntDec 1)))))))
+                                        bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePutDereferenceLocalState (Identifier "a") (BinaryOpExprExpr (Add (UnaryOpExpr (Dereference (NameAccessChainExpr (LocalNameAccessChain (Identifier "a"))))) (ValueLiteral (Numerical (LiteralIntDec 1))))) []))
                                         }
                                     ),
                                 SequenceItemBindExpr
@@ -82,7 +82,7 @@ RModule
                                     ( Bindings
                                         { bindings = BindedSingle (BindIdentifier (Identifier "cps_state") (Just (-1))),
                                         bindingsBindType = Just IntermediateTypeScopes,
-                                        bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePutLocalState [Identifier "s", Identifier "s"] (BinaryOpExprExpr ( Add ( DotOrIndexChainExpr ( DotAccess { dotAccessLeft = NameAccessChainExpr (LocalNameAccessChain (Identifier "s")), dotAccessRight = Identifier "s" } ) ) (ValueLiteral (Numerical (LiteralIntDec 1))) ))))
+                                        bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePutLocalState (Identifier "s") (BinaryOpExprExpr ( Add ( DotOrIndexChainExpr ( DotAccess { dotAccessLeft = NameAccessChainExpr (LocalNameAccessChain (Identifier "s")), dotAccessRight = Identifier "s" } ) ) (ValueLiteral (Numerical (LiteralIntDec 1))) )) [0]))
                                         }
                                     )
                                 ],

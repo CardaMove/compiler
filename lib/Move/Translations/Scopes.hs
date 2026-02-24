@@ -45,27 +45,58 @@ markVariablesForLocalScope root = snd $ traverseRootPostOrder exprMapper bindsMa
 -- |
 -- Utility function
 --
--- Given an expression `a[.b.c]`, returns the chain of identifiers ["a", "b", "c"] in left-to-right order
-getDotAccessChain :: Expr -> [Identifier]
-getDotAccessChain = reverse . getDotAccessChain'
-  where
-    getDotAccessChain' (NameAccessChainExpr (LocalNameAccessChain ident)) = [ident]
-    getDotAccessChain' (DotOrIndexChainExpr DotAccess {dotAccessLeft, dotAccessRight}) = dotAccessRight : getDotAccessChain' dotAccessLeft
-    -- TODO: For now, only simple dot access chains like `a[.b.c]` are supported, but they might be inline values
-    getDotAccessChain' expr = error $ "More complex dot access chain not supported: " ++ show expr
-
--- |
--- Utility function
+-- Given an expression `a[.b.c]`, returns the chain of fields' indices [idx_a, idx_b, idx_c] in left-to-right order,
+-- along with the leftmost identifier `a` and the final type of the whole dot access
 --
--- Given a reference to either a local identifier or a dot access chain `&[mut] a[.b.c]`,
--- rewrites the node as an high level reference on the state, also preserving the resulting type
--- TODO: track the indices of the fields, so to allow Aiken builtins to unconstruct the Data
-mapRightValueRef :: Expr -> Type -> Expr
-mapRightValueRef (NameAccessChainExpr (LocalNameAccessChain ident)) exprType = IntermediateExprExpr $ IntermediateReferenceLocalState [ident] exprType
-mapRightValueRef expr@(DotOrIndexChainExpr _) exprType = IntermediateExprExpr $ IntermediateReferenceLocalState (getDotAccessChain expr) exprType
--- TODO: Similarly, only references to variables or dot access are supported, but can be inline values
--- or also `(*a).b.c = ...`
-mapRightValueRef expr _ = error $ "More complex reference not supported: " ++ show expr
+-- Needs the scope so to find the correct structs
+-- Note that `a` must be a local name
+unconstrDotAccess :: Expr -> [Scope] -> (Identifier, [Int], Type)
+unconstrDotAccess expr' scopes' =
+  let (ident, idx, t) = unconstrDotAccess' expr' scopes'
+   in (ident, reverse idx, t)
+  where
+    findField :: Identifier -> [NamedField] -> Maybe (Int, NamedField)
+    findField = findField' 0
+      where
+        findField' :: Int -> Identifier -> [NamedField] -> Maybe (Int, NamedField)
+        findField' _ _ [] = Nothing
+        findField' idx ident (f : fs) =
+          if ident == fieldIdentifier f
+            then Just (idx, f)
+            else findField' (idx + 1) ident fs
+
+    -- Helper function. Returns the field indices in reverse order for convenience
+    unconstrDotAccess' :: Expr -> [Scope] -> (Identifier, [Int], Type)
+    -- Leftmost part of a dot access should be a local identifier
+    unconstrDotAccess' expr@(NameAccessChainExpr (LocalNameAccessChain ident)) scopes = (ident, [], inferExprType expr scopes)
+    unconstrDotAccess' expr@(NameAccessChainExpr _) _ = error $ "Unexpected dot access to non-local name access chain: " ++ show expr
+    -- When finding a dot access, recursively check the left part
+    unconstrDotAccess' expr@(DotOrIndexChainExpr (DotAccess {dotAccessLeft, dotAccessRight})) scopes =
+      case unconstrDotAccess' dotAccessLeft scopes of
+        -- The left part produces a value of a type that might also be a reference, due to syntactic sugar
+        -- Here the syntactic sugar is ignored, it is handled outside this function
+        (ident, fieldsChain, TypeConstructor tCons _) -> accessField ident fieldsChain tCons
+        (ident, fieldsChain, TypeMutableRef (TypeConstructor tCons _)) -> accessField ident fieldsChain tCons
+        (ident, fieldsChain, TypeImmutableRef (TypeConstructor tCons _)) -> accessField ident fieldsChain tCons
+        res -> error $ "Dot access to a non-struct type: " ++ show expr ++ " as: " ++ show res
+      where
+        -- Given the identifier and type of the left part of the dot access, along with the recursive fields on the left part,
+        -- accesses the field `dotAccessRight` from the `tCons` struct
+        accessField :: Identifier -> [Int] -> NameAccessChain -> (Identifier, [Int], Type)
+        -- The type of the left part of the dot access must be a named struct
+        accessField ident fieldsChain (LocalNameAccessChain tCons) =
+          case getIdentifierFromScopes tCons scopes of
+            VariableAnnotations _ (IntermediateTypeNamedStructDeclaration str fields) ->
+              -- If so, access the correct field
+              case findField dotAccessRight fields of
+                Nothing -> error $ "Dot access to unknown struct field: " ++ show str ++ ", field: " ++ show dotAccessRight
+                Just (idx, accessedField) -> (ident, idx : fieldsChain, fieldType accessedField)
+            VariableAnnotations _ t -> error $ "Dot access to a non-named struct: " ++ show expr ++ " as: " ++ show t
+        -- Otherwise, throw and error
+        accessField ident fieldsChain tCons = error $ "Unexpected non-local type when unconstructing dot access: " ++ show (ident, fieldsChain, tCons)
+
+    -- TODO: For now, only simple dot access chains like `a[.b.c]` are supported, but they might be inline values
+    unconstrDotAccess' expr _ = error $ "Unsupported dot access chain: " ++ show expr
 
 -- |
 -- Utility function
@@ -76,36 +107,46 @@ mapRightValueRef expr _ = error $ "More complex reference not supported: " ++ sh
 --    such as `... (a = 1) ...`, but cases like this should never be present anyway
 --
 -- Possible assignment are `a[.b.c] = ...`, tuple destructuring `(a, b[.c]) = ...` or dereferences `*a`
+--
+-- The rewriting is performed on two steps:
+-- first, a traversal uses the scope to rewrite the assignments into an `IntermediateScopeBinding` expression, that must be present only in this function
+-- then, a transformBi is performed in order to rewrite a `SequenceItemExpr` corresponding to the assignement into a let bind `SequenceItemBindExpr`
 rewriteAssignments :: Root -> AnnotatedUUID -> Root
-rewriteAssignments root scopeUUID = transformBi f root
+rewriteAssignments root scopeUUID = transformBi helperBindRewriter $ fst $ traverseRootPostOrder exprMapper traversalIdentity root ()
   where
-    -- `a = ...`
-    f (SequenceItemExpr (AssignmentExpr (Assignment {assignmentLeft = NameAccessChainExpr (LocalNameAccessChain ident), assignmentRight}))) =
+    -- Translates assignments into the `IntermediateScopeBinding` expressions
+    exprMapper :: TraversalMapper Expr ()
+    -- Translating `a = ...` as a PUT on the state
+    exprMapper (AssignmentExpr (Assignment {assignmentLeft = NameAccessChainExpr (LocalNameAccessChain ident), assignmentRight})) _ state =
+      (IntermediateExprExpr $ IntermediateScopeBinding [IntermediatePutLocalState ident assignmentRight []], state)
+    -- Translating `a.b[.c] = ...`.
+    -- Note that the it might be a syntactic sugar if `a` is a reference
+    exprMapper (AssignmentExpr (Assignment {assignmentLeft = dotAccess@(DotOrIndexChainExpr _), assignmentRight})) scopes state =
+      let (ident, fields, _) = unconstrDotAccess dotAccess scopes
+       in case (getIdentifierFromScopes ident scopes, null fields) of
+            -- In case `a` is a reference, and some fields are accessed, is a syntactic sugar
+            (VariableAnnotations _ (TypeMutableRef _), False) -> (IntermediateExprExpr $ IntermediateScopeBinding [IntermediatePutDereferenceLocalState ident assignmentRight fields], state)
+            (VariableAnnotations _ (TypeImmutableRef _), False) -> (IntermediateExprExpr $ IntermediateScopeBinding [IntermediatePutDereferenceLocalState ident assignmentRight fields], state)
+            -- Otherwise it is a normal PUT on the state
+            _ -> (IntermediateExprExpr $ IntermediateScopeBinding [IntermediatePutLocalState ident assignmentRight fields], state)
+    -- Translating `*a = ...`, with no dot access
+    -- Note that `a` must be a local name
+    exprMapper (AssignmentExpr (Assignment {assignmentLeft = UnaryOpExpr (Dereference (NameAccessChainExpr (LocalNameAccessChain ident))), assignmentRight})) _ state =
+      (IntermediateExprExpr $ IntermediateScopeBinding [IntermediatePutDereferenceLocalState ident assignmentRight []], state)
+    -- TODO: Tuple assignments
+    exprMapper expr _ state = (expr, state)
+
+    -- rewrites a `IntermediateScopeBinding` into a let bind `SequenceItemBindExpr`
+    helperBindRewriter :: SequenceItem -> SequenceItem
+    -- TODO: Support for tuple assignments by subsequent bindings in nested struct (or if possible, multiple lines of let bindings)
+    helperBindRewriter (SequenceItemExpr (IntermediateExprExpr (IntermediateScopeBinding [rightVal]))) =
       SequenceItemBindExpr
         Bindings
           { bindings = BindedSingle $ BindIdentifier cpsIdentifier $ Just scopeUUID,
             bindingsBindType = Just IntermediateTypeScopes,
-            bindingsBindExpr = Just $ IntermediateExprExpr $ IntermediatePutLocalState [ident] assignmentRight
+            bindingsBindExpr = Just $ IntermediateExprExpr $ rightVal
           }
-    -- `a[.b.c]`, note about syntactic sugar for references few comments below
-    f (SequenceItemExpr (AssignmentExpr (Assignment {assignmentLeft = dotAccess@(DotOrIndexChainExpr _), assignmentRight}))) =
-      SequenceItemBindExpr
-        Bindings
-          { bindings = BindedSingle $ BindIdentifier cpsIdentifier $ Just scopeUUID,
-            bindingsBindType = Just IntermediateTypeScopes,
-            bindingsBindExpr = Just $ IntermediateExprExpr $ IntermediatePutLocalState (getDotAccessChain dotAccess) assignmentRight
-          }
-    -- `*a = ...`, it can not be a dot access, meaning `*(a.b)`, since references can not be labels in structs
-    f (SequenceItemExpr (AssignmentExpr (Assignment {assignmentLeft = UnaryOpExpr (Dereference (NameAccessChainExpr (LocalNameAccessChain ident))), assignmentRight}))) =
-      SequenceItemBindExpr
-        Bindings
-          { bindings = BindedSingle $ BindIdentifier cpsIdentifier $ Just scopeUUID,
-            bindingsBindType = Just IntermediateTypeScopes,
-            bindingsBindExpr = Just $ IntermediateExprExpr $ IntermediatePutDereferenceLocalState ident assignmentRight
-          }
-    -- TODO: tuple assignments
-    f expr@(SequenceItemExpr _) = expr
-    f bind = bind
+    helperBindRewriter bind = bind
 
 -- |
 -- Utility function
@@ -115,8 +156,13 @@ rewriteAssignments root scopeUUID = transformBi f root
 --
 -- Also includes global storage operators that do not alter the storage itself, meaning borrows and exists
 rewriteRefs :: TraversalMapper Expr ()
-rewriteRefs expr@(UnaryOpExpr (ImmutableReference referencedExpr)) scopes state = (mapRightValueRef referencedExpr $ inferExprType expr scopes, state)
-rewriteRefs expr@(UnaryOpExpr (MutableReference referencedExpr)) scopes state = (mapRightValueRef referencedExpr $ inferExprType expr scopes, state)
+-- Here, it is assumed that references are only in the form of `& a[.b.c]`, so a dot access or a name access chain is expected
+rewriteRefs (UnaryOpExpr (ImmutableReference expr)) scopes state =
+  let (nac, idx, t) = unconstrDotAccess expr scopes
+   in (IntermediateExprExpr $ IntermediateReferenceLocalState nac idx $ TypeImmutableRef t, state)
+rewriteRefs (UnaryOpExpr (MutableReference expr)) scopes state =
+  let (nac, idx, t) = unconstrDotAccess expr scopes
+   in (IntermediateExprExpr $ IntermediateReferenceLocalState nac idx $ TypeMutableRef t, state)
 -- Also rewrite dereferences on right value
 -- This passage is mainly used to preserve the resulting type, that would not be inferrable anymore after the AST rewrite
 rewriteRefs expr@(UnaryOpExpr (Dereference dereferencedExpr)) scopes state = (IntermediateExprExpr $ IntermediateGetDereferenceLocalState dereferencedExpr $ inferExprType expr scopes, state)
@@ -551,9 +597,9 @@ rewriteInlineStateMutationInSequence (Sequence {sequenceUses, sequenceItems, seq
           hasIntermediateStateMutations expr' =
             any
               ( \expr'' -> case expr'' of
-                  IntermediateExprExpr (IntermediatePutLocalState _ _) -> True
+                  IntermediateExprExpr (IntermediatePutLocalState {}) -> True
                   IntermediateExprExpr (IntermediatePostLocalState _ _) -> True
-                  IntermediateExprExpr (IntermediatePutDereferenceLocalState _ _) -> True
+                  IntermediateExprExpr (IntermediatePutDereferenceLocalState {}) -> True
                   _ -> False
               )
               (universe expr')

@@ -114,9 +114,7 @@ RModule
                                           Just
                                             ( IntermediateExprExpr
                                                 ( IntermediatePutLocalState
-                                                    [ Identifier "f",
-                                                      Identifier "val"
-                                                    ]
+                                                    (Identifier "f")
                                                     ( BinaryOpExprExpr
                                                         ( Add
                                                             ( DotOrIndexChainExpr
@@ -128,6 +126,7 @@ RModule
                                                             (ValueLiteral (Numerical (LiteralIntDec 1)))
                                                         )
                                                     )
+                                                    [0]
                                                 )
                                             )
                                       },
@@ -213,8 +212,8 @@ RModule
                                                                     bindingsBindExpr =
                                                                       Just
                                                                         ( IntermediateExprExpr
-                                                                            ( IntermediatePutLocalState
-                                                                                [Identifier "g2", Identifier "f", Identifier "val"]
+                                                                            ( IntermediatePutDereferenceLocalState
+                                                                                (Identifier "g2")
                                                                                 ( BinaryOpExprExpr
                                                                                     ( Mult
                                                                                         ( DotOrIndexChainExpr
@@ -233,6 +232,7 @@ RModule
                                                                                         (ValueLiteral (Numerical (LiteralIntDec 5)))
                                                                                     )
                                                                                 )
+                                                                                [0, 0]
                                                                             )
                                                                         )
                                                                   }
