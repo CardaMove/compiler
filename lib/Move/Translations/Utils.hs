@@ -15,9 +15,11 @@ module Move.Translations.Utils
     inferExprType,
     resolveParametricType,
     mapTemporaryBindingsToScope,
+    tryIO,
   )
 where
 
+import Control.Exception (ErrorCall, Exception (displayException), try)
 import Control.Monad.State
   ( MonadState (get, put),
     State,
@@ -419,3 +421,12 @@ mapTemporaryBindingsToScope = Map.map handleTempBind
           bindingsBindType = Just (TypeTuple [tempT, IntermediateTypeScopes])
         } = VariableAnnotations tempUUID tempT
     handleTempBind bind = error $ "Unexpected temporary binding: " ++ show bind
+
+-- |
+-- Tries to execute an IO operation, intercepting any error if thrown and providing additional informations
+tryIO :: String -> IO a -> IO a
+tryIO stepName step = do
+  res <- try step
+  case res of
+    Left err -> error $ "Failed at " ++ stepName ++ ": " ++ displayException (err :: ErrorCall)
+    Right val -> pure val

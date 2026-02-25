@@ -1,27 +1,18 @@
 module Move.Loader.Loader (loadToml) where
 
-import Control.Exception (ErrorCall, Exception (displayException), try)
 import Move.AST (Root)
 import Move.Lexer (scan)
 import Move.Parser (parse)
+import Move.Translations.Utils (tryIO)
 import System.Directory (doesFileExist, listDirectory)
 import System.FilePath (takeDirectory, takeExtension, (</>))
-
--- |
--- Tries to execute an IO operation, intercepting any error if thrown and providing additional informations
-runStep :: String -> IO a -> IO a
-runStep stepName step = do
-  res <- try step
-  case res of
-    Left err -> error $ "Loading failed at step " ++ stepName ++ ": " ++ displayException (err :: ErrorCall)
-    Right val -> pure val
 
 -- |
 -- Loads a single file and parses it
 loadFile :: String -> IO (FilePath, Root)
 loadFile path = do
-  file <- runStep ("File loading: " ++ show path) $ readFile path
-  runStep ("File parsing: " ++ show path) $ return (path, parse $ scan file)
+  file <- tryIO ("File loading: " ++ show path) $ readFile path
+  tryIO ("File parsing: " ++ show path) $ return (path, parse $ scan file)
 
 -- |
 -- Given the path to a `Move.toml` file, loads the entire project files

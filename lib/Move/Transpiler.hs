@@ -1,22 +1,13 @@
 module Move.Transpiler (transpiler) where
 
-import Control.Exception (ErrorCall, displayException, evaluate, try)
+import Control.Exception (evaluate)
 import Control.Monad.State (runState)
 import Move.AST (Root)
 import Move.Translations.Loops (translateWhilesToFunctionsInRoot)
 import Move.Translations.Scopes (addLocalScopeInRoot, markVariablesForLocalScope)
 import Move.Translations.TypeWitness (translateTParamsInRoot)
-import Move.Translations.Utils (annotateBindingsWithUUID)
+import Move.Translations.Utils (annotateBindingsWithUUID, tryIO)
 import Move.Translations.PostProcessing (postProcessRoot)
-
--- |
--- Tries to execute an IO operation, intercepting any error if thrown and providing additional informations
-runStep :: String -> IO a -> IO a
-runStep stepName step = do
-  res <- try step
-  case res of
-    Left err -> error $ "Transpiling failed at step " ++ stepName ++ ": " ++ displayException (err :: ErrorCall)
-    Right val -> pure val
 
 -- |
 -- Given the whole parsed ASTs, translates them
@@ -31,16 +22,16 @@ transpiler = mapM $ uncurry transpileRoot
 -- Translates a single AST root alone
 transpileRoot :: FilePath -> Root -> IO (FilePath, Root)
 transpileRoot fileName root = do
-  step1NoLoops <- runStep (fileName ++ ": translateWhilesToFunctionsInRoot") $ evaluate $ translateWhilesToFunctionsInRoot root
+  step1NoLoops <- tryIO (fileName ++ ": translateWhilesToFunctionsInRoot") $ evaluate $ translateWhilesToFunctionsInRoot root
 
   (step2Annotated, uuidAfterAnnotations) <-
-    runStep (fileName ++ ": annotateBindingsWithUUID") $ evaluate $ runState (annotateBindingsWithUUID step1NoLoops) 0
+    tryIO (fileName ++ ": annotateBindingsWithUUID") $ evaluate $ runState (annotateBindingsWithUUID step1NoLoops) 0
 
   (step3TypeWitness, uuidAfterTypeWitness) <-
-    runStep (fileName ++ ": translateTParamsInRoot") $ evaluate $ runState (translateTParamsInRoot step2Annotated) uuidAfterAnnotations
+    tryIO (fileName ++ ": translateTParamsInRoot") $ evaluate $ runState (translateTParamsInRoot step2Annotated) uuidAfterAnnotations
 
-  markedVars <- runStep (fileName ++ ": markVariablesForLocalScope") $ evaluate $ markVariablesForLocalScope step3TypeWitness
+  markedVars <- tryIO (fileName ++ ": markVariablesForLocalScope") $ evaluate $ markVariablesForLocalScope step3TypeWitness
 
-  step4LocalScope <- runStep (fileName ++ ": addLocalScopeInRoot") $ evaluate $ addLocalScopeInRoot step3TypeWitness markedVars uuidAfterTypeWitness
+  step4LocalScope <- tryIO (fileName ++ ": addLocalScopeInRoot") $ evaluate $ addLocalScopeInRoot step3TypeWitness markedVars uuidAfterTypeWitness
 
-  runStep (fileName ++ ": postProcessing") $ evaluate (fileName, postProcessRoot step4LocalScope)
+  tryIO (fileName ++ ": postProcessing") $ evaluate (fileName, postProcessRoot step4LocalScope)

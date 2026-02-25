@@ -2,12 +2,12 @@
 
 module Aiken.AikenGenerator (generateRoot, generateTopLevel) where
 
-import Control.Exception (ErrorCall, Exception (displayException), evaluate, try)
+import Control.Exception (evaluate)
 import Data.Maybe (fromMaybe)
 import Data.Text (Text, empty, intercalate, null, pack)
 import Move.AST
 import Move.Translations.PostProcessing (gsUtilsIdent, refUtilsIdent, scopeUtilsIdent)
-import Move.Translations.Utils (cpsIdentifier, unitType)
+import Move.Translations.Utils (cpsIdentifier, tryIO, unitType)
 import NeatInterpolation (trimming)
 
 --
@@ -16,23 +16,14 @@ import NeatInterpolation (trimming)
 -- TODO: Signer module?
 
 -- |
--- Tries to execute an IO operation, intercepting any error if thrown and providing additional informations
-runStep :: String -> IO a -> IO a
-runStep stepName step = do
-  res <- try step
-  case res of
-    Left err -> error $ "Aiken generator failed at step " ++ stepName ++ ": " ++ displayException (err :: ErrorCall)
-    Right val -> pure val
-
--- |
 -- Given either a Script or a Module, generates its corresponding Aiken code
 --
 -- NOTE: the default indentation size for Aiken is two spaces
 generateRoot :: FilePath -> Root -> IO Text
 generateRoot fileName (RModule Module {moduleTopLevels}) =
-  runStep fileName $ evaluate $ join "\n" $ filter (not . Data.Text.null) $ map generateTopLevel moduleTopLevels
+  tryIO fileName $ evaluate $ join "\n" $ filter (not . Data.Text.null) $ map generateTopLevel moduleTopLevels
 generateRoot fileName (RScript Script {scriptTopLevels}) =
-  runStep fileName $ evaluate $ join "\n" $ filter (not . Data.Text.null) $ map generateTopLevel scriptTopLevels
+  tryIO fileName $ evaluate $ join "\n" $ filter (not . Data.Text.null) $ map generateTopLevel scriptTopLevels
 
 -- |
 -- Given any top level, generates its corresponding Aiken code
@@ -446,7 +437,7 @@ generateExpression (IntermediateExprExpr (IntermediateGetLocalState ident t)) =
     lib = packIdent scopeUtilsIdent
     ident' = packIdent ident
     cpsIdentifier' = packIdent cpsIdentifier
-generateExpression (IntermediateExprExpr (IntermediatePutLocalState ident expr fields)) = 
+generateExpression (IntermediateExprExpr (IntermediatePutLocalState ident expr fields)) =
   [trimming|
     $lib.put_scope($ident', $fields', $expr', $cpsIdentifier')
   |]
