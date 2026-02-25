@@ -334,7 +334,7 @@ rewriteInlineStateMutation scopeUUID = rewriteInlineStateMutation'
                    pseofcFields = [addressExpr, IntermediateExprExpr (IntermediateTypeWitnessExprExpr typeWitnessExpr)]
                  }
              )
-      scopes
+      _scopes
       (currUUID, bindingsToAdd) =
         let --
             -- The type argument can not be omitted and must be a single one
@@ -358,7 +358,7 @@ rewriteInlineStateMutation scopeUUID = rewriteInlineStateMutation'
                   bindingsBindType =
                     Just $
                       TypeTuple
-                        [ inferExprType expr scopes,
+                        [ resourceType,
                           IntermediateTypeScopes
                         ],
                   bindingsBindExpr =

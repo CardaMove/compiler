@@ -294,6 +294,9 @@ generateExpression (CommaExpr exprs) =
     exprs' = intercalate (pack ", ") $ map generateExpression exprs
 generateExpression (TypedExprTerm TypedExpr {typedExpr}) = generateExpression typedExpr
 -- Casting is translated as a non-exaustive pattern matchich via `expect`
+-- Note: expect with a tuple is not accepted by Aiken because the type checker complains both for incompatible tuple types and for reckless opaque cast.
+-- If each element of a tuple is needed, the solution is to expect each one of them alone
+-- (see how move_from is translated)
 generateExpression (CastingTerm Casting {castingExpr, castingType}) =
   [trimming|
     {
@@ -521,16 +524,18 @@ generateExpression (IntermediateExprExpr (IntermediateMoveTo signer expr _t tWit
     cpsIdentifier' = packIdent cpsIdentifier
 -- `move_from<T>(address)`
 -- Requires a manual casting after calling the Aiken lib
+-- Note: expect with a tuple is not accepted by Aiken because the type checker complains both for incompatible tuple types and for reckless opaque cast.
+-- If each element of a tuple is needed, the solution is to expect each one of them alone
 generateExpression (IntermediateExprExpr (IntermediateMoveFrom expr t tWitness)) =
   [trimming|
     {
-      expect (val, $cpsIdentifier'): ($casted', $scopeT) = $lib.move_from($addr, $resourceType, $cpsIdentifier')
+      let (val, $cpsIdentifier') = $lib.move_from($addr, $resourceType, $cpsIdentifier')
+      expect val: $casted' = val
       (val, $cpsIdentifier')
     }
   |]
   where
     casted' = generateType t
-    scopeT = generateType IntermediateTypeScopes
     lib = packIdent gsUtilsIdent
     addr = generateExpression expr
     resourceType = generateTWitness tWitness

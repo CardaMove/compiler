@@ -371,8 +371,8 @@ inferExprType (IntermediateExprExpr (IntermediatePopScope _)) _ = IntermediateTy
 inferExprType (IntermediateExprExpr (IntermediateBorrowGlobalMut _ t _)) _ = TypeMutableRef t
 inferExprType (IntermediateExprExpr (IntermediateBorrowGlobal _ t _)) _ = TypeImmutableRef t
 inferExprType (IntermediateExprExpr (IntermediateExists {})) _ = booleanType
-inferExprType (IntermediateExprExpr (IntermediateMoveTo {})) _ = unitType
-inferExprType (IntermediateExprExpr (IntermediateMoveFrom _ t _)) _ = t
+inferExprType (IntermediateExprExpr (IntermediateMoveTo {})) _ = TypeTuple [TypeTuple [], IntermediateTypeScopes]
+inferExprType (IntermediateExprExpr (IntermediateMoveFrom _ t _)) _ = TypeTuple [t, IntermediateTypeScopes]
 inferExprType (IntermediateExprExpr (IntermediateTypeWitnessExprExpr _)) _ = IntermediateTypeWitnessType
 inferExprType (IntermediateExprExpr expr@(IntermediateScopeBinding _)) _ = error $ "An IntermediateScopeBinding should never be present in the AST: " ++ show expr
 
