@@ -28,8 +28,10 @@ generateRoot fileName (RScript Script {scriptTopLevels}) =
 -- |
 -- Given any top level, generates its corresponding Aiken code
 generateTopLevel :: TopLevel -> Text
--- NOTE: module addresses are translated in folder names.
--- TODO: this might be insufficient for named addresses since their value is set in the Toml file?
+-- NOTE: module addresses should be translated in folder names
+-- The Aiken generator considers named or numerical addresses identical,
+-- it is up to the caller to correctly associate the numerical address to each named address, and write the resulting files
+-- in the correct folder
 generateTopLevel (TopLevelUse Use {useAddress, useIdentifier, useAlias, useMembers}) =
   [trimming|
     use $addr/$ident$members$alias

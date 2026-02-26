@@ -709,42 +709,40 @@ rewriteFunctionDeclaration root markedVars bindingsToAdd scopeUUID = case root o
           -- Additionally, note how it forces to consider the Sequence as if it mutates the state
           -- this is to leave the called function to reqrite the ending expression so to return the state
           functionBody' =
-            fmap
-              ( \functionBody''' ->
-                  fst3 $ rewriteInlineStateMutationInSequence functionBody''' scopeUUID bindingsToAdd False True
-              )
-              functionBody
+            ( \functionBody''' ->
+                fst3 $ rewriteInlineStateMutationInSequence functionBody''' scopeUUID bindingsToAdd False True
+            )
+              <$> functionBody
 
           -- Then, prepend some let bindings for pushing the new scope and the marked parameters
           functionBody'' =
-            fmap
-              ( \functionBody'''@Sequence {sequenceItems} ->
-                  functionBody'''
-                    { sequenceItems =
-                        -- First, push the new scope in the body
-                        ( SequenceItemBindExpr $
-                            Bindings
-                              { bindings = BindedSingle $ BindIdentifier cpsIdentifier (Just scopeUUID),
-                                bindingsBindType = Just IntermediateTypeScopes,
-                                bindingsBindExpr = Just $ IntermediateExprExpr $ IntermediatePushScope cpsIdentifier
-                              }
-                        )
-                          :
-                          -- Then, push each marked parameter on the scope
-                          map
-                            ( \Parameter {parameterIdentifier} ->
-                                SequenceItemBindExpr $
-                                  Bindings
-                                    { bindings = BindedSingle $ BindIdentifier cpsIdentifier $ Just scopeUUID,
-                                      bindingsBindType = Just IntermediateTypeScopes,
-                                      bindingsBindExpr = Just $ IntermediateExprExpr $ IntermediatePostLocalState parameterIdentifier (Just $ NameAccessChainExpr $ LocalNameAccessChain parameterIdentifier)
-                                    }
-                            )
-                            markedParameters
-                          ++ sequenceItems
-                    }
-              )
-              functionBody'
+            ( \functionBody'''@Sequence {sequenceItems} ->
+                functionBody'''
+                  { sequenceItems =
+                      -- First, push the new scope in the body
+                      ( SequenceItemBindExpr $
+                          Bindings
+                            { bindings = BindedSingle $ BindIdentifier cpsIdentifier (Just scopeUUID),
+                              bindingsBindType = Just IntermediateTypeScopes,
+                              bindingsBindExpr = Just $ IntermediateExprExpr $ IntermediatePushScope cpsIdentifier
+                            }
+                      )
+                        :
+                        -- Then, push each marked parameter on the scope
+                        map
+                          ( \Parameter {parameterIdentifier} ->
+                              SequenceItemBindExpr $
+                                Bindings
+                                  { bindings = BindedSingle $ BindIdentifier cpsIdentifier $ Just scopeUUID,
+                                    bindingsBindType = Just IntermediateTypeScopes,
+                                    bindingsBindExpr = Just $ IntermediateExprExpr $ IntermediatePostLocalState parameterIdentifier (Just $ NameAccessChainExpr $ LocalNameAccessChain parameterIdentifier)
+                                  }
+                          )
+                          markedParameters
+                        ++ sequenceItems
+                  }
+            )
+              <$> functionBody'
 
           -- Always add the state in the return type
           functionReturnType' = case functionReturnType of

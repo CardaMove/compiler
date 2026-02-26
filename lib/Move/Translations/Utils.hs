@@ -16,6 +16,7 @@ module Move.Translations.Utils
     resolveParametricType,
     mapTemporaryBindingsToScope,
     tryIO,
+    utilsLibAddress
   )
 where
 
@@ -60,6 +61,11 @@ type Scope = Map.Map Identifier VariableAnnotations
 -- that includes both scopes and global storage
 cpsIdentifier :: Identifier
 cpsIdentifier = Identifier "cps_state"
+
+-- |
+-- The named address representing the folder where the Aiken stdlib can be found
+utilsLibAddress :: Address
+utilsLibAddress = NamedAddress $ Identifier "utils"
 
 -- |
 -- Checks if the identifier is present in any of the input scopes
