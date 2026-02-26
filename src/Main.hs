@@ -40,7 +40,7 @@ main = do
   let outDir = "test/out"
 
   -- For each source file, create the output path of the corresponding Aiken file
-  let outFiles = evalState (mapM ((`buildOutFilePath` outDir) . snd) sourceFiles) 0
+  let outFiles = evalState (mapM ((`buildOutFilePath` outDir) . snd) transpiled) 0
 
   zipWithM_ writeFile' outFiles (map (removeCarriage . unpack) aikenText)
 

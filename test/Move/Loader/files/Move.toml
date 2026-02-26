@@ -5,6 +5,7 @@ authors = []
 
 [addresses]
 NamedAddr = "0xCAFE"
+SecondAddr = "0xABC123"
 
 [dev-addresses]
 

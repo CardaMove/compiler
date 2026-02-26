@@ -1,7 +1,7 @@
 module Move.Loader.LoaderSpec (spec) where
 
 import Data.List (sort)
-import Move.AST (Identifier (Identifier), Module (moduleIdentifier), Root (RModule, RScript))
+import Move.AST (Identifier (Identifier), Module (moduleIdentifier), Root (RModule, RScript), Numerical (LiteralIntHex))
 import Move.Loader.Loader (loadToml)
 import Test.Hspec
 import Data.Map qualified as Map
@@ -29,7 +29,7 @@ testLoadToml = describe "Tests the function `loadToml`" $ do
 
     addrAssoc <- snd <$> loadToml tomlPath
 
-    addrAssoc `shouldBe` Map.empty
+    addrAssoc `shouldBe` Map.fromList [(Identifier "NamedAddr", LiteralIntHex "0xCAFE"), (Identifier "SecondAddr", LiteralIntHex "0xABC123")]
 
 spec :: Spec
 spec = do
