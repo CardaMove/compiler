@@ -8,11 +8,11 @@ name:           cardamove
 version:        0.1.0.0
 category:       Blockchain
 homepage:       https://github.com/CardaMove/compiler#readme
-author:         Lorenzo Fanton,
-                Andrea Roveroni
-maintainer:     887857@stud.unive.it,
-                880092@stud.unive.it
-copyright:      2024 Lorenzo Fanton
+author:         Andrea Roveroni,
+                Lorenzo Fanton
+maintainer:     880092@stud.unive.it,
+                887857@stud.unive.it
+copyright:      2026 Andrea Roveroni
 license:        MIT
 license-file:   LICENSE
 build-type:     Simple

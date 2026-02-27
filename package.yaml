@@ -5,12 +5,12 @@ version:             0.1.0.0
 homepage:            https://github.com/CardaMove/compiler#readme
 license:             MIT
 author:
-  - "Lorenzo Fanton"
   - "Andrea Roveroni"
+  - "Lorenzo Fanton"
 maintainer:
-  - "887857@stud.unive.it"
   - "880092@stud.unive.it"
-copyright:           2024 Lorenzo Fanton
+  - "887857@stud.unive.it"
+copyright:           2026 Andrea Roveroni
 category:            Blockchain
 extra-source-files:
 - README.md
