@@ -383,6 +383,7 @@ inferExprType (IntermediateExprExpr (IntermediateMoveTo {})) _ = TypeTuple [Type
 inferExprType (IntermediateExprExpr (IntermediateMoveFrom _ t _)) _ = TypeTuple [t, IntermediateTypeScopes]
 inferExprType (IntermediateExprExpr (IntermediateTypeWitnessExprExpr _)) _ = IntermediateTypeWitnessType
 inferExprType (IntermediateExprExpr expr@(IntermediateScopeBinding _)) _ = error $ "An IntermediateScopeBinding should never be present in the AST: " ++ show expr
+inferExprType (IntermediateExprExpr (IntermediateReferenceExtension _ _ t)) _ = t
 
 -- |
 -- Given a type that might be parametric, along with the type parameters of the record (or function) and their respective type arguments,

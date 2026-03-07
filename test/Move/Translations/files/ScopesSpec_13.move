@@ -32,9 +32,12 @@ module NamedAddr::TestingModule {
             // POST g2 (this is because g2.f.val marks it as mutated, even if it is a syntactic sugar)
             let g2 = borrow_global_mut<G<bool>>(address_of(s));
 
-            // (GET g2).f.val, PUT-deref (g2.f.val)
-            // Note syntactic sugar for dereferencing g2
+            // (GET-deref (GET g2)).f.val, PUT-deref (g2.f.val)
+            // Note syntactic sugar for dereferencing g2 both on right value and left value
             g2.f.val = g2.f.val * 5;
+
+            // Reference extension
+            let r: &mut F<u64> = &mut g2.f;
 
             // (GET g2).f.val
             // Also return scope

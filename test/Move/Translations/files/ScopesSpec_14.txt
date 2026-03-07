@@ -221,7 +221,14 @@ RModule
                                                                                                 { dotAccessLeft =
                                                                                                     DotOrIndexChainExpr
                                                                                                       ( DotAccess
-                                                                                                          { dotAccessLeft = IntermediateExprExpr (IntermediateGetLocalState (Identifier "g2") (TypeMutableRef (TypeConstructor (LocalNameAccessChain (Identifier "G")) [TypeConstructor (LocalNameAccessChain (Identifier "bool")) []]))),
+                                                                                                          { dotAccessLeft = IntermediateExprExpr
+                                                                                                              (
+                                                                                                                IntermediateGetDereferenceLocalState 
+                                                                                                                (
+                                                                                                                  IntermediateExprExpr (IntermediateGetLocalState (Identifier "g2") (TypeMutableRef (TypeConstructor (LocalNameAccessChain (Identifier "G")) [TypeConstructor (LocalNameAccessChain (Identifier "bool")) []])))
+                                                                                                                )
+                                                                                                                (TypeConstructor (LocalNameAccessChain (Identifier "G")) [TypeConstructor (LocalNameAccessChain (Identifier "bool")) []])
+                                                                                                              ),
                                                                                                             dotAccessRight = Identifier "f"
                                                                                                           }
                                                                                                       ),
@@ -233,6 +240,28 @@ RModule
                                                                                     )
                                                                                 )
                                                                                 [0, 0]
+                                                                            )
+                                                                        )
+                                                                  }
+                                                              ),
+                                                            SequenceItemBindExpr
+                                                              (
+                                                                Bindings
+                                                                  {
+                                                                    bindings = BindedSingle (BindIdentifier (Identifier "r") (Just 666)),
+                                                                    bindingsBindType = Just (TypeMutableRef (TypeConstructor (LocalNameAccessChain (Identifier "F")) [TypeConstructor (LocalNameAccessChain (Identifier "u64")) []])),
+                                                                    bindingsBindExpr =
+                                                                      Just
+                                                                        ( IntermediateExprExpr
+                                                                            (
+                                                                              IntermediateReferenceExtension
+                                                                                (
+                                                                                  IntermediateExprExpr (IntermediateGetLocalState (Identifier "g2") (TypeMutableRef (TypeConstructor (LocalNameAccessChain (Identifier "G")) [TypeConstructor (LocalNameAccessChain (Identifier "bool")) []])))
+                                                                                )
+                                                                                0
+                                                                                (
+                                                                                  TypeMutableRef (TypeConstructor (LocalNameAccessChain (Identifier "F")) [TypeConstructor (LocalNameAccessChain (Identifier "u64")) []])
+                                                                                )
                                                                             )
                                                                         )
                                                                   }
