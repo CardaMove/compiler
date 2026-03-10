@@ -281,6 +281,7 @@ inferExprType expr@(DotOrIndexChainExpr (DotAccess {dotAccessLeft, dotAccessRigh
     -- NOTE: Here it is not possible to know if that reference will be extended or if it is the syntactic sugar for dereferencing
     -- Meaning the difference between `r.a[.b]` and `& r.a[.b]`
     -- So the resulting type here should not consider the reference
+    -- Or, to put in another way, default to the desugaring
     TypeImmutableRef (TypeConstructor typeCons typeArgs) -> resolveDotAccess typeCons typeArgs
     TypeMutableRef (TypeConstructor typeCons typeArgs) -> resolveDotAccess typeCons typeArgs
     exprType -> error $ "Dot access to non-struct type: " ++ show expr ++ " with type: " ++ show exprType

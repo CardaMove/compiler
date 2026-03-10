@@ -1,7 +1,7 @@
 module Move.Translations.Scopes (markVariablesForLocalScope, rewriteAssignments, rewriteRefs, rewriteVars, rewriteLetBinds, rewriteInlineStateMutation, addLocalScopeInRoot) where
 
 import Data.Generics.Uniplate.Data (transformBi, universe)
-import Data.List (sortOn, elemIndex)
+import Data.List (elemIndex, sortOn)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
 import Data.Set qualified as Set
@@ -242,11 +242,16 @@ rewriteRefs expr _scopes state = (expr, state)
 --
 -- Third pass: rewrite variables on right value, such as `a[.b.c]`
 -- (must be done after references to avoid conflicts)
--- Note that the dot access chain is already handled with the leftmost identifier
+--
+-- Additionally, performs desugaring when encountering a dot access `r.a[.b]` where `r` is a reference
+-- This is because, if encountered, it is equivalent to `(*r).a[.b]`
+-- Note that this does not cause conflits with reference extension `& r.a[.b]` since it has already been rewritten as a different AST node
+--
 -- This passage is mainly used to preserve the resulting type, so to allow for an explicit cast on the translated AST
 rewriteVars :: Set.Set AnnotatedUUID -> TraversalMapper Expr ()
 rewriteVars markedVars = rewriteVars'
   where
+    -- Handle any local identifier, including the leftmost identifier in any dot access chain
     rewriteVars' expr@(NameAccessChainExpr (LocalNameAccessChain ident)) scopes state =
       case getIdentifierFromScopes ident scopes of
         VariableAnnotations (Just identUUID) identType ->
@@ -255,6 +260,29 @@ rewriteVars markedVars = rewriteVars'
             then (IntermediateExprExpr $ IntermediateGetLocalState ident identType, state)
             else (expr, state)
         VariableAnnotations Nothing _ -> error $ "Found identifier without UUID when adding local state: " ++ show expr
+    rewriteVars' expr@(DotOrIndexChainExpr DotAccess {dotAccessLeft, dotAccessRight}) scopes state =
+      case inferExprType dotAccessLeft scopes of
+        -- If the left part of the dot access is a reference, wrap it into a dereference
+        -- Note that this happens only for the leftmost dot access, meaning `r.a` and not `r.a.b`, since the inference of the expression
+        -- defaults to syntact sugar for dot accesses, so it would not return a reference for the type of `r.a` in the second case
+        -- Fot the same reason, do not include the reference type here for the left part
+        TypeMutableRef tLeft ->
+          ( DotOrIndexChainExpr $
+              DotAccess
+                { dotAccessLeft = IntermediateExprExpr $ IntermediateGetDereferenceLocalState dotAccessLeft tLeft,
+                  dotAccessRight
+                },
+            state
+          )
+        TypeImmutableRef tLeft ->
+          ( DotOrIndexChainExpr $
+              DotAccess
+                { dotAccessLeft = IntermediateExprExpr $ IntermediateGetDereferenceLocalState dotAccessLeft tLeft,
+                  dotAccessRight
+                },
+            state
+          )
+        _ -> (expr, state)
     rewriteVars' expr _scopes state = (expr, state)
 
 -- |

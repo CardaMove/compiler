@@ -39,7 +39,8 @@ module NamedAddr::TestingModule {
             // Reference extension
             let r: &mut u64 = &mut g2.f.val;
 
-            // (GET g2).f.val
+            // (GET-deref (GET g2)).f.val
+            // Note syntact sugar for destructuring like few rows above
             // Also return scope
             g2.f.val
         };

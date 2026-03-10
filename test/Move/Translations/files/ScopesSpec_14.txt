@@ -162,7 +162,7 @@ RModule
                                   SequenceItemBindExpr
                                     ( Bindings
                                         { bindings = BindedTuple [BindIdentifier (Identifier "temp_10") (Just 10), BindIdentifier (Identifier "cps_state") (Just (-1))],
-                                          bindingsBindType = Just (TypeTuple [TypeMutableRef (TypeConstructor (LocalNameAccessChain (Identifier "u64")) []), IntermediateTypeScopes]),
+                                          bindingsBindType = Just (TypeTuple [TypeConstructor (LocalNameAccessChain (Identifier "u64")) [], IntermediateTypeScopes]),
                                           bindingsBindExpr =
                                             Just
                                               ( SequenceExpr
@@ -275,7 +275,10 @@ RModule
                                                                         { dotAccessLeft =
                                                                             DotOrIndexChainExpr
                                                                               ( DotAccess
-                                                                                  { dotAccessLeft = IntermediateExprExpr (IntermediateGetLocalState (Identifier "g2") (TypeMutableRef (TypeConstructor (LocalNameAccessChain (Identifier "G")) [TypeConstructor (LocalNameAccessChain (Identifier "bool")) []]))),
+                                                                                  { dotAccessLeft = IntermediateExprExpr (IntermediateGetDereferenceLocalState
+                                                                                      (IntermediateExprExpr (IntermediateGetLocalState (Identifier "g2") (TypeMutableRef (TypeConstructor (LocalNameAccessChain (Identifier "G")) [TypeConstructor (LocalNameAccessChain (Identifier "bool")) []]))))
+                                                                                      (TypeConstructor (LocalNameAccessChain (Identifier "G")) [TypeConstructor (LocalNameAccessChain (Identifier "bool")) []])
+                                                                                    ),
                                                                                     dotAccessRight = Identifier "f"
                                                                                   }
                                                                               ),
