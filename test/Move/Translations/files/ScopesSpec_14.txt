@@ -94,7 +94,7 @@ RModule
                                     ),
                                   SequenceItemBindExpr
                                     ( Bindings
-                                        { bindings = BindedTuple [BindIdentifier (Identifier "temp_7") (Just 7), BindIdentifier (Identifier "cps_state") (Just (-1))],
+                                        { bindings = BindedTuple [BindIdentifier (Identifier "temp_8") (Just 8), BindIdentifier (Identifier "cps_state") (Just (-1))],
                                           bindingsBindType = Just (TypeTuple [TypeConstructor (LocalNameAccessChain (Identifier "F")) [TypeConstructor (LocalNameAccessChain (Identifier "u64")) []], IntermediateTypeScopes]),
                                           bindingsBindExpr = Just (IntermediateExprExpr (IntermediateMoveFrom (NameAccessChainExpr (LocalNameAccessChain (Identifier "a1"))) (TypeConstructor (LocalNameAccessChain (Identifier "F")) [TypeConstructor (LocalNameAccessChain (Identifier "u64")) []]) (IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "F")) [IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "u64")) []])))
                                         }
@@ -103,7 +103,7 @@ RModule
                                     ( Bindings
                                         { bindings = BindedSingle (BindIdentifier (Identifier "cps_state") (Just (-1))),
                                           bindingsBindType = Just IntermediateTypeScopes,
-                                          bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePostLocalState (Identifier "f") (Just (NameAccessChainExpr (LocalNameAccessChain (Identifier "temp_7"))))))
+                                          bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePostLocalState (Identifier "f") (Just (NameAccessChainExpr (LocalNameAccessChain (Identifier "temp_8"))))))
                                         }
                                     ),
                                   SequenceItemBindExpr
@@ -153,15 +153,15 @@ RModule
                                     ),
                                   SequenceItemBindExpr
                                     ( Bindings
-                                        { bindings = BindedTuple [BindIdentifier (Identifier "temp_8") (Just 8), BindIdentifier (Identifier "cps_state") (Just (-1))],
+                                        { bindings = BindedTuple [BindIdentifier (Identifier "temp_9") (Just 9), BindIdentifier (Identifier "cps_state") (Just (-1))],
                                           bindingsBindType = Just (TypeTuple [TypeTuple [], IntermediateTypeScopes]),
                                           bindingsBindExpr = Just (IntermediateExprExpr (IntermediateMoveTo (NameAccessChainExpr (LocalNameAccessChain (Identifier "s"))) (NameAccessChainExpr (LocalNameAccessChain (Identifier "g"))) (TypeConstructor (LocalNameAccessChain (Identifier "G")) [TypeConstructor (LocalNameAccessChain (Identifier "bool")) []]) (IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "G")) [IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "bool")) []])))
                                         }
                                     ),
-                                  SequenceItemExpr (NameAccessChainExpr (LocalNameAccessChain (Identifier "temp_8"))),
+                                  SequenceItemExpr (NameAccessChainExpr (LocalNameAccessChain (Identifier "temp_9"))),
                                   SequenceItemBindExpr
                                     ( Bindings
-                                        { bindings = BindedTuple [BindIdentifier (Identifier "temp_9") (Just 9), BindIdentifier (Identifier "cps_state") (Just (-1))],
+                                        { bindings = BindedTuple [BindIdentifier (Identifier "temp_10") (Just 10), BindIdentifier (Identifier "cps_state") (Just (-1))],
                                           bindingsBindType = Just (TypeTuple [TypeMutableRef (TypeConstructor (LocalNameAccessChain (Identifier "u64")) []), IntermediateTypeScopes]),
                                           bindingsBindExpr =
                                             Just
@@ -248,8 +248,8 @@ RModule
                                                               (
                                                                 Bindings
                                                                   {
-                                                                    bindings = BindedSingle (BindIdentifier (Identifier "r") (Just 666)),
-                                                                    bindingsBindType = Just (TypeMutableRef (TypeConstructor (LocalNameAccessChain (Identifier "F")) [TypeConstructor (LocalNameAccessChain (Identifier "u64")) []])),
+                                                                    bindings = BindedSingle (BindIdentifier (Identifier "r") (Just 7)),
+                                                                    bindingsBindType = Just (TypeMutableRef (TypeConstructor (LocalNameAccessChain (Identifier "u64")) [])),
                                                                     bindingsBindExpr =
                                                                       Just
                                                                         ( IntermediateExprExpr
@@ -258,9 +258,9 @@ RModule
                                                                                 (
                                                                                   IntermediateExprExpr (IntermediateGetLocalState (Identifier "g2") (TypeMutableRef (TypeConstructor (LocalNameAccessChain (Identifier "G")) [TypeConstructor (LocalNameAccessChain (Identifier "bool")) []])))
                                                                                 )
-                                                                                0
+                                                                                [0, 0]
                                                                                 (
-                                                                                  TypeMutableRef (TypeConstructor (LocalNameAccessChain (Identifier "F")) [TypeConstructor (LocalNameAccessChain (Identifier "u64")) []])
+                                                                                  TypeMutableRef (TypeConstructor (LocalNameAccessChain (Identifier "u64")) [])
                                                                                 )
                                                                             )
                                                                         )
@@ -294,7 +294,7 @@ RModule
                                     ( Bindings
                                         { bindings = BindedSingle (BindIdentifier (Identifier "a") (Just 5)),
                                           bindingsBindType = Nothing,
-                                          bindingsBindExpr = Just (NameAccessChainExpr (LocalNameAccessChain (Identifier "temp_9")))
+                                          bindingsBindExpr = Just (NameAccessChainExpr (LocalNameAccessChain (Identifier "temp_10")))
                                         }
                                     )
                                 ],

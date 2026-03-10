@@ -37,7 +37,7 @@ module NamedAddr::TestingModule {
             g2.f.val = g2.f.val * 5;
 
             // Reference extension
-            let r: &mut F<u64> = &mut g2.f;
+            let r: &mut u64 = &mut g2.f.val;
 
             // (GET g2).f.val
             // Also return scope

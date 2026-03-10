@@ -1,7 +1,7 @@
 module Move.Translations.Scopes (markVariablesForLocalScope, rewriteAssignments, rewriteRefs, rewriteVars, rewriteLetBinds, rewriteInlineStateMutation, addLocalScopeInRoot) where
 
 import Data.Generics.Uniplate.Data (transformBi, universe)
-import Data.List (sortOn)
+import Data.List (sortOn, elemIndex)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
 import Data.Set qualified as Set
@@ -52,65 +52,53 @@ markVariablesForLocalScope root = snd $ traverseRootPostOrder exprMapper bindsMa
 -- - The chain of fields' indices `[idx_b, idx_c]` in left-to-right order
 --
 -- - The type of the identifier `a`
+
 --
--- - The final type of the whole dot access
+-- Instead, the final type is not returned so to not duplicate the logic of `inferExprType`
 --
 -- Needs the scope so to find the correct structs.
 --
 -- Note that `a` must be a local name
-unconstrDotAccess :: Expr -> [Scope] -> (Identifier, [Int], Type, Type)
+unconstrDotAccess :: Expr -> [Scope] -> (Identifier, [Int], Type)
 unconstrDotAccess expr' scopes' =
-  let (ident, idx, tIdent, tFinal) = unconstrDotAccess' expr' scopes'
-   in (ident, reverse idx, tIdent, tFinal)
+  let (ident, idx, tIdent) = unconstrDotAccess' expr' scopes'
+   in (ident, reverse idx, tIdent)
   where
-    -- Helper function. Given the name of the field and all the fields of a struct declaration,
-    -- Returns the index of the field and the field definition (if found)
-    findField :: Identifier -> [NamedField] -> Maybe (Int, NamedField)
-    findField = findField' 0
-      where
-        findField' :: Int -> Identifier -> [NamedField] -> Maybe (Int, NamedField)
-        findField' _ _ [] = Nothing
-        findField' idx ident (f : fs) =
-          if ident == fieldIdentifier f
-            then Just (idx, f)
-            else findField' (idx + 1) ident fs
-
     -- Helper function. Returns the field indices in reverse order for convenience
-    unconstrDotAccess' :: Expr -> [Scope] -> (Identifier, [Int], Type, Type)
+    unconstrDotAccess' :: Expr -> [Scope] -> (Identifier, [Int], Type)
     -- Leftmost part of a dot access should be a local identifier
-    unconstrDotAccess' expr@(NameAccessChainExpr (LocalNameAccessChain ident)) scopes =
-      let tIdent = inferExprType expr scopes
-       in (ident, [], tIdent, tIdent)
+    unconstrDotAccess' expr@(NameAccessChainExpr (LocalNameAccessChain ident)) scopes = (ident, [], inferExprType expr scopes)
     unconstrDotAccess' expr@(NameAccessChainExpr _) _ = error $ "Unexpected dot access to non-local name access chain: " ++ show expr
     -- When finding a dot access, recursively check the left part
     unconstrDotAccess' expr@(DotOrIndexChainExpr (DotAccess {dotAccessLeft, dotAccessRight})) scopes =
-      case unconstrDotAccess' dotAccessLeft scopes of
+      case (unconstrDotAccess' dotAccessLeft scopes, inferExprType dotAccessLeft scopes) of
         -- The left part produces a value of a type that might also be a reference, due to syntactic sugar
         -- Here the syntactic sugar is ignored, it is handled outside this function
         -- Note: in all cases, always append the recursive field indices and also return leftmost identifier name/type already found in the recursion
-        (ident, fieldsChain, tIdent, TypeConstructor tCons _) ->
-          let (fieldIdx, fieldT) = accessField tCons dotAccessRight
-           in (ident, fieldIdx : fieldsChain, tIdent, fieldT)
-        (ident, fieldsChain, tIdent, TypeMutableRef (TypeConstructor tCons _)) ->
-          let (fieldIdx, fieldT) = accessField tCons dotAccessRight
-           in (ident, fieldIdx : fieldsChain, tIdent, fieldT)
-        (ident, fieldsChain, tIdent, TypeImmutableRef (TypeConstructor tCons _)) ->
-          let (fieldIdx, fieldT) = accessField tCons dotAccessRight
-           in (ident, fieldIdx : fieldsChain, tIdent, fieldT)
+        ((identLeft, fieldsChain, tLeft), TypeConstructor tCons _) ->
+          let fieldIdx = accessField tCons dotAccessRight
+           in (identLeft, fieldIdx : fieldsChain, tLeft)
+        ((identLeft, fieldsChain, tLeft), TypeMutableRef (TypeConstructor tCons _)) ->
+          let fieldIdx = accessField tCons dotAccessRight
+           in (identLeft, fieldIdx : fieldsChain, tLeft)
+        ((identLeft, fieldsChain, tLeft), TypeImmutableRef (TypeConstructor tCons _)) ->
+          let fieldIdx = accessField tCons dotAccessRight
+           in (identLeft, fieldIdx : fieldsChain, tLeft)
         res -> error $ "Dot access to a non-struct type: " ++ show expr ++ " as: " ++ show res
       where
         -- Given the name of type constructor of the left part of the dot access,
         -- along with the name of the field to access, accesses the field from the struct, returning
-        -- the index of the field and the resulting type
-        accessField :: NameAccessChain -> Identifier -> (Int, Type)
+        -- the index of the field
+        -- Note that the resulting type is ignored. If needed, it can be inferred by using `inferExprType`
+        accessField :: NameAccessChain -> Identifier -> Int
         -- The type of the left part of the dot access must be a (local) named struct
         accessField (LocalNameAccessChain tCons) fieldIdent =
           case getIdentifierFromScopes tCons scopes of
-            VariableAnnotations _ (IntermediateTypeNamedStructDeclaration str fields) ->
+            VariableAnnotations _ str@(IntermediateTypeNamedStructDeclaration _ namedFields) ->
               -- If so, access the correct field
-              case findField fieldIdent fields of
+              case elemIndex fieldIdent $ map fieldIdentifier namedFields of
                 Nothing -> error $ "Dot access to unknown struct field: " ++ show str ++ ", field: " ++ show fieldIdent
-                Just (idx, accessedField) -> (idx, fieldType accessedField)
+                Just fieldIdx -> fieldIdx
             VariableAnnotations _ t -> error $ "Dot access to a non-named struct: " ++ show expr ++ " as: " ++ show t
         -- Otherwise, throw and error, since it is not possible to access struct fields from other modules
         accessField tCons fieldIdent = error $ "Unexpected non-local type when unconstructing dot access: " ++ show (tCons, fieldIdent)
@@ -144,10 +132,10 @@ rewriteAssignments root scopeUUID = transformBi helperBindRewriter $ fst $ trave
     exprMapper (AssignmentExpr (Assignment {assignmentLeft = dotAccess@(DotOrIndexChainExpr _), assignmentRight})) scopes state =
       case unconstrDotAccess dotAccess scopes of
         -- In case `a` is a reference, and some fields are accessed, is a syntactic sugar
-        (ident, fields@(_ : _), TypeMutableRef _, _) -> (IntermediateExprExpr $ IntermediateScopeBinding [IntermediatePutDereferenceLocalState ident assignmentRight fields], state)
-        (ident, fields@(_ : _), TypeImmutableRef _, _) -> (IntermediateExprExpr $ IntermediateScopeBinding [IntermediatePutDereferenceLocalState ident assignmentRight fields], state)
+        (ident, fields@(_ : _), TypeMutableRef _) -> (IntermediateExprExpr $ IntermediateScopeBinding [IntermediatePutDereferenceLocalState ident assignmentRight fields], state)
+        (ident, fields@(_ : _), TypeImmutableRef _) -> (IntermediateExprExpr $ IntermediateScopeBinding [IntermediatePutDereferenceLocalState ident assignmentRight fields], state)
         -- Otherwise it is a normal PUT on the state
-        (ident, fields, _, _) -> (IntermediateExprExpr $ IntermediateScopeBinding [IntermediatePutLocalState ident assignmentRight fields], state)
+        (ident, fields, _) -> (IntermediateExprExpr $ IntermediateScopeBinding [IntermediatePutLocalState ident assignmentRight fields], state)
     -- Translating `*a = ...`, with no dot access
     -- Note that `a` must be a local name
     exprMapper (AssignmentExpr (Assignment {assignmentLeft = UnaryOpExpr (Dereference (NameAccessChainExpr (LocalNameAccessChain ident))), assignmentRight})) _ state =
@@ -179,11 +167,20 @@ rewriteAssignments root scopeUUID = transformBi helperBindRewriter $ fst $ trave
 -- Also includes global storage operators that do not alter the storage itself, meaning borrows and exists
 rewriteRefs :: TraversalMapper Expr ()
 rewriteRefs (UnaryOpExpr (ImmutableReference expr)) scopes state =
-  let (nac, idx, _, t) = unconstrDotAccess expr scopes
-   in (IntermediateExprExpr $ IntermediateReferenceLocalState nac idx $ TypeImmutableRef t, state)
+  case (unconstrDotAccess expr scopes, inferExprType expr scopes) of
+    -- In case the leftmost identifier is a reference, it is a reference extension
+    ((identLeft, fieldIdxs, TypeMutableRef _), tFinal) -> (IntermediateExprExpr $ IntermediateReferenceExtension (NameAccessChainExpr (LocalNameAccessChain identLeft)) fieldIdxs (TypeImmutableRef tFinal), state)
+    ((identLeft, fieldIdxs, TypeImmutableRef _), tFinal) -> (IntermediateExprExpr $ IntermediateReferenceExtension (NameAccessChainExpr (LocalNameAccessChain identLeft)) fieldIdxs (TypeImmutableRef tFinal), state)
+    -- Otherwise, it is a normal reference
+    ((identLeft, fieldIdxs, _), tFinal) -> (IntermediateExprExpr $ IntermediateReferenceLocalState identLeft fieldIdxs $ TypeImmutableRef tFinal, state)
 rewriteRefs (UnaryOpExpr (MutableReference expr)) scopes state =
-  let (nac, idx, _, t) = unconstrDotAccess expr scopes
-   in (IntermediateExprExpr $ IntermediateReferenceLocalState nac idx $ TypeMutableRef t, state)
+  case (unconstrDotAccess expr scopes, inferExprType expr scopes) of
+    -- In case the leftmost identifier is a reference, it is a reference extension
+    ((identLeft, fieldIdxs, TypeMutableRef _), tFinal) -> (IntermediateExprExpr $ IntermediateReferenceExtension (NameAccessChainExpr (LocalNameAccessChain identLeft)) fieldIdxs (TypeMutableRef tFinal), state)
+    -- Note that it is not possible to mutare an already immutable reference
+    ((_, _, TypeImmutableRef _), _) -> error $ "Trying to extend an immutable reference into a mutable reference: " ++ show expr
+    -- Otherwise, it is a normal reference
+    ((identLeft, fieldIdxs, _), tFinal) -> (IntermediateExprExpr $ IntermediateReferenceLocalState identLeft fieldIdxs $ TypeMutableRef tFinal, state)
 -- Also rewrite dereferences on right value
 -- This passage is mainly used to preserve the resulting type, that would not be inferrable anymore after the AST rewrite
 rewriteRefs expr@(UnaryOpExpr (Dereference dereferencedExpr)) scopes state = (IntermediateExprExpr $ IntermediateGetDereferenceLocalState dereferencedExpr $ inferExprType expr scopes, state)

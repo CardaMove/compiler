@@ -277,9 +277,12 @@ inferExprType expr@(DotOrIndexChainExpr (DotAccess {dotAccessLeft, dotAccessRigh
   case inferExprType dotAccessLeft scopes of
     -- Usually, the left part of the dot access is a named struct
     TypeConstructor typeCons typeArgs -> resolveDotAccess typeCons typeArgs
-    -- But it can also be a reference (to a named struct) that will then be extended
-    TypeImmutableRef (TypeConstructor typeCons typeArgs) -> TypeImmutableRef $ resolveDotAccess typeCons typeArgs
-    TypeMutableRef (TypeConstructor typeCons typeArgs) -> TypeMutableRef $ resolveDotAccess typeCons typeArgs
+    -- But it can also be a reference (to a named struct)
+    -- NOTE: Here it is not possible to know if that reference will be extended or if it is the syntactic sugar for dereferencing
+    -- Meaning the difference between `r.a[.b]` and `& r.a[.b]`
+    -- So the resulting type here should not consider the reference
+    TypeImmutableRef (TypeConstructor typeCons typeArgs) -> resolveDotAccess typeCons typeArgs
+    TypeMutableRef (TypeConstructor typeCons typeArgs) -> resolveDotAccess typeCons typeArgs
     exprType -> error $ "Dot access to non-struct type: " ++ show expr ++ " with type: " ++ show exprType
   where
     -- TODO: For now, only local names are supported

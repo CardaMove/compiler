@@ -673,9 +673,9 @@ data IntermediateExpr
     -- Multiple intermediate expressions can be passed, used to chain them in a single binding
     IntermediateScopeBinding [IntermediateExpr]
   | -- | Represents extending a reference via
-    -- `& r.b` where `r` is already a reference
-    -- Note that it is not possible to extend more than one field since reference can not be struct fields
-    IntermediateReferenceExtension Expr Int Type
+    -- `& r.b[.c]` where `r` is already a reference
+    -- Note that it is possible to extend more than one field since only `r` needs to be a reference
+    IntermediateReferenceExtension Expr [Int] Type
   deriving (Eq, Show, Read, Data, Typeable, Ord)
 
 -- |
