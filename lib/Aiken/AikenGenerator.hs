@@ -536,7 +536,15 @@ generateExpression (IntermediateExprExpr (IntermediateMoveFrom expr t tWitness))
 -- Type witnesses expressions
 generateExpression (IntermediateExprExpr (IntermediateTypeWitnessExprExpr tWitness)) = generateTWitness tWitness
 generateExpression (IntermediateExprExpr expr@(IntermediateScopeBinding _)) = error $ "IntermediateScopeBinding should never be present when generating Aiken: " ++ show expr
-
+-- Extending references
+generateExpression (IntermediateExprExpr (IntermediateReferenceExtension ref fields _)) = 
+  [trimming|
+    $lib.extend_ref($ref', $fields')
+  |]
+  where
+    lib = packIdent refUtilsIdent
+    ref' = generateExpression ref
+    fields' = pack $ show fields
 -- |
 -- Given a Move Sequence (not SequenceExpr), generates the corresponding Aiken code,
 -- without braces '{' '}'. Braces should be handled both by `generateExpression` and top level function
