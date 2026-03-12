@@ -519,6 +519,7 @@ generateExpression (IntermediateExprExpr (IntermediateMoveTo signer expr _t tWit
 -- Requires a manual casting after calling the Aiken lib
 -- Note: expect with a tuple is not accepted by Aiken because the type checker complains both for incompatible tuple types and for reckless opaque cast.
 -- If each element of a tuple is needed, the solution is to expect each one of them alone
+-- FIXME: Might be removed this unnecessary expect logic since casting has been addded
 generateExpression (IntermediateExprExpr (IntermediateMoveFrom expr t tWitness)) =
   [trimming|
     {

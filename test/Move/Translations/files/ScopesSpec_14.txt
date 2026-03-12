@@ -103,7 +103,12 @@ RModule
                                     ( Bindings
                                         { bindings = BindedSingle (BindIdentifier (Identifier "cps_state") (Just (-1))),
                                           bindingsBindType = Just IntermediateTypeScopes,
-                                          bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePostLocalState (Identifier "f") (Just (NameAccessChainExpr (LocalNameAccessChain (Identifier "temp_8"))))))
+                                          bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePostLocalState (Identifier "f") (Just (
+                                            CastingTerm (Casting{
+                                              castingExpr = NameAccessChainExpr (LocalNameAccessChain (Identifier "temp_8")),
+                                              castingType = TypeConstructor (LocalNameAccessChain (Identifier "F")) [TypeConstructor (LocalNameAccessChain (Identifier "u64")) []]
+                                            })
+                                          ))))
                                         }
                                     ),
                                   SequenceItemBindExpr
@@ -185,21 +190,24 @@ RModule
                                                                         ( IntermediateExprExpr
                                                                             ( IntermediatePostLocalState
                                                                                 (Identifier "g2")
-                                                                                ( Just
-                                                                                    ( IntermediateExprExpr
-                                                                                        ( IntermediateBorrowGlobalMut
-                                                                                            ( PositionalStructExprOrFunctionCallExpr
-                                                                                                ( PositionalStructExprOrFunctionCall
-                                                                                                    { pseofcNameAccessChain = LocalNameAccessChain (Identifier "address_of"),
-                                                                                                      pseofcTypeArgs = [],
-                                                                                                      pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "s"))]
-                                                                                                    }
-                                                                                                )
-                                                                                            )
-                                                                                            (TypeConstructor (LocalNameAccessChain (Identifier "G")) [TypeConstructor (LocalNameAccessChain (Identifier "bool")) []])
-                                                                                            (IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "G")) [IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "bool")) []])
-                                                                                        )
-                                                                                    )
+                                                                                ( Just (CastingTerm (Casting{
+                                                                                    castingExpr = (
+                                                                                      IntermediateExprExpr
+                                                                                          ( IntermediateBorrowGlobalMut
+                                                                                              ( PositionalStructExprOrFunctionCallExpr
+                                                                                                  ( PositionalStructExprOrFunctionCall
+                                                                                                      { pseofcNameAccessChain = LocalNameAccessChain (Identifier "address_of"),
+                                                                                                        pseofcTypeArgs = [],
+                                                                                                        pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "s"))]
+                                                                                                      }
+                                                                                                  )
+                                                                                              )
+                                                                                              (TypeConstructor (LocalNameAccessChain (Identifier "G")) [TypeConstructor (LocalNameAccessChain (Identifier "bool")) []])
+                                                                                              (IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "G")) [IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "bool")) []])
+                                                                                          )
+                                                                                      ),
+                                                                                    castingType = TypeMutableRef (TypeConstructor (LocalNameAccessChain (Identifier "G")) [TypeConstructor (LocalNameAccessChain (Identifier "bool")) []])
+                                                                                  }))
                                                                                 )
                                                                             )
                                                                         )

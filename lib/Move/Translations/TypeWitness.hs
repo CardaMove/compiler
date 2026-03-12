@@ -8,6 +8,8 @@ import Data.Maybe (fromMaybe)
 import Data.Set qualified as Set
 import GHC.Unicode (isUpper)
 import Move.AST
+import Move.Translations.TraversalUtils (TraversalMapper, traversalIdentity, traverseRootPostOrder)
+import Move.Translations.Utils
 
 -- |
 -- Given an AST, rewrites all type parameters in function declarations as an additional
@@ -15,10 +17,17 @@ import Move.AST
 --
 -- Prepends to their name a `tw_` to avoid name clashes.
 --
+-- NOTE: It is needed by the logic in `rewriteFunctionCalls` that the type witnesses whould be named identical to the corresponding type parameters 
+--
 -- Additionally, rewrites all occurrences of type parameters in the body of the function.
+--
+-- Also, wraps function returned values into casting if needed (see comments in `rewriteFunctionCalls`)
 translateTParamsInRoot :: Root -> State Int Root
 translateTParamsInRoot root = do
-  case root of
+  -- First, rewrite the function calls
+  let root' = fst $ traverseRootPostOrder rewriteFunctionCalls traversalIdentity root ()
+
+  case root' of
     RModule rModule@Module {moduleTopLevels} -> do
       mappedTL <- mapM rewriteTopLevel moduleTopLevels
       return $ RModule $ rModule {moduleTopLevels = mappedTL}
@@ -26,6 +35,88 @@ translateTParamsInRoot root = do
       mappedTL <- mapM rewriteTopLevel scriptTopLevels
       return $ RScript $ rScript {scriptTopLevels = mappedTL}
   where
+    -- Checks if a gven function return type is parametric or not,
+    -- based on the identifiers of the type parameters defined on that function signature
+    isTypeParametric :: Type -> Set.Set Identifier -> Bool
+    isTypeParametric (TypeConstructor (LocalNameAccessChain tCons) tArgs) tParams = Set.member tCons tParams || any (`isTypeParametric` tParams) tArgs
+    isTypeParametric (TypeConstructor _ tArgs) tParams = any (`isTypeParametric` tParams) tArgs
+    isTypeParametric (TypeImmutableRef t) tParams = isTypeParametric t tParams
+    isTypeParametric (TypeMutableRef t) tParams = isTypeParametric t tParams
+    isTypeParametric (TypeTuple ts) tParams = any (`isTypeParametric` tParams) ts
+    isTypeParametric TypeUnknown _ = False
+    isTypeParametric IntermediateTypeScopes _ = False
+    isTypeParametric t@(TypeArrow _ _) _ = error $ "Unexpected return type from a function: " ++ show t
+    isTypeParametric t@(IntermediateTypeNamedStructDeclaration _ _) _ = error $ "Unexpected return type from a function: " ++ show t
+    isTypeParametric t@IntermediateTypeWitnessType _ = error $ "Unexpected return type from a function: " ++ show t
+
+    -- Helper function, used to rewrite a single type argument to a type witness
+    mapTArgToFArg :: Type -> Set.Set Identifier -> IntermediateTypeWitnessExpr
+    mapTArgToFArg (TypeConstructor (LocalNameAccessChain tCons) tArgs) tParams
+      -- If the type constructor is one of the type parameters, rewrite it as its identifier
+      -- Example `T`
+      | Set.member tCons tParams = IntermediateTypeWitnessIdent tCons
+      -- Otherwise, it is a struct or stdlib type and might also have type args itself
+      -- Example `MyStruct`, `u64` or `MyStruct<...>`
+      | otherwise = IntermediateTypeWithnessC (LocalNameAccessChain tCons) $ map (`mapTArgToFArg` tParams) tArgs
+    -- Any non-local type constructor is surely not a type parameter
+    mapTArgToFArg (TypeConstructor tCons tArgs) tParams =
+      IntermediateTypeWithnessC tCons $ map (`mapTArgToFArg` tParams) tArgs
+    mapTArgToFArg t _ = error $ "Unexpected type argument: " ++ show t
+
+    -- Given the current scopes, returns all the identifiers corresponding to type witnesses
+    extractTypeWitnessesFromScopes :: [Scope] -> Set.Set Identifier
+    extractTypeWitnessesFromScopes [] = Set.empty
+    extractTypeWitnessesFromScopes (sc:scs) = extractFromScope sc `Set.union` extractTypeWitnessesFromScopes scs
+      where
+        -- Inner helper function that given a single scope, extracts all the identifiers corresponding to type witnesses
+        extractFromScope :: Scope -> Set.Set Identifier
+        extractFromScope scope = Set.fromList [ident | (ident, VariableAnnotations _ IntermediateTypeWitnessType) <- Map.toList scope]
+
+    -- Rewrites function calls to add the type witnesses as function parameters,
+    -- while also wrapping the result in a casting
+    --
+    -- The (down)casting is needed only when the return type is parametric on some type parameters of that function
+    -- This is because the caller function would thus (probably) resolve that parametric type into a concrete type, and in Aiken this must be done via an `expect`
+    --
+    -- Example: `my_func<a>(...): MyStruct<a>` or `my_func<a>(...): a` would (probably) be resolved as concrete types:
+    --
+    -- `let res: MyStruct<u64> = my_func<u64>(...)`
+    --
+    -- Note: there is the possibility that the type of the `res` variable is still parametric on `a` (type parameter forwarding?),
+    -- in this case the casting is not needed, but in any case it does not impact runtime exectution
+    rewriteFunctionCalls :: TraversalMapper Expr ()
+    rewriteFunctionCalls expr@(PositionalStructExprOrFunctionCallExpr fc@PositionalStructExprOrFunctionCall {pseofcNameAccessChain = LocalNameAccessChain funcIdent, pseofcFields, pseofcTypeArgs}) scopes st =
+      case getIdentifierFromScopes funcIdent scopes of
+        -- In this case, it is a function call and not a positional struct
+        VariableAnnotations _ (TypeArrow tParams tFunc) ->
+          let -- Always add the corresponding type witnesses
+              -- TODO: additionally the function arguments should be upcasted if the corresponding func params are parametric
+              -- NOTE that the identifiers of the type parameters are supplied to `extractTypeWitnessesFromScopes` by extracting the names of the type witnesses
+              -- This relies to the fact that the name of the type parameter and the corresponding type witness must be identical, otherwise a type argument would not be
+              -- recognized as coming from a type param
+              -- The reason for doing this is that the traversal has no way to know the type parameters defined by the current function
+              -- FIXME: The above reasoning does not work since type witnesses have not been added yet. 
+              --    A solution might be swapping the order of this rewrital and the rewrital for structs/function definitions. This will not impact the inference of function return type
+              fc' = fc {pseofcFields = pseofcFields ++ map (IntermediateExprExpr . IntermediateTypeWitnessExprExpr . (`mapTArgToFArg` extractTypeWitnessesFromScopes scopes)) pseofcTypeArgs}
+
+              -- If the return type is parametric on the type params defined on that function, wrap the returned value into a cast
+              expr' =
+                if not (null tParams) && isTypeParametric (last tFunc) (Set.fromList tParams)
+                  then
+                    CastingTerm $
+                      Casting
+                        { castingExpr = PositionalStructExprOrFunctionCallExpr fc',
+                          castingType = inferExprType expr scopes
+                        }
+                  else
+                    PositionalStructExprOrFunctionCallExpr fc'
+           in (expr', st)
+        -- Otherwise, leave the function call / positional struct unchanged
+        _ -> (expr, st)
+    -- TODO: non local function calls
+    rewriteFunctionCalls expr@(PositionalStructExprOrFunctionCallExpr _) _scopes _st = error $ "Non-local function calls currently not supported: " ++ show expr
+    rewriteFunctionCalls expr _scopes st = (expr, st)
+
     -- Maps any type parameter to a corresponding function parameter
     -- The function parameter will have the same identifier as the type param, but in snake_case
     mapTParamToFParam :: TypeParameter -> State Int Parameter
@@ -44,29 +135,6 @@ translateTParamsInRoot root = do
       TypeConstructor (LocalNameAccessChain $ fromMaybe tCons $ Map.lookup tCons renames) tArgs
     helperTrTypes _ t = t
 
-    -- Used to add type witnesses to function calls
-    -- Accepts as input the set of type parameters (already rewritten by `helperTrTypes`) of the function
-    helperTrExpr :: Set.Set Identifier -> PositionalStructExprOrFunctionCall -> PositionalStructExprOrFunctionCall
-    helperTrExpr tParams fc@PositionalStructExprOrFunctionCall {pseofcTypeArgs, pseofcFields} =
-      fc
-        { pseofcFields = pseofcFields ++ map (IntermediateExprExpr . IntermediateTypeWitnessExprExpr . mapTArgToFArg) pseofcTypeArgs
-        }
-      where
-        -- Helper function, used to rewrite a single type argument to a type witness
-        mapTArgToFArg :: Type -> IntermediateTypeWitnessExpr
-        mapTArgToFArg (TypeConstructor (LocalNameAccessChain tCons) tArgs) =
-          -- If the type constructor is one of the type parameters, rewrite it as its identifier
-          -- Example `T`
-          if Set.member tCons tParams
-            then IntermediateTypeWitnessIdent tCons
-            -- Otherwise, it is a struct or stdlib type and might also have type args itself
-            -- Example `MyStruct`, `u64` or `MyStruct<...>`
-            else IntermediateTypeWithnessC (LocalNameAccessChain tCons) $ map mapTArgToFArg tArgs
-        -- Any non-local type constructor is surely not a type parameter
-        mapTArgToFArg (TypeConstructor tCons tArgs) =
-          IntermediateTypeWithnessC tCons $ map mapTArgToFArg tArgs
-        mapTArgToFArg t = error $ "Unexpected type argument: " ++ show t
-
     -- Given the map of renamed type parameter identifiers and a type param to renamed, ensures it is present and returns the renamed version
     assertRenamed :: Map.Map Identifier Identifier -> TypeParameter -> TypeParameter
     assertRenamed renames tp@TypeParameter {typeIdentifier} =
@@ -74,7 +142,7 @@ translateTParamsInRoot root = do
         Nothing -> error $ "Expected a type parameter to have been renamed: " ++ show tp
         Just typeIdentifier' -> tp {typeIdentifier = typeIdentifier'}
 
-    -- Rewrites any top level
+    -- Rewrites any top level definition
     --
     -- Note how type parameters are always kept in the rewritten function (but in snake_case),
     -- so to still be able to identify if a function is polymorphic or not (used when rewriting function calls).
@@ -100,13 +168,8 @@ translateTParamsInRoot root = do
       -- Passing the map allows to know which type comes from a type parameter
       let func'' = transformBi (helperTrTypes renames) func'
 
-      -- Then, for each function call add the corresponding type witness
-      -- TODO: NOTE that since this step checks for the presence of type arguments rather than inspecting the type of the function
-      -- looking for type params, it is not able to infer missing type arguments
-      -- A fix/improvement could be: first, rewrite all function definitions, then, perform a traversal of each function and look at the signature of each called function
-      let func''' = transformBi (helperTrExpr $ Set.fromList $ map typeIdentifier functionTypeParameters') func''
-
-      return $ TopLevelFunction func'''
+      -- Note: the rewriting of function calls has been removed and has already been performed in `rewriteFunctionCalls`
+      return $ TopLevelFunction func''
 
     -- Also named and positional structs should be rewritten
     -- not with type witnesses by just snake_case-ing their type arguments
