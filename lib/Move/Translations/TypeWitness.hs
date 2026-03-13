@@ -45,9 +45,10 @@ translateTParamsInRoot root = do
     isTypeParametric (TypeTuple ts) tParams = any (`isTypeParametric` tParams) ts
     isTypeParametric TypeUnknown _ = False
     isTypeParametric IntermediateTypeScopes _ = False
-    isTypeParametric t@(TypeArrow _ _) _ = error $ "Unexpected return type from a function: " ++ show t
-    isTypeParametric t@(IntermediateTypeNamedStructDeclaration _ _) _ = error $ "Unexpected return type from a function: " ++ show t
-    isTypeParametric t@IntermediateTypeWitnessType _ = error $ "Unexpected return type from a function: " ++ show t
+    -- NOTE: An arrow type might be parametric on some outer type names, but in this case should never be encountered in any case
+    isTypeParametric (TypeArrow _ _) _ = False
+    isTypeParametric t@(IntermediateTypeNamedStructDeclaration _ _) _ = error $ "Unexpected function parameter type: " ++ show t
+    isTypeParametric IntermediateTypeWitnessType _ = False
 
     -- Helper function, used to rewrite a single type argument to a type witness
     mapTArgToFArg :: Type -> Set.Set Identifier -> IntermediateTypeWitnessExpr
@@ -89,19 +90,38 @@ translateTParamsInRoot root = do
       case getIdentifierFromScopes funcIdent scopes of
         -- In this case, it is a function call and not a positional struct
         VariableAnnotations _ (TypeArrow tParams tFunc) ->
-          let -- Always add the corresponding type witnesses
-              -- TODO: additionally the function arguments should be upcasted if the corresponding func params are parametric
+          let tParamsSet = Set.fromList tParams
+              -- Always add the corresponding type witnesses
               -- NOTE that the identifiers of the type parameters are supplied to `extractTypeWitnessesFromScopes` by extracting the names of the type witnesses
               -- This relies to the fact that the name of the type parameter and the corresponding type witness must be identical, otherwise a type argument would not be
               -- recognized as coming from a type param
               -- The reason for doing this is that the traversal has no way to know the type parameters defined by the current function
-              --
-              -- NOTE: This reasoning requires that the type witnesses have already been inserted into the function signature
-              fc' = fc {pseofcFields = pseofcFields ++ map (IntermediateExprExpr . IntermediateTypeWitnessExprExpr . (`mapTArgToFArg` extractTypeWitnessesFromScopes scopes)) pseofcTypeArgs}
+              -- This reasoning requires that the type witnesses have already been inserted into the (caller) function signature
+              pseofcFields' = pseofcFields ++ map (IntermediateExprExpr . IntermediateTypeWitnessExprExpr . (`mapTArgToFArg` extractTypeWitnessesFromScopes scopes)) pseofcTypeArgs
+
+              -- Additionally, upcast any function argument if the corresponding func param is parametric
+              -- Note that `tFunc` has one element more since it contains the return type,
+              -- however the `zipWith` ignores it
+              -- Here it is assumed that the number of arguments and function parameters match
+              pseofcFields'' = zipWith upcastFuncArg pseofcFields' tFunc
+                where
+                  -- Given a function argument and the type of the corresponding function parameter, wraps the argument
+                  -- into an (up)casting if the type is parametric on the type params defined on the called function
+                  upcastFuncArg :: Expr -> Type -> Expr
+                  upcastFuncArg fArg tParam
+                    | isTypeParametric tParam tParamsSet =
+                        CastingTerm $
+                          Casting
+                            { castingExpr = fArg,
+                              castingType = tParam
+                            }
+                  upcastFuncArg fArg _ = fArg
+
+              fc' = fc {pseofcFields = pseofcFields''}
 
               -- If the return type is parametric on the type params defined on that function, wrap the returned value into a cast
               expr' =
-                if not (null tParams) && isTypeParametric (last tFunc) (Set.fromList tParams)
+                if not (null tParams) && isTypeParametric (last tFunc) tParamsSet
                   then
                     CastingTerm $
                       Casting

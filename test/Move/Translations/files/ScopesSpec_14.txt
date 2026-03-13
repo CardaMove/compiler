@@ -160,7 +160,7 @@ RModule
                                     ( Bindings
                                         { bindings = BindedTuple [BindIdentifier (Identifier "temp_9") (Just 9), BindIdentifier (Identifier "cps_state") (Just (-1))],
                                           bindingsBindType = Just (TypeTuple [TypeTuple [], IntermediateTypeScopes]),
-                                          bindingsBindExpr = Just (IntermediateExprExpr (IntermediateMoveTo (NameAccessChainExpr (LocalNameAccessChain (Identifier "s"))) (NameAccessChainExpr (LocalNameAccessChain (Identifier "g"))) (TypeConstructor (LocalNameAccessChain (Identifier "G")) [TypeConstructor (LocalNameAccessChain (Identifier "bool")) []]) (IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "G")) [IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "bool")) []])))
+                                          bindingsBindExpr = Just (IntermediateExprExpr (IntermediateMoveTo (NameAccessChainExpr (LocalNameAccessChain (Identifier "s"))) (CastingTerm (Casting{castingExpr = NameAccessChainExpr (LocalNameAccessChain (Identifier "g")), castingType = TypeConstructor (LocalNameAccessChain (Identifier "T")) []})) (TypeConstructor (LocalNameAccessChain (Identifier "G")) [TypeConstructor (LocalNameAccessChain (Identifier "bool")) []]) (IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "G")) [IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "bool")) []])))
                                         }
                                     ),
                                   SequenceItemExpr (NameAccessChainExpr (LocalNameAccessChain (Identifier "temp_9"))),
