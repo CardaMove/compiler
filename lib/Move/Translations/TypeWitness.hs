@@ -17,23 +17,23 @@ import Move.Translations.Utils
 --
 -- Prepends to their name a `tw_` to avoid name clashes.
 --
--- NOTE: It is needed by the logic in `rewriteFunctionCalls` that the type witnesses whould be named identical to the corresponding type parameters 
+-- NOTE: It is needed by the logic in `rewriteFunctionCalls` that the type witnesses whould be named identical to the corresponding type parameters
 --
 -- Additionally, rewrites all occurrences of type parameters in the body of the function.
 --
 -- Also, wraps function returned values into casting if needed (see comments in `rewriteFunctionCalls`)
 translateTParamsInRoot :: Root -> State Int Root
 translateTParamsInRoot root = do
-  -- First, rewrite the function calls
-  let root' = fst $ traverseRootPostOrder rewriteFunctionCalls traversalIdentity root ()
-
-  case root' of
+  -- Rewrite the function and struct definitions
+  root' <- case root of
     RModule rModule@Module {moduleTopLevels} -> do
       mappedTL <- mapM rewriteTopLevel moduleTopLevels
       return $ RModule $ rModule {moduleTopLevels = mappedTL}
     RScript rScript@Script {scriptTopLevels} -> do
       mappedTL <- mapM rewriteTopLevel scriptTopLevels
       return $ RScript $ rScript {scriptTopLevels = mappedTL}
+  -- Then, rewrite the function calls
+  return $ fst $ traverseRootPostOrder rewriteFunctionCalls traversalIdentity root' ()
   where
     -- Checks if a gven function return type is parametric or not,
     -- based on the identifiers of the type parameters defined on that function signature
@@ -66,7 +66,7 @@ translateTParamsInRoot root = do
     -- Given the current scopes, returns all the identifiers corresponding to type witnesses
     extractTypeWitnessesFromScopes :: [Scope] -> Set.Set Identifier
     extractTypeWitnessesFromScopes [] = Set.empty
-    extractTypeWitnessesFromScopes (sc:scs) = extractFromScope sc `Set.union` extractTypeWitnessesFromScopes scs
+    extractTypeWitnessesFromScopes (sc : scs) = extractFromScope sc `Set.union` extractTypeWitnessesFromScopes scs
       where
         -- Inner helper function that given a single scope, extracts all the identifiers corresponding to type witnesses
         extractFromScope :: Scope -> Set.Set Identifier
@@ -95,8 +95,8 @@ translateTParamsInRoot root = do
               -- This relies to the fact that the name of the type parameter and the corresponding type witness must be identical, otherwise a type argument would not be
               -- recognized as coming from a type param
               -- The reason for doing this is that the traversal has no way to know the type parameters defined by the current function
-              -- FIXME: The above reasoning does not work since type witnesses have not been added yet. 
-              --    A solution might be swapping the order of this rewrital and the rewrital for structs/function definitions. This will not impact the inference of function return type
+              --
+              -- NOTE: This reasoning requires that the type witnesses have already been inserted into the function signature
               fc' = fc {pseofcFields = pseofcFields ++ map (IntermediateExprExpr . IntermediateTypeWitnessExprExpr . (`mapTArgToFArg` extractTypeWitnessesFromScopes scopes)) pseofcTypeArgs}
 
               -- If the return type is parametric on the type params defined on that function, wrap the returned value into a cast
