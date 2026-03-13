@@ -293,7 +293,7 @@ generateExpression (TypedExprTerm TypedExpr {typedExpr}) = generateExpression ty
 generateExpression (CastingTerm Casting {castingExpr, castingType}) =
   [trimming|
     {
-      expect val:$t = $expr
+      expect val: $t = $expr
       val
     }
   |]

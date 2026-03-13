@@ -76,7 +76,7 @@ translateTParamsInRoot root = do
     -- Rewrites function calls to add the type witnesses as function parameters,
     -- while also wrapping the result in a casting
     --
-    -- The (down)casting is needed only when the return type is parametric on some type parameters of that function
+    -- The (down)casting is needed only when the return type is parametric on some type parameters of the called function
     -- This is because the caller function would thus (probably) resolve that parametric type into a concrete type, and in Aiken this must be done via an `expect`
     --
     -- Example: `my_func<a>(...): MyStruct<a>` or `my_func<a>(...): a` would (probably) be resolved as concrete types:
@@ -85,6 +85,8 @@ translateTParamsInRoot root = do
     --
     -- Note: there is the possibility that the type of the `res` variable is still parametric on `a` (type parameter forwarding?),
     -- in this case the casting is not needed, but in any case it does not impact runtime exectution
+    --
+    -- Similarly, it also performs an (up)casting when function arguments are passed to function parameters that are themselves type-parametric
     rewriteFunctionCalls :: TraversalMapper Expr ()
     rewriteFunctionCalls expr@(PositionalStructExprOrFunctionCallExpr fc@PositionalStructExprOrFunctionCall {pseofcNameAccessChain = LocalNameAccessChain funcIdent, pseofcFields, pseofcTypeArgs}) scopes st =
       case getIdentifierFromScopes funcIdent scopes of
