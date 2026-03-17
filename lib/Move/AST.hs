@@ -262,6 +262,7 @@ data Type
     -- this is because this type acs only as a way to keep the nested fields of a struct declaration and to resolve their type
     IntermediateTypeNamedStructDeclaration [Identifier] [NamedField]
   | IntermediateTypeWitnessType
+  | IntermediateTypeData
   deriving (Eq, Show, Read, Data, Typeable, Ord)
 
 -- | A function declaration
@@ -676,6 +677,10 @@ data IntermediateExpr
     -- `& r.b[.c]` where `r` is already a reference
     -- Note that it is possible to extend more than one field since only `r` needs to be a reference
     IntermediateReferenceExtension Expr [Int] Type
+  |
+    -- | Represents an invocation of `as_data(expr)` in Aiken
+    -- Used to solve problems when performing casting
+    IntermediateAsData Expr
   deriving (Eq, Show, Read, Data, Typeable, Ord)
 
 -- |

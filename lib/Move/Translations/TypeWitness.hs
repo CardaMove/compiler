@@ -20,8 +20,6 @@ import Move.Translations.Utils
 -- NOTE: It is needed by the logic in `rewriteFunctionCalls` that the type witnesses whould be named identical to the corresponding type parameters
 --
 -- Additionally, rewrites all occurrences of type parameters in the body of the function.
---
--- Also, wraps function returned values into casting if needed (see comments in `rewriteFunctionCalls`)
 translateTParamsInRoot :: Root -> State Int Root
 translateTParamsInRoot root = do
   -- Rewrite the function and struct definitions
@@ -35,21 +33,6 @@ translateTParamsInRoot root = do
   -- Then, rewrite the function calls
   return $ fst $ traverseRootPostOrder rewriteFunctionCalls traversalIdentity root' ()
   where
-    -- Checks if a gven function return type is parametric or not,
-    -- based on the identifiers of the type parameters defined on that function signature
-    isTypeParametric :: Type -> Set.Set Identifier -> Bool
-    isTypeParametric (TypeConstructor (LocalNameAccessChain tCons) tArgs) tParams = Set.member tCons tParams || any (`isTypeParametric` tParams) tArgs
-    isTypeParametric (TypeConstructor _ tArgs) tParams = any (`isTypeParametric` tParams) tArgs
-    isTypeParametric (TypeImmutableRef t) tParams = isTypeParametric t tParams
-    isTypeParametric (TypeMutableRef t) tParams = isTypeParametric t tParams
-    isTypeParametric (TypeTuple ts) tParams = any (`isTypeParametric` tParams) ts
-    isTypeParametric TypeUnknown _ = False
-    isTypeParametric IntermediateTypeScopes _ = False
-    -- NOTE: An arrow type might be parametric on some outer type names, but in this case should never be encountered in any case
-    isTypeParametric (TypeArrow _ _) _ = False
-    isTypeParametric t@(IntermediateTypeNamedStructDeclaration _ _) _ = error $ "Unexpected function parameter type: " ++ show t
-    isTypeParametric IntermediateTypeWitnessType _ = False
-
     -- Helper function, used to rewrite a single type argument to a type witness
     mapTArgToFArg :: Type -> Set.Set Identifier -> IntermediateTypeWitnessExpr
     mapTArgToFArg (TypeConstructor (LocalNameAccessChain tCons) tArgs) tParams
@@ -73,66 +56,20 @@ translateTParamsInRoot root = do
         extractFromScope :: Scope -> Set.Set Identifier
         extractFromScope scope = Set.fromList [ident | (ident, VariableAnnotations _ IntermediateTypeWitnessType) <- Map.toList scope]
 
-    -- Rewrites function calls to add the type witnesses as function parameters,
-    -- while also wrapping the result in a casting
-    --
-    -- The (down)casting is needed only when the return type is parametric on some type parameters of the called function
-    -- This is because the caller function would thus (probably) resolve that parametric type into a concrete type, and in Aiken this must be done via an `expect`
-    --
-    -- Example: `my_func<a>(...): MyStruct<a>` or `my_func<a>(...): a` would (probably) be resolved as concrete types:
-    --
-    -- `let res: MyStruct<u64> = my_func<u64>(...)`
-    --
-    -- Note: there is the possibility that the type of the `res` variable is still parametric on `a` (type parameter forwarding?),
-    -- in this case the casting is not needed, but in any case it does not impact runtime exectution
-    --
-    -- Similarly, it also performs an (up)casting when function arguments are passed to function parameters that are themselves type-parametric
+    -- Rewrites function calls to add the type witnesses as function parameters
     rewriteFunctionCalls :: TraversalMapper Expr ()
     rewriteFunctionCalls expr@(PositionalStructExprOrFunctionCallExpr fc@PositionalStructExprOrFunctionCall {pseofcNameAccessChain = LocalNameAccessChain funcIdent, pseofcFields, pseofcTypeArgs}) scopes st =
       case getIdentifierFromScopes funcIdent scopes of
         -- In this case, it is a function call and not a positional struct
-        VariableAnnotations _ (TypeArrow tParams tFunc) ->
-          let tParamsSet = Set.fromList tParams
-              -- Always add the corresponding type witnesses
+        VariableAnnotations _ (TypeArrow _ _) ->
+          let -- Always add the corresponding type witnesses
               -- NOTE that the identifiers of the type parameters are supplied to `extractTypeWitnessesFromScopes` by extracting the names of the type witnesses
               -- This relies to the fact that the name of the type parameter and the corresponding type witness must be identical, otherwise a type argument would not be
               -- recognized as coming from a type param
               -- The reason for doing this is that the traversal has no way to know the type parameters defined by the current function
               -- This reasoning requires that the type witnesses have already been inserted into the (caller) function signature
               pseofcFields' = pseofcFields ++ map (IntermediateExprExpr . IntermediateTypeWitnessExprExpr . (`mapTArgToFArg` extractTypeWitnessesFromScopes scopes)) pseofcTypeArgs
-
-              -- Additionally, upcast any function argument if the corresponding func param is parametric
-              -- Note that `tFunc` has one element more since it contains the return type,
-              -- however the `zipWith` ignores it
-              -- Here it is assumed that the number of arguments and function parameters match
-              pseofcFields'' = zipWith upcastFuncArg pseofcFields' tFunc
-                where
-                  -- Given a function argument and the type of the corresponding function parameter, wraps the argument
-                  -- into an (up)casting if the type is parametric on the type params defined on the called function
-                  upcastFuncArg :: Expr -> Type -> Expr
-                  upcastFuncArg fArg tParam
-                    | isTypeParametric tParam tParamsSet =
-                        CastingTerm $
-                          Casting
-                            { castingExpr = fArg,
-                              castingType = tParam
-                            }
-                  upcastFuncArg fArg _ = fArg
-
-              fc' = fc {pseofcFields = pseofcFields''}
-
-              -- If the return type is parametric on the type params defined on that function, wrap the returned value into a cast
-              expr' =
-                if not (null tParams) && isTypeParametric (last tFunc) tParamsSet
-                  then
-                    CastingTerm $
-                      Casting
-                        { castingExpr = PositionalStructExprOrFunctionCallExpr fc',
-                          castingType = inferExprType expr scopes
-                        }
-                  else
-                    PositionalStructExprOrFunctionCallExpr fc'
-           in (expr', st)
+           in (PositionalStructExprOrFunctionCallExpr $ fc {pseofcFields = pseofcFields'}, st)
         -- Otherwise, leave the function call / positional struct unchanged
         _ -> (expr, st)
     -- TODO: non local function calls

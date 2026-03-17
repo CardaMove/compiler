@@ -21,16 +21,11 @@ RModule
                             sequenceItems = [],
                             sequenceEndExpr =
                                 Just
-                                ( CastingTerm (
-                                        Casting{
-                                            castingExpr = PositionalStructExprOrFunctionCallExpr
-                                                ( PositionalStructExprOrFunctionCall
-                                                    {   pseofcNameAccessChain = LocalNameAccessChain (Identifier "move_from"),
-                                                        pseofcTypeArgs = [TypeConstructor (LocalNameAccessChain (Identifier "MyCoin")) [TypeConstructor (LocalNameAccessChain (Identifier "tw_coin_type")) []]],
-                                                        pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "from")), IntermediateExprExpr (IntermediateTypeWitnessExprExpr (IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "MyCoin")) [IntermediateTypeWitnessIdent (Identifier "tw_coin_type")]))]
-                                                    }
-                                                ),
-                                            castingType = TypeConstructor (LocalNameAccessChain (Identifier "MyCoin")) [TypeConstructor (LocalNameAccessChain (Identifier "tw_coin_type")) []]
+                                ( PositionalStructExprOrFunctionCallExpr
+                                    ( PositionalStructExprOrFunctionCall
+                                        { pseofcNameAccessChain = LocalNameAccessChain (Identifier "move_from"),
+                                            pseofcTypeArgs = [TypeConstructor (LocalNameAccessChain (Identifier "MyCoin")) [TypeConstructor (LocalNameAccessChain (Identifier "tw_coin_type")) []]],
+                                            pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "from")), IntermediateExprExpr (IntermediateTypeWitnessExprExpr (IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "MyCoin")) [IntermediateTypeWitnessIdent (Identifier "tw_coin_type")]))]
                                         }
                                     )
                                 )
@@ -60,11 +55,7 @@ RModule
                                     ( PositionalStructExprOrFunctionCall
                                         { pseofcNameAccessChain = LocalNameAccessChain (Identifier "move_to"),
                                             pseofcTypeArgs = [TypeConstructor (LocalNameAccessChain (Identifier "MyCoin")) [TypeConstructor (LocalNameAccessChain (Identifier "tw_coin_type")) []]],
-                                            pseofcFields = [
-                                                NameAccessChainExpr (LocalNameAccessChain (Identifier "to")),
-                                                CastingTerm (Casting{castingExpr = NameAccessChainExpr (LocalNameAccessChain (Identifier "coin")), castingType = TypeConstructor (LocalNameAccessChain (Identifier "T")) []}),
-                                                IntermediateExprExpr (IntermediateTypeWitnessExprExpr (IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "MyCoin")) [IntermediateTypeWitnessIdent (Identifier "tw_coin_type")]))
-                                            ]
+                                            pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "to")), NameAccessChainExpr (LocalNameAccessChain (Identifier "coin")), IntermediateExprExpr (IntermediateTypeWitnessExprExpr (IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "MyCoin")) [IntermediateTypeWitnessIdent (Identifier "tw_coin_type")]))]
                                         }
                                     )
                                 )
@@ -94,16 +85,13 @@ RModule
                                         bindingsBindType = Nothing,
                                         bindingsBindExpr =
                                             Just
-                                            ( CastingTerm (Casting{
-                                                    castingExpr = PositionalStructExprOrFunctionCallExpr
-                                                        ( PositionalStructExprOrFunctionCall
-                                                            { pseofcNameAccessChain = LocalNameAccessChain (Identifier "withdraw"),
-                                                                pseofcTypeArgs = [TypeConstructor (LocalNameAccessChain (Identifier "tw_coin_type")) []],
-                                                                pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "from")), IntermediateExprExpr (IntermediateTypeWitnessExprExpr (IntermediateTypeWitnessIdent (Identifier "tw_coin_type")))]
-                                                            }
-                                                        ),
-                                                        castingType = TypeConstructor (LocalNameAccessChain (Identifier "MyCoin")) [TypeConstructor (LocalNameAccessChain (Identifier "tw_coin_type")) []]
-                                                })
+                                            ( PositionalStructExprOrFunctionCallExpr
+                                                ( PositionalStructExprOrFunctionCall
+                                                    { pseofcNameAccessChain = LocalNameAccessChain (Identifier "withdraw"),
+                                                        pseofcTypeArgs = [TypeConstructor (LocalNameAccessChain (Identifier "tw_coin_type")) []],
+                                                        pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "from")), IntermediateExprExpr (IntermediateTypeWitnessExprExpr (IntermediateTypeWitnessIdent (Identifier "tw_coin_type")))]
+                                                    }
+                                                )
                                             )
                                         }
                                     )
@@ -114,10 +102,7 @@ RModule
                                     ( PositionalStructExprOrFunctionCall
                                         { pseofcNameAccessChain = LocalNameAccessChain (Identifier "deposit"),
                                             pseofcTypeArgs = [TypeConstructor (LocalNameAccessChain (Identifier "tw_coin_type")) [], TypeConstructor (LocalNameAccessChain (Identifier "MyCoin")) [TypeConstructor (LocalNameAccessChain (Identifier "u64")) []]],
-                                            pseofcFields = [
-                                                NameAccessChainExpr (LocalNameAccessChain (Identifier "to")),
-                                                CastingTerm (Casting{castingExpr = NameAccessChainExpr (LocalNameAccessChain (Identifier "c")), castingType = TypeConstructor (LocalNameAccessChain (Identifier "MyCoin")) [TypeConstructor (LocalNameAccessChain (Identifier "tw_coin_type")) []]}),
-                                                IntermediateExprExpr (IntermediateTypeWitnessExprExpr (IntermediateTypeWitnessIdent (Identifier "tw_coin_type"))), IntermediateExprExpr (IntermediateTypeWitnessExprExpr (IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "MyCoin")) [IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "u64")) []]))]
+                                            pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "to")), NameAccessChainExpr (LocalNameAccessChain (Identifier "c")), IntermediateExprExpr (IntermediateTypeWitnessExprExpr (IntermediateTypeWitnessIdent (Identifier "tw_coin_type"))), IntermediateExprExpr (IntermediateTypeWitnessExprExpr (IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "MyCoin")) [IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "u64")) []]))]
                                         }
                                     )
                                 )

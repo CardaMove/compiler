@@ -103,12 +103,7 @@ RModule
                                     ( Bindings
                                         { bindings = BindedSingle (BindIdentifier (Identifier "cps_state") (Just (-1))),
                                           bindingsBindType = Just IntermediateTypeScopes,
-                                          bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePostLocalState (Identifier "f") (Just (
-                                            CastingTerm (Casting{
-                                              castingExpr = NameAccessChainExpr (LocalNameAccessChain (Identifier "temp_8")),
-                                              castingType = TypeConstructor (LocalNameAccessChain (Identifier "F")) [TypeConstructor (LocalNameAccessChain (Identifier "u64")) []]
-                                            })
-                                          ))))
+                                          bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePostLocalState (Identifier "f") (Just (NameAccessChainExpr (LocalNameAccessChain (Identifier "temp_8"))))))
                                         }
                                     ),
                                   SequenceItemBindExpr
@@ -160,7 +155,7 @@ RModule
                                     ( Bindings
                                         { bindings = BindedTuple [BindIdentifier (Identifier "temp_9") (Just 9), BindIdentifier (Identifier "cps_state") (Just (-1))],
                                           bindingsBindType = Just (TypeTuple [TypeTuple [], IntermediateTypeScopes]),
-                                          bindingsBindExpr = Just (IntermediateExprExpr (IntermediateMoveTo (NameAccessChainExpr (LocalNameAccessChain (Identifier "s"))) (CastingTerm (Casting{castingExpr = NameAccessChainExpr (LocalNameAccessChain (Identifier "g")), castingType = TypeConstructor (LocalNameAccessChain (Identifier "T")) []})) (TypeConstructor (LocalNameAccessChain (Identifier "G")) [TypeConstructor (LocalNameAccessChain (Identifier "bool")) []]) (IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "G")) [IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "bool")) []])))
+                                          bindingsBindExpr = Just (IntermediateExprExpr (IntermediateMoveTo (NameAccessChainExpr (LocalNameAccessChain (Identifier "s"))) (NameAccessChainExpr (LocalNameAccessChain (Identifier "g"))) (TypeConstructor (LocalNameAccessChain (Identifier "G")) [TypeConstructor (LocalNameAccessChain (Identifier "bool")) []]) (IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "G")) [IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "bool")) []])))
                                         }
                                     ),
                                   SequenceItemExpr (NameAccessChainExpr (LocalNameAccessChain (Identifier "temp_9"))),
@@ -190,24 +185,21 @@ RModule
                                                                         ( IntermediateExprExpr
                                                                             ( IntermediatePostLocalState
                                                                                 (Identifier "g2")
-                                                                                ( Just (CastingTerm (Casting{
-                                                                                    castingExpr = (
-                                                                                      IntermediateExprExpr
-                                                                                          ( IntermediateBorrowGlobalMut
-                                                                                              ( PositionalStructExprOrFunctionCallExpr
-                                                                                                  ( PositionalStructExprOrFunctionCall
-                                                                                                      { pseofcNameAccessChain = LocalNameAccessChain (Identifier "address_of"),
-                                                                                                        pseofcTypeArgs = [],
-                                                                                                        pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "s"))]
-                                                                                                      }
-                                                                                                  )
-                                                                                              )
-                                                                                              (TypeConstructor (LocalNameAccessChain (Identifier "G")) [TypeConstructor (LocalNameAccessChain (Identifier "bool")) []])
-                                                                                              (IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "G")) [IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "bool")) []])
-                                                                                          )
-                                                                                      ),
-                                                                                    castingType = TypeMutableRef (TypeConstructor (LocalNameAccessChain (Identifier "G")) [TypeConstructor (LocalNameAccessChain (Identifier "bool")) []])
-                                                                                  }))
+                                                                                ( Just
+                                                                                    ( IntermediateExprExpr
+                                                                                        ( IntermediateBorrowGlobalMut
+                                                                                            ( PositionalStructExprOrFunctionCallExpr
+                                                                                                ( PositionalStructExprOrFunctionCall
+                                                                                                    { pseofcNameAccessChain = LocalNameAccessChain (Identifier "address_of"),
+                                                                                                      pseofcTypeArgs = [],
+                                                                                                      pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "s"))]
+                                                                                                    }
+                                                                                                )
+                                                                                            )
+                                                                                            (TypeConstructor (LocalNameAccessChain (Identifier "G")) [TypeConstructor (LocalNameAccessChain (Identifier "bool")) []])
+                                                                                            (IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "G")) [IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "bool")) []])
+                                                                                        )
+                                                                                    )
                                                                                 )
                                                                             )
                                                                         )

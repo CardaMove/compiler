@@ -213,6 +213,7 @@ generateType IntermediateTypeScopes = pack "CPS"
 generateType TypeUnknown = pack "UNKNOWN_TYPE"
 generateType t@(TypeArrow _ _) = error $ "Unexpected TypeArrow: " ++ show t
 generateType t@(IntermediateTypeNamedStructDeclaration _ _) = error $ "Unexpected IntermediateTypeNamedStructDeclaration: " ++ show t
+generateType IntermediateTypeData = pack "Data"
 
 -- |
 -- Given some type parameters, generates the corresponding Aiken code
@@ -538,7 +539,7 @@ generateExpression (IntermediateExprExpr (IntermediateMoveFrom expr t tWitness))
 generateExpression (IntermediateExprExpr (IntermediateTypeWitnessExprExpr tWitness)) = generateTWitness tWitness
 generateExpression (IntermediateExprExpr expr@(IntermediateScopeBinding _)) = error $ "IntermediateScopeBinding should never be present when generating Aiken: " ++ show expr
 -- Extending references
-generateExpression (IntermediateExprExpr (IntermediateReferenceExtension ref fields _)) = 
+generateExpression (IntermediateExprExpr (IntermediateReferenceExtension ref fields _)) =
   [trimming|
     $lib.extend_ref($ref', $fields')
   |]
@@ -546,6 +547,13 @@ generateExpression (IntermediateExprExpr (IntermediateReferenceExtension ref fie
     lib = packIdent refUtilsIdent
     ref' = generateExpression ref
     fields' = pack $ show fields
+generateExpression (IntermediateExprExpr (IntermediateAsData expr)) =
+  [trimming|
+    as_data($expr')
+  |]
+  where
+    expr' = generateExpression expr
+
 -- |
 -- Given a Move Sequence (not SequenceExpr), generates the corresponding Aiken code,
 -- without braces '{' '}'. Braces should be handled both by `generateExpression` and top level function

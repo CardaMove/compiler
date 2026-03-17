@@ -16,7 +16,8 @@ module Move.Translations.Utils
     resolveParametricType,
     mapTemporaryBindingsToScope,
     tryIO,
-    utilsLibAddress
+    utilsLibAddress,
+    isTypeParametric,
   )
 where
 
@@ -29,6 +30,7 @@ import Data.Generics.Uniplate.Data (transformBiM)
 import Data.List qualified as List
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
+import Data.Set qualified as Set
 import Move.AST
 
 -- | Unity type ()
@@ -388,6 +390,7 @@ inferExprType (IntermediateExprExpr (IntermediateMoveFrom _ t _)) _ = TypeTuple 
 inferExprType (IntermediateExprExpr (IntermediateTypeWitnessExprExpr _)) _ = IntermediateTypeWitnessType
 inferExprType (IntermediateExprExpr expr@(IntermediateScopeBinding _)) _ = error $ "An IntermediateScopeBinding should never be present in the AST: " ++ show expr
 inferExprType (IntermediateExprExpr (IntermediateReferenceExtension _ _ t)) _ = t
+inferExprType (IntermediateExprExpr (IntermediateAsData _)) _ = IntermediateTypeData
 
 -- |
 -- Given a type that might be parametric, along with the type parameters of the record (or function) and their respective type arguments,
@@ -441,3 +444,21 @@ tryIO stepName step = do
   case res of
     Left err -> error $ "Failed at " ++ stepName ++ ": " ++ displayException (err :: ErrorCall)
     Right val -> pure val
+
+-- |
+-- Checks if a type occurrence is parametric or not,
+-- based on the identifiers of the type parameters defined on that function signature
+isTypeParametric :: Type -> Set.Set Identifier -> Bool
+isTypeParametric (TypeConstructor (LocalNameAccessChain tCons) tArgs) tParams = Set.member tCons tParams || any (`isTypeParametric` tParams) tArgs
+isTypeParametric (TypeConstructor _ tArgs) tParams = any (`isTypeParametric` tParams) tArgs
+isTypeParametric (TypeImmutableRef t) tParams = isTypeParametric t tParams
+isTypeParametric (TypeMutableRef t) tParams = isTypeParametric t tParams
+isTypeParametric (TypeTuple ts) tParams = any (`isTypeParametric` tParams) ts
+isTypeParametric TypeUnknown _ = False
+isTypeParametric IntermediateTypeScopes _ = False
+-- NOTE: An arrow type might be parametric on some outer type names, but in this case should never be encountered in any case
+isTypeParametric (TypeArrow _ _) _ = False
+-- A struct declaration type should never be encountered
+isTypeParametric t@(IntermediateTypeNamedStructDeclaration _ _) _ = error $ "Unexpected type: " ++ show t
+isTypeParametric IntermediateTypeWitnessType _ = False
+isTypeParametric IntermediateTypeData _ = False
