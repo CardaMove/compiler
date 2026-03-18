@@ -7,7 +7,7 @@ module Move.Translations.Utils
     Scope,
     cpsIdentifier,
     isIdentifierInScope,
-    getIdentifierFromScopes,
+    getNacFromScopes,
     getUseIdentifiers,
     extractVariablesFromBindings,
     extractVariablesFromSingleBind,
@@ -78,13 +78,14 @@ isIdentifierInScope ident (x : xs) = Map.member ident x || isIdentifierInScope i
 -- Returns the UUID and inferred type of an identifier present in the scope.
 --
 -- Throws an error if the identifier is not present in the scope
-getIdentifierFromScopes :: Identifier -> [Scope] -> VariableAnnotations
-getIdentifierFromScopes ident [] = error ("Cannot get identifier type. Not in scope: " ++ show ident)
-getIdentifierFromScopes ident (x : xs) = case Map.lookup ident x of
-  -- The identifier is not in this scope, proceed recursively
-  Nothing -> getIdentifierFromScopes ident xs
-  -- The identifier is in this scope, return its UUID and type (if available)
-  Just res -> res
+getNacFromScopes :: NameAccessChain -> [Scope] -> VariableAnnotations
+getNacFromScopes _ = error "TODO:"
+-- getNacFromScopes ident [] = error ("Cannot get identifier type. Not in scope: " ++ show ident)
+-- getNacFromScopes ident (x : xs) = case Map.lookup ident x of
+--   -- The identifier is not in this scope, proceed recursively
+--   Nothing -> getNacFromScopes ident xs
+--   -- The identifier is in this scope, return its UUID and type (if available)
+--   Just res -> res
 
 -- |
 -- Given a Use, returns all the alias identifiers.
@@ -287,10 +288,9 @@ inferExprType expr@(DotOrIndexChainExpr (DotAccess {dotAccessLeft, dotAccessRigh
     TypeMutableRef (TypeConstructor typeCons typeArgs) -> resolveDotAccess typeCons typeArgs
     exprType -> error $ "Dot access to non-struct type: " ++ show expr ++ " with type: " ++ show exprType
   where
-    -- TODO: For now, only local names are supported
     resolveDotAccess :: NameAccessChain -> [Type] -> Type
-    resolveDotAccess (LocalNameAccessChain ident) typeArgs =
-      case getIdentifierFromScopes ident scopes of
+    resolveDotAccess nac typeArgs =
+      case getNacFromScopes nac scopes of
         VariableAnnotations _ t@(IntermediateTypeNamedStructDeclaration typeParams namedFields) ->
           if length typeParams /= length typeArgs
             then error $ "Found a type constructor with wrong number of type arguments: " ++ show t
@@ -298,7 +298,6 @@ inferExprType expr@(DotOrIndexChainExpr (DotAccess {dotAccessLeft, dotAccessRigh
               Nothing -> error $ "Found a dotAccessRight not present in the corresponding named struct declaration: " ++ show dotAccessLeft ++ ", " ++ show t
               Just NamedField {fieldType} -> resolveParametricType fieldType (zip typeParams typeArgs)
         _ -> error $ "Found dotAccessLeft that is not a named struct: " ++ show dotAccessLeft
-    resolveDotAccess name _ = error $ "Unsupported name access chain: " ++ show name
 
 -- Literal values
 inferExprType (ValueLiteral (Address _)) _ = addressType
@@ -313,21 +312,20 @@ inferExprType (TypedExprTerm (TypedExpr {typedExprType})) _ = typedExprType
 -- Casting
 inferExprType (CastingTerm (Casting {castingType})) _ = castingType
 -- Named struct expression
-inferExprType (NamedStructExprExpr expr@(NamedStructExpr {nseNameAccessChain = LocalNameAccessChain structName, nseTypeArgs})) scopes =
-  case getIdentifierFromScopes structName scopes of
+inferExprType (NamedStructExprExpr expr@(NamedStructExpr {nseNameAccessChain, nseTypeArgs})) scopes =
+  case getNacFromScopes nseNameAccessChain scopes of
     VariableAnnotations _ (IntermediateTypeNamedStructDeclaration typeParams _) ->
       -- TODO: For now, inference of type arguments is not performed
       if length typeParams /= length nseTypeArgs
         then error $ "Found a named struct expression with wrong number of type arguments: " ++ show expr
-        else TypeConstructor (LocalNameAccessChain structName) nseTypeArgs
+        else TypeConstructor nseNameAccessChain nseTypeArgs
     _ -> error $ "Found a named struct expression that does not correspond to a struct declaration: " ++ show expr
--- TODO: non local nac
-inferExprType (NamedStructExprExpr (NamedStructExpr {nseNameAccessChain = _})) scopes = TypeUnknown
 -- Positional struct expression or function call
--- TODO: type parameters for now are ignored (for structs), also non-local name access chains
+-- TODO: type parameters for now are ignored (for structs)
 -- FIXME: follow what done for named structs
-inferExprType (PositionalStructExprOrFunctionCallExpr expr@(PositionalStructExprOrFunctionCall {pseofcNameAccessChain = LocalNameAccessChain calledIdent, pseofcTypeArgs})) scopes =
-  case getIdentifierFromScopes calledIdent scopes of
+-- FIXME: There seems to be more logic here, to resolve parametric types. Probably add to the named struct expression above
+inferExprType (PositionalStructExprOrFunctionCallExpr expr@(PositionalStructExprOrFunctionCall {pseofcNameAccessChain, pseofcTypeArgs})) scopes =
+  case getNacFromScopes pseofcNameAccessChain scopes of
     -- The type of a function call is the return type.
     -- It is assumed that the correct number of arguments is passed
     VariableAnnotations _ (TypeArrow typeParams ts) ->
@@ -338,18 +336,12 @@ inferExprType (PositionalStructExprOrFunctionCallExpr expr@(PositionalStructExpr
         else resolveParametricType (last ts) (zip typeParams pseofcTypeArgs)
     -- Otherwise, for a struct, it is the name of the struct
     VariableAnnotations _ structType -> structType
--- TODO: non local nac
-inferExprType (PositionalStructExprOrFunctionCallExpr (PositionalStructExprOrFunctionCall {pseofcNameAccessChain = _})) scopes = TypeUnknown
 -- Function bang call has unit type
 inferExprType (FunctionBangCallExpr _) _ = unitType
 -- Name access chain
-inferExprType (NameAccessChainExpr (LocalNameAccessChain ident)) scopes =
-  let VariableAnnotations _ identType = getIdentifierFromScopes ident scopes
+inferExprType (NameAccessChainExpr nac) scopes =
+  let VariableAnnotations _ identType = getNacFromScopes nac scopes
    in identType
--- TODO: resolve alias
-inferExprType (NameAccessChainExpr (AliasedNameAccessChain address ident)) scopes = TypeUnknown
--- TODO: resolve alias
-inferExprType (NameAccessChainExpr (UnaliasedNameAccessChain address ident1 ident2)) scopes = TypeUnknown
 -- Sequence
 inferExprType (SequenceExpr (Sequence {sequenceEndExpr})) scopes =
   case sequenceEndExpr of

@@ -7,34 +7,37 @@ import Data.Maybe (fromMaybe)
 import Data.Set qualified as Set
 import Move.AST
 import Move.Translations.TraversalUtils (TraversalMapper, traversalIdentity, traverseRootPostOrder)
-import Move.Translations.Utils (Scope, VariableAnnotations (VariableAnnotations), cpsIdentifier, getIdentifierFromScopes, inferExprType, mapTemporaryBindingsToScope, unitType)
+import Move.Translations.Utils (Scope, VariableAnnotations (VariableAnnotations), cpsIdentifier, getNacFromScopes, inferExprType, mapTemporaryBindingsToScope, unitType)
 
 -- |
 -- Given the AST, marks all the variables that need to be inserted in the explicit local scope
 markVariablesForLocalScope :: Root -> Set.Set AnnotatedUUID
-markVariablesForLocalScope root = snd $ traverseRootPostOrder exprMapper bindsMapper root Set.empty
+markVariablesForLocalScope root = snd $ traverseRootPostOrder vaiableMarker bindsMapper root Set.empty
   where
     insertMaybe :: (Ord a) => Maybe a -> Set.Set a -> Set.Set a
     insertMaybe Nothing set = set
     insertMaybe (Just val) set = Set.insert val set
 
     -- Given any expression, returns the UUID of the leftmost (local) identifier, if it is found
-    getLeftmostIdentifier :: Expr -> [Scope] -> Maybe AnnotatedUUID
-    getLeftmostIdentifier (NameAccessChainExpr (LocalNameAccessChain ident)) scopes =
-      case getIdentifierFromScopes ident scopes of
+    getLeftmostIdentInRef :: Expr -> [Scope] -> Maybe AnnotatedUUID
+    getLeftmostIdentInRef (NameAccessChainExpr (LocalNameAccessChain ident)) scopes =
+      case getNacFromScopes (LocalNameAccessChain ident) scopes of
         VariableAnnotations (Just identUUID) _ -> Just identUUID
         -- Throw an error if the identifier has no UUID
         _ -> error $ "Found identifier in right value without UUID when marking for local scope " ++ show ident
-    getLeftmostIdentifier (DotOrIndexChainExpr DotAccess {dotAccessLeft}) scopes = getLeftmostIdentifier dotAccessLeft scopes
-    getLeftmostIdentifier _ _ = Nothing
+    getLeftmostIdentInRef (DotOrIndexChainExpr DotAccess {dotAccessLeft}) scopes = getLeftmostIdentInRef dotAccessLeft scopes
+    -- References to non-local name access chains would make sense only for immutable references to module constants,
+    -- but the Move compiler seems to complain in any case
+    getLeftmostIdentInRef nac@(NameAccessChainExpr _) _ = error $ "Unsupported reference to non-local name access chain: " ++ show nac
+    getLeftmostIdentInRef _ _ = Nothing
 
-    exprMapper :: TraversalMapper Expr (Set.Set AnnotatedUUID)
+    vaiableMarker :: TraversalMapper Expr (Set.Set AnnotatedUUID)
     -- Every referenced variable `&[mut] a[.b.c]` should be added to the local scope
-    exprMapper expr@(UnaryOpExpr (MutableReference referencedExpr)) scopes res = (expr, insertMaybe (getLeftmostIdentifier referencedExpr scopes) res)
-    exprMapper expr@(UnaryOpExpr (ImmutableReference referencedExpr)) scopes res = (expr, insertMaybe (getLeftmostIdentifier referencedExpr scopes) res)
+    vaiableMarker expr@(UnaryOpExpr (MutableReference referencedExpr)) scopes res = (expr, insertMaybe (getLeftmostIdentInRef referencedExpr scopes) res)
+    vaiableMarker expr@(UnaryOpExpr (ImmutableReference referencedExpr)) scopes res = (expr, insertMaybe (getLeftmostIdentInRef referencedExpr scopes) res)
     -- Every mutated variable `a[.b.c] = ...` should be added to the local scope
-    exprMapper expr@(AssignmentExpr (Assignment {assignmentLeft})) scopes res = (expr, insertMaybe (getLeftmostIdentifier assignmentLeft scopes) res)
-    exprMapper expr _scopes res = (expr, res)
+    vaiableMarker expr@(AssignmentExpr (Assignment {assignmentLeft})) scopes res = (expr, insertMaybe (getLeftmostIdentInRef assignmentLeft scopes) res)
+    vaiableMarker expr _scopes res = (expr, res)
 
     bindsMapper :: TraversalMapper Bindings (Set.Set AnnotatedUUID)
     -- Regarding let bindings, there is no need to analyze anything
@@ -93,7 +96,7 @@ unconstrDotAccess expr' scopes' =
         accessField :: NameAccessChain -> Identifier -> Int
         -- The type of the left part of the dot access must be a (local) named struct
         accessField (LocalNameAccessChain tCons) fieldIdent =
-          case getIdentifierFromScopes tCons scopes of
+          case getNacFromScopes (LocalNameAccessChain tCons) scopes of
             VariableAnnotations _ str@(IntermediateTypeNamedStructDeclaration _ namedFields) ->
               -- If so, access the correct field
               case elemIndex fieldIdent $ map fieldIdentifier namedFields of
@@ -188,7 +191,7 @@ rewriteRefs expr@(UnaryOpExpr (Dereference dereferencedExpr)) scopes state = (In
 -- -- Note how there is no need to check if `b` is a reference, since refs can not be stored as struct fields
 -- rewriteRefs expr@(DotOrIndexChainExpr (DotAccess{dotAccessLeft, dotAccessRight})) scopes state =
 --   let (nac, idx, t) = unconstrDotAccess expr scopes
---    in case getIdentifierFromScopes nac scopes of
+--    in case getNacFromScopes nac scopes of
 --      VariableAnnotations _ (TypeImmutableRef _) ->
 
 -- Also rewrite `borrow_global_mut` and `borrow_global`, treating them as normal references but on the global storage
@@ -253,7 +256,7 @@ rewriteVars markedVars = rewriteVars'
   where
     -- Handle any local identifier, including the leftmost identifier in any dot access chain
     rewriteVars' expr@(NameAccessChainExpr (LocalNameAccessChain ident)) scopes state =
-      case getIdentifierFromScopes ident scopes of
+      case getNacFromScopes (LocalNameAccessChain ident) scopes of
         VariableAnnotations (Just identUUID) identType ->
           -- Replace the variable only if it is marked as such
           if Set.member identUUID markedVars
@@ -419,11 +422,8 @@ rewriteInlineStateMutation scopeUUID = rewriteInlineStateMutation'
                 }
          in -- and replace the function call with the temp variable
             (NameAccessChainExpr $ LocalNameAccessChain tempIdentifier', (currUUID + 1, Map.insert tempIdentifier' newBinding bindingsToAdd))
-    -- TODO: For now considers just functions with a local name. To support calling functions in other module,
-    -- the traversal should probably be rewritten so to support different modules and/or aliases and similar
-    -- It also considers the fact that a function call might access and update the global storage
-    rewriteInlineStateMutation' expr@(PositionalStructExprOrFunctionCallExpr funcCall@PositionalStructExprOrFunctionCall {pseofcNameAccessChain = LocalNameAccessChain funcIdent, pseofcFields}) scopes (currUUID, bindingsToAdd) =
-      case getIdentifierFromScopes funcIdent scopes of
+    rewriteInlineStateMutation' expr@(PositionalStructExprOrFunctionCallExpr funcCall@PositionalStructExprOrFunctionCall {pseofcNameAccessChain, pseofcFields}) scopes (currUUID, bindingsToAdd) =
+      case getNacFromScopes pseofcNameAccessChain scopes of
         -- In this case, it is a function call and not a positional struct
         VariableAnnotations _ (TypeArrow _ _) ->
           -- Since it is not possible (without a proper static analysis) to know if the function call accesses or modify the state,

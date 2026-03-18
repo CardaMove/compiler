@@ -58,8 +58,8 @@ translateTParamsInRoot root = do
 
     -- Rewrites function calls to add the type witnesses as function parameters
     rewriteFunctionCalls :: TraversalMapper Expr ()
-    rewriteFunctionCalls expr@(PositionalStructExprOrFunctionCallExpr fc@PositionalStructExprOrFunctionCall {pseofcNameAccessChain = LocalNameAccessChain funcIdent, pseofcFields, pseofcTypeArgs}) scopes st =
-      case getIdentifierFromScopes funcIdent scopes of
+    rewriteFunctionCalls expr@(PositionalStructExprOrFunctionCallExpr fc@PositionalStructExprOrFunctionCall {pseofcNameAccessChain, pseofcFields, pseofcTypeArgs}) scopes st =
+      case getNacFromScopes pseofcNameAccessChain scopes of
         -- In this case, it is a function call and not a positional struct
         VariableAnnotations _ (TypeArrow _ _) ->
           let -- Always add the corresponding type witnesses
@@ -72,8 +72,6 @@ translateTParamsInRoot root = do
            in (PositionalStructExprOrFunctionCallExpr $ fc {pseofcFields = pseofcFields'}, st)
         -- Otherwise, leave the function call / positional struct unchanged
         _ -> (expr, st)
-    -- TODO: non local function calls
-    rewriteFunctionCalls expr@(PositionalStructExprOrFunctionCallExpr _) _scopes _st = error $ "Non-local function calls currently not supported: " ++ show expr
     rewriteFunctionCalls expr _scopes st = (expr, st)
 
     -- Maps any type parameter to a corresponding function parameter

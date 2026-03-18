@@ -9,7 +9,7 @@ import Data.Map qualified as Map
 import Data.Set qualified as Set
 import Move.AST
 import Move.Translations.TraversalUtils (traverseExprPostOrder, traverseRootPostOrder, traversalIdentity)
-import Move.Translations.Utils (Scope, VariableAnnotations (VariableAnnotations), booleanType, getIdentifierFromScopes, isIdentifierInScope)
+import Move.Translations.Utils (Scope, VariableAnnotations (VariableAnnotations), booleanType, getNacFromScopes, isIdentifierInScope)
 
 -- |
 -- Translates all `loop expr` expressions into `while(true) expr`.
@@ -122,7 +122,7 @@ mapWhileToFunction (While {whileCondition, whileExpr}) scopes containsBreak func
       -- Get all the free variables with their type
       -- Note that variables are sorted so to avoid confusion when testing
       allFreeVars = sort $ nub (freeVarsInConditionExpr ++ freeVarsInBodyExpr)
-      freeVarsWithType = map (\ident -> (ident, getIdentifierFromScopes ident scopes')) allFreeVars
+      freeVarsWithType = map (\ident -> (ident, getNacFromScopes (LocalNameAccessChain ident) scopes')) allFreeVars
       --
       -- For each free variable, create a function parameter as a mutable reference
       functionParameters = map (uncurry mapFreeVariableToFunctionParameter) freeVarsWithType

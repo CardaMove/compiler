@@ -6,7 +6,7 @@ import Data.Sequence (fromList, mapWithIndex)
 import Data.Set qualified as Set
 import Move.AST
 import Move.Translations.TraversalUtils (TraversalMapper, traversalIdentity, traverseRootPostOrder)
-import Move.Translations.Utils (VariableAnnotations (..), getIdentifierFromScopes, inferExprType, isTypeParametric)
+import Move.Translations.Utils (VariableAnnotations (..), getNacFromScopes, inferExprType, isTypeParametric)
 
 -- |
 -- Given an AST with parametric polymorphism, rewrites it by removing generics and replacing them via
@@ -122,8 +122,8 @@ castExpr expr _ t =
 --
 -- Similarly, it also performs an (up)casting when function arguments are passed to function parameters that are themselves type-parametric
 insertCasting :: TraversalMapper Expr ()
-insertCasting expr@(PositionalStructExprOrFunctionCallExpr fc@PositionalStructExprOrFunctionCall {pseofcNameAccessChain = LocalNameAccessChain funcIdent, pseofcFields}) scopes st =
-  case getIdentifierFromScopes funcIdent scopes of
+insertCasting expr@(PositionalStructExprOrFunctionCallExpr fc@PositionalStructExprOrFunctionCall {pseofcNameAccessChain, pseofcFields}) scopes st =
+  case getNacFromScopes pseofcNameAccessChain scopes of
     -- In this case, it is a function call and not a positional struct
     VariableAnnotations _ (TypeArrow tParams tFunc) ->
       let tParamsSet = Set.fromList tParams
@@ -156,8 +156,6 @@ insertCasting expr@(PositionalStructExprOrFunctionCallExpr fc@PositionalStructEx
        in (expr', st)
     -- Otherwise, leave the function call / positional struct unchanged
     _ -> (expr, st)
--- TODO: non local function calls
-insertCasting expr@(PositionalStructExprOrFunctionCallExpr _) _scopes _st = error $ "Non-local function calls currently not supported: " ++ show expr
 insertCasting expr _scopes st = (expr, st)
 
 -- |

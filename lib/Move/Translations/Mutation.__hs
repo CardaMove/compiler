@@ -6,7 +6,7 @@ import Data.Set qualified as Set
 import Data.Maybe (fromMaybe)
 import Move.AST (AnnotatedUUID, Assignment (Assignment, assignmentLeft, assignmentRight), DotOrIndexChain (DotAccess, dotAccessLeft), Expr (AssignmentExpr, DotOrIndexChainExpr, NameAccessChainExpr, UnaryOpExpr), Identifier, NameAccessChain (LocalNameAccessChain), Root, UnaryExpr (MutableReference), Type (TypeImmutableRef, TypeMutableRef), Binded (..), Bindings (..))
 import Move.Translations.TraversalUtils (TraversalMapper, traverseRootPostOrder)
-import Move.Translations.Utils (VariableAnnotations (VariableAnnotations), getIdentifierFromScopes, inferExprType, extractVariablesFromBindings, Scope)
+import Move.Translations.Utils (VariableAnnotations (VariableAnnotations), getNacFromScopes, inferExprType, extractVariablesFromBindings, Scope)
 
 -- |
 -- Results of the function `markMutabilityInRoot`
@@ -34,7 +34,7 @@ markMutabilityInRoot root = snd $ traverseRootPostOrder exprMapper bindsMapper r
     -- Given an expression, returns a set with all UUIDs present in it
     findUUIDsInExpr :: Expr -> [Scope] -> Set.Set AnnotatedUUID
     findUUIDsInExpr (NameAccessChainExpr (LocalNameAccessChain ident)) scopes =
-      case getIdentifierFromScopes ident scopes of
+      case getNacFromScopes ident scopes of
         VariableAnnotations (Just identUUID) _ -> Set.singleton identUUID
         _ -> Set.empty
     findUUIDsInExpr expr' scopes = concatSet (`findUUIDsInExpr` scopes) (children expr')
@@ -56,7 +56,7 @@ markMutabilityInRoot root = snd $ traverseRootPostOrder exprMapper bindsMapper r
     exprMapper :: TraversalMapper Expr MutabilityResult
     -- If `&mut a` is found, mark `a` as (possibly) mutated
     exprMapper expr@(UnaryOpExpr (MutableReference (NameAccessChainExpr (LocalNameAccessChain ident)))) scopes mutRes@MutabilityResult {mutatedVars} =
-      case getIdentifierFromScopes ident scopes of
+      case getNacFromScopes ident scopes of
         VariableAnnotations (Just identUUID) _ -> (expr, mutRes {mutatedVars = Set.insert identUUID mutatedVars})
         -- Throw an error if the identifier is 
         _ -> error $ "Found identifier in right value without annotations when performing mutability analysis: " ++ show ident
@@ -72,7 +72,7 @@ markMutabilityInRoot root = snd $ traverseRootPostOrder exprMapper bindsMapper r
               pickLeft _ = error $ "Expected a dot chain expression (or a local name) as left value of an assignment: " ++ show assignmentLeft
 
           -- Here we have the UUID of the leftmost identifier (meaning the identifier of `a`)
-          leftmostUUID :: Maybe AnnotatedUUID = case getIdentifierFromScopes leftmostIdent scopes of
+          leftmostUUID :: Maybe AnnotatedUUID = case getNacFromScopes leftmostIdent scopes of
             VariableAnnotations maybeUUID _ -> maybeUUID
 
           -- Then, add `a` to mutated variables (or references) and, if it's a reference,
