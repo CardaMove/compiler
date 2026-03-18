@@ -9,6 +9,7 @@ import Move.Translations.PostProcessing (postProcessRoot)
 import Move.Translations.Scopes (addLocalScopeInRoot, markVariablesForLocalScope)
 import Move.Translations.TypeWitness (translateTParamsInRoot)
 import Move.Translations.Utils (annotateBindingsWithUUID, tryIO)
+import Move.Translations.Polymorphism (translatePolymorphismInRoot)
 
 -- |
 -- Given the whole parsed ASTs, translates them
@@ -33,4 +34,6 @@ transpileRoot fileName root addrAssoc = do
 
   step4LocalScope <- tryIO (fileName ++ ": addLocalScopeInRoot") $ evaluate $ addLocalScopeInRoot step3TypeWitness markedVars uuidAfterTypeWitness
 
-  tryIO (fileName ++ ": postProcessing") $ evaluate (fileName, postProcessRoot step4LocalScope addrAssoc)
+  step5Polymorphism <- tryIO (fileName ++ ": translatePolymorphismInRoot") $ evaluate $ translatePolymorphismInRoot step4LocalScope
+
+  tryIO (fileName ++ ": postProcessing") $ evaluate (fileName, postProcessRoot step5Polymorphism addrAssoc)

@@ -1,91 +1,114 @@
-RModule
-( Module
-    { moduleAddress = NamedAddress (Identifier "NamedAddr"),
-        moduleIdentifier = Identifier "Playground6",
-        moduleTopLevels =
-        [ TopLevelNamedStruct (NamedStruct {namedStructIdentifier = Identifier "A", namedStructTypeParameters = [], namedStructAbilities = [Drop], namedStructFields = [NamedField {fieldIdentifier = Identifier "b", fieldType = TypeConstructor (LocalNameAccessChain (Identifier "bool")) []}]}),
-            TopLevelNamedStruct (NamedStruct {namedStructIdentifier = Identifier "Wrapper", namedStructTypeParameters = [TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "tw_content", typeConstraints = [Drop]}], namedStructAbilities = [Drop], namedStructFields = [NamedField {fieldIdentifier = Identifier "amount", fieldType = TypeConstructor (LocalNameAccessChain (Identifier "u64")) []}, NamedField {fieldIdentifier = Identifier "content", fieldType = TypeConstructor (LocalNameAccessChain (Identifier "tw_content")) []}]}),
-            TopLevelFunction
-            ( Function
-                { functionHasNativeModifier = False,
-                    functionVisibilityModifier = Nothing,
-                    functionHasEntryModifier = False,
-                    functionName = Identifier "wrap_content",
-                    functionTypeParameters = [TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "tw_content", typeConstraints = [Drop]}],
-                    functionParameters = [Parameter {parameterIdentifier = Identifier "content", parameterType = IntermediateTypeData, parameterUUID = Just 1}, Parameter {parameterIdentifier = Identifier "tw_content", parameterType = IntermediateTypeWitnessType, parameterUUID = Just 6}, Parameter {parameterIdentifier = Identifier "cps_state", parameterType = IntermediateTypeScopes, parameterUUID = Just (-1)}],
-                    functionReturnType = Just (TypeTuple [TypeConstructor (LocalNameAccessChain (Identifier "Wrapper")) [IntermediateTypeData], IntermediateTypeScopes]),
-                    functionAcquires = [],
-                    functionBody =
-                    Just
-                        ( Sequence
-                            { sequenceUses = [],
-                            sequenceItems =
-                                [ SequenceItemBindExpr (Bindings {bindings = BindedSingle (BindIdentifier (Identifier "cps_state") (Just (-1))), bindingsBindType = Just IntermediateTypeScopes, bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePushScope (Identifier "cps_state")))}),
-                                SequenceItemBindExpr (Bindings {bindings = BindedSingle (BindIdentifier (Identifier "w") (Just 2)), bindingsBindType = Nothing, bindingsBindExpr = Just (NamedStructExprExpr (NamedStructExpr {nseNameAccessChain = LocalNameAccessChain (Identifier "Wrapper"), nseTypeArgs = [IntermediateTypeData], nseFields = [NamedStructExprField {nsefIdentifier = Identifier "amount", nsefExpr = Just (ValueLiteral (Numerical (LiteralIntDec 1)))}, NamedStructExprField {nsefIdentifier = Identifier "content", nsefExpr = Just (NameAccessChainExpr (LocalNameAccessChain (Identifier "content")))}]}))})
-                                ],
-                            sequenceEndExpr = Just (CommaExpr [NameAccessChainExpr (LocalNameAccessChain (Identifier "w")), IntermediateExprExpr (IntermediatePopScope (Identifier "cps_state"))])
-                            }
-                        ),
-                    functionUUID = Just 0
-                }
-            ),
-            TopLevelFunction
-            ( Function
-                { functionHasNativeModifier = False,
-                    functionVisibilityModifier = Nothing,
-                    functionHasEntryModifier = False,
-                    functionName = Identifier "main",
-                    functionTypeParameters = [],
-                    functionParameters = [Parameter {parameterIdentifier = Identifier "cps_state", parameterType = IntermediateTypeScopes, parameterUUID = Just (-1)}],
-                    functionReturnType = Just (TypeTuple [TypeTuple [], IntermediateTypeScopes]),
-                    functionAcquires = [],
-                    functionBody =
-                    Just
-                        ( Sequence
-                            { sequenceUses = [],
-                            sequenceItems =
-                                [ SequenceItemBindExpr (Bindings {bindings = BindedSingle (BindIdentifier (Identifier "cps_state") (Just (-1))), bindingsBindType = Just IntermediateTypeScopes, bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePushScope (Identifier "cps_state")))}),
-                                SequenceItemBindExpr (Bindings {bindings = BindedSingle (BindIdentifier (Identifier "content") (Just 4)), bindingsBindType = Nothing, bindingsBindExpr = Just (NamedStructExprExpr (NamedStructExpr {nseNameAccessChain = LocalNameAccessChain (Identifier "A"), nseTypeArgs = [], nseFields = [NamedStructExprField {nsefIdentifier = Identifier "b", nsefExpr = Just (ValueLiteral (Boolean True))}]}))}),
-                                SequenceItemBindExpr
-                                    ( Bindings
-                                        { bindings = BindedTuple [BindIdentifier (Identifier "temp_7") (Just 7), BindIdentifier (Identifier "cps_state") (Just (-1))],
-                                        bindingsBindType = Just (TypeTuple [TypeConstructor (LocalNameAccessChain (Identifier "Wrapper")) [TypeConstructor (LocalNameAccessChain (Identifier "A")) []], IntermediateTypeScopes]),
-                                        bindingsBindExpr =
-                                            Just
-                                            ( CastingTerm
-                                                ( Casting
-                                                    { castingExpr = IntermediateExprExpr (IntermediateAsData (
-                                                        PositionalStructExprOrFunctionCallExpr
-                                                            ( PositionalStructExprOrFunctionCall
-                                                                { pseofcNameAccessChain = LocalNameAccessChain (Identifier "wrap_content"),
-                                                                pseofcTypeArgs = [TypeConstructor (LocalNameAccessChain (Identifier "A")) []],
-                                                                pseofcFields =
-                                                                    [ CastingTerm (
-                                                                    Casting {
-                                                                        castingExpr = IntermediateExprExpr (IntermediateAsData (NameAccessChainExpr (LocalNameAccessChain (Identifier "content")))),
-                                                                        castingType = IntermediateTypeData
-                                                                        }
-                                                                    ),
-                                                                    IntermediateExprExpr (IntermediateTypeWitnessExprExpr (IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "A")) [])),
-                                                                    NameAccessChainExpr (LocalNameAccessChain (Identifier "cps_state"))
-                                                                    ]
+  RModule
+  ( Module
+      { moduleAddress = NamedAddress (Identifier "NamedAddr"),
+          moduleIdentifier = Identifier "Playground6",
+          moduleTopLevels =
+          [ TopLevelNamedStruct (NamedStruct {namedStructIdentifier = Identifier "A", namedStructTypeParameters = [], namedStructAbilities = [Drop], namedStructFields = [NamedField {fieldIdentifier = Identifier "b", fieldType = TypeConstructor (LocalNameAccessChain (Identifier "bool")) []}]}),
+              TopLevelNamedStruct (NamedStruct {namedStructIdentifier = Identifier "Wrapper", namedStructTypeParameters = [TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "tw_content", typeConstraints = [Drop]}], namedStructAbilities = [Drop], namedStructFields = [NamedField {fieldIdentifier = Identifier "amount", fieldType = TypeConstructor (LocalNameAccessChain (Identifier "u64")) []}, NamedField {fieldIdentifier = Identifier "content", fieldType = TypeConstructor (LocalNameAccessChain (Identifier "tw_content")) []}]}),
+              TopLevelFunction
+              ( Function
+                  { functionHasNativeModifier = False,
+                      functionVisibilityModifier = Nothing,
+                      functionHasEntryModifier = False,
+                      functionName = Identifier "wrap_content",
+                      functionTypeParameters = [TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "tw_content", typeConstraints = [Drop]}],
+                      functionParameters = [Parameter {parameterIdentifier = Identifier "content", parameterType = IntermediateTypeData, parameterUUID = Just 1}, Parameter {parameterIdentifier = Identifier "tw_content", parameterType = IntermediateTypeWitnessType, parameterUUID = Just 6}, Parameter {parameterIdentifier = Identifier "cps_state", parameterType = IntermediateTypeScopes, parameterUUID = Just (-1)}],
+                      functionReturnType = Just (TypeTuple [TypeConstructor (LocalNameAccessChain (Identifier "Wrapper")) [IntermediateTypeData], IntermediateTypeScopes]),
+                      functionAcquires = [],
+                      functionBody =
+                      Just
+                          ( Sequence
+                              { sequenceUses = [],
+                              sequenceItems =
+                                  [ SequenceItemBindExpr (Bindings {bindings = BindedSingle (BindIdentifier (Identifier "cps_state") (Just (-1))), bindingsBindType = Just IntermediateTypeScopes, bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePushScope (Identifier "cps_state")))}),
+                                  SequenceItemBindExpr (Bindings {bindings = BindedSingle (BindIdentifier (Identifier "w") (Just 2)), bindingsBindType = Nothing, bindingsBindExpr = Just (NamedStructExprExpr (NamedStructExpr {nseNameAccessChain = LocalNameAccessChain (Identifier "Wrapper"), nseTypeArgs = [IntermediateTypeData], nseFields = [NamedStructExprField {nsefIdentifier = Identifier "amount", nsefExpr = Just (ValueLiteral (Numerical (LiteralIntDec 1)))}, NamedStructExprField {nsefIdentifier = Identifier "content", nsefExpr = Just (NameAccessChainExpr (LocalNameAccessChain (Identifier "content")))}]}))})
+                                  ],
+                              sequenceEndExpr = Just (CommaExpr [NameAccessChainExpr (LocalNameAccessChain (Identifier "w")), IntermediateExprExpr (IntermediatePopScope (Identifier "cps_state"))])
+                              }
+                          ),
+                      functionUUID = Just 0
+                  }
+              ),
+              TopLevelFunction
+              ( Function
+                  { functionHasNativeModifier = False,
+                      functionVisibilityModifier = Nothing,
+                      functionHasEntryModifier = False,
+                      functionName = Identifier "main",
+                      functionTypeParameters = [],
+                      functionParameters = [Parameter {parameterIdentifier = Identifier "cps_state", parameterType = IntermediateTypeScopes, parameterUUID = Just (-1)}],
+                      functionReturnType = Just (TypeTuple [TypeTuple [], IntermediateTypeScopes]),
+                      functionAcquires = [],
+                      functionBody =
+                      Just
+                          ( Sequence
+                              { sequenceUses = [],
+                              sequenceItems =
+                                  [ SequenceItemBindExpr (Bindings {bindings = BindedSingle (BindIdentifier (Identifier "cps_state") (Just (-1))), bindingsBindType = Just IntermediateTypeScopes, bindingsBindExpr = Just (IntermediateExprExpr (IntermediatePushScope (Identifier "cps_state")))}),
+                                  SequenceItemBindExpr (Bindings {bindings = BindedSingle (BindIdentifier (Identifier "content") (Just 4)), bindingsBindType = Nothing, bindingsBindExpr = Just (NamedStructExprExpr (NamedStructExpr {nseNameAccessChain = LocalNameAccessChain (Identifier "A"), nseTypeArgs = [], nseFields = [NamedStructExprField {nsefIdentifier = Identifier "b", nsefExpr = Just (ValueLiteral (Boolean True))}]}))}),
+                                  SequenceItemBindExpr
+                                      ( Bindings
+                                          { bindings = BindedTuple [BindIdentifier (Identifier "temp_7") (Just 7), BindIdentifier (Identifier "cps_state") (Just (-1))],
+                                          bindingsBindType = Just (TypeTuple [TypeConstructor (LocalNameAccessChain (Identifier "Wrapper")) [TypeConstructor (LocalNameAccessChain (Identifier "A")) []], IntermediateTypeScopes]),
+                                          bindingsBindExpr =
+                                              Just
+                                              ( SequenceExpr (Sequence{
+                                                      sequenceUses = [],
+                                                      sequenceItems = [
+                                                          SequenceItemBindExpr (Bindings{
+                                                              bindings = BindedTuple [
+                                                                  BindIdentifier (Identifier "el_0") Nothing,
+                                                                  BindIdentifier (Identifier "el_1") Nothing
+                                                              ],
+                                                              bindingsBindType = Just (
+                                                                  TypeTuple [
+                                                                      TypeConstructor (LocalNameAccessChain (Identifier "Wrapper")) [IntermediateTypeData],
+                                                                      IntermediateTypeScopes
+                                                                  ]
+                                                              ),
+                                                              bindingsBindExpr = Just (
+                                                                  PositionalStructExprOrFunctionCallExpr
+                                                                  ( PositionalStructExprOrFunctionCall
+                                                                      { pseofcNameAccessChain = LocalNameAccessChain (Identifier "wrap_content"),
+                                                                      pseofcTypeArgs = [TypeConstructor (LocalNameAccessChain (Identifier "A")) []],
+                                                                      pseofcFields =
+                                                                          [ CastingTerm (
+                                                                          Casting {
+                                                                              castingExpr = IntermediateExprExpr (IntermediateAsData (NameAccessChainExpr (LocalNameAccessChain (Identifier "content")))),
+                                                                              castingType = IntermediateTypeData
+                                                                              }
+                                                                          ),
+                                                                          IntermediateExprExpr (IntermediateTypeWitnessExprExpr (IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "A")) [])),
+                                                                          NameAccessChainExpr (LocalNameAccessChain (Identifier "cps_state"))
+                                                                          ]
+                                                                      }
+                                                                  )
+                                                              )
+                                                          })
+                                                      ],
+                                                      sequenceEndExpr = Just (
+                                                        CommaExpr [
+                                                            CastingTerm (
+                                                                Casting{
+                                                                    castingExpr = IntermediateExprExpr (IntermediateAsData (NameAccessChainExpr (LocalNameAccessChain (Identifier "el_0")))),
+                                                                    castingType = TypeConstructor (LocalNameAccessChain (Identifier "Wrapper")) [TypeConstructor (LocalNameAccessChain (Identifier "A")) []]
                                                                 }
-                                                            )
-                                                        )),
-                                                        castingType = TypeTuple [TypeConstructor (LocalNameAccessChain (Identifier "Wrapper")) [TypeConstructor (LocalNameAccessChain (Identifier "A")) []], IntermediateTypeScopes]
-                                                    }
-                                                )
-                                            )
-                                        }
-                                    ),
-                                SequenceItemBindExpr (Bindings {bindings = BindedSingle (BindIdentifier (Identifier "wrapped") (Just 5)), bindingsBindType = Just (TypeConstructor (LocalNameAccessChain (Identifier "Wrapper")) [TypeConstructor (LocalNameAccessChain (Identifier "A")) []]), bindingsBindExpr = Just (NameAccessChainExpr (LocalNameAccessChain (Identifier "temp_7")))})
-                                ],
-                            sequenceEndExpr = Just (CommaExpr [CommaExpr [], IntermediateExprExpr (IntermediatePopScope (Identifier "cps_state"))])
-                            }
-                        ),
-                    functionUUID = Just 3
-                }
-            )
-        ]
-    }
-)
+                                                            ),
+                                                            NameAccessChainExpr (LocalNameAccessChain (Identifier "el_1"))
+                                                        ]
+                                                      )
+                                                  })
+                                              )
+                                          }
+                                      ),
+                                  SequenceItemBindExpr (Bindings {bindings = BindedSingle (BindIdentifier (Identifier "wrapped") (Just 5)), bindingsBindType = Just (TypeConstructor (LocalNameAccessChain (Identifier "Wrapper")) [TypeConstructor (LocalNameAccessChain (Identifier "A")) []]), bindingsBindExpr = Just (NameAccessChainExpr (LocalNameAccessChain (Identifier "temp_7")))})
+                                  ],
+                              sequenceEndExpr = Just (CommaExpr [CommaExpr [], IntermediateExprExpr (IntermediatePopScope (Identifier "cps_state"))])
+                              }
+                          ),
+                      functionUUID = Just 3
+                  }
+              )
+          ]
+      }
+  )
