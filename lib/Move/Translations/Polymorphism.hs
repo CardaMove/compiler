@@ -27,6 +27,7 @@ translatePolymorphismInRoot root =
   where
     -- Helper function for `replaceTParamsWithData`
     -- Given the set of type parameter names and a type, replaces all the occurrences of the type parameter names with the intermediate supertype
+    -- Note that this function is intended to be used inside a `transformBi`
     rewriteTypeAsData :: Set.Set Identifier -> Type -> Type
     rewriteTypeAsData tParamIdents (TypeConstructor (LocalNameAccessChain tCons) [])
       | Set.member tCons tParamIdents = IntermediateTypeData
@@ -72,14 +73,17 @@ translatePolymorphismInRoot root =
                 where
                   -- Given a function argument and the type of the corresponding function parameter, wraps the argument
                   -- into an (up)casting if the type is parametric on the type params defined on the called function
+                  -- Note that the upcasted type is rewritten with the `IntermediateTypeData` when a parametric type occurs
+                  -- For example, an argument passed to a parameter of type `MyType<tw_a>` is upcasted to `MyType<IntermediateTypeData>`
                   -- TODO: Handle the tuple separately (one cast for each element)
+                  -- Update: maybe it is not needed, since they are cated to Data in any case
                   upcastFuncArg :: Expr -> Type -> Expr
                   upcastFuncArg fArg tParam
                     | isTypeParametric tParam tParamsSet =
                         CastingTerm $
                           Casting
                             { castingExpr = IntermediateExprExpr $ IntermediateAsData fArg,
-                              castingType = tParam
+                              castingType = transformBi (rewriteTypeAsData tParamsSet) tParam
                             }
                   upcastFuncArg fArg _ = fArg
 

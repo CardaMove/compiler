@@ -97,6 +97,7 @@ test-suite cardamove-test
       Move.Loader.LoaderSpec
       Move.ParserSpec
       Move.Translations.LoopsSpec
+      Move.Translations.PolymorphismSpec
       Move.Translations.ScopesSpec
       Move.Translations.TraversalUtilsSpec
       Move.Translations.TypeWitnessSpec

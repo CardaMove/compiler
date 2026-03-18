@@ -13,7 +13,6 @@ module Move.Translations.Utils
     extractVariablesFromSingleBind,
     annotateBindingsWithUUID,
     inferExprType,
-    resolveParametricType,
     mapTemporaryBindingsToScope,
     tryIO,
     utilsLibAddress,
@@ -417,7 +416,12 @@ resolveParametricType (TypeConstructor tCons tArgs) parentTArgs = TypeConstructo
 resolveParametricType (TypeImmutableRef t) parentTArgs = TypeImmutableRef $ resolveParametricType t parentTArgs
 resolveParametricType (TypeMutableRef t) parentTArgs = TypeMutableRef $ resolveParametricType t parentTArgs
 resolveParametricType (TypeTuple t) parentTArgs = TypeTuple $ map (`resolveParametricType` parentTArgs) t
-resolveParametricType t _ = error $ "Unexpected type: " ++ show t
+resolveParametricType TypeUnknown _ = TypeUnknown
+resolveParametricType IntermediateTypeScopes _ = IntermediateTypeScopes
+resolveParametricType t@(TypeArrow _ _) _ = error $ "Unexpected (possibly parametric) type: " ++ show t
+resolveParametricType t@(IntermediateTypeNamedStructDeclaration _ _) _ = error $ "Unexpected (possibly parametric) type: " ++ show t
+resolveParametricType IntermediateTypeWitnessType _ = IntermediateTypeWitnessType
+resolveParametricType IntermediateTypeData _ = IntermediateTypeData
 
 -- |
 -- Given all the temporary bindings, retrieves the original type of the temporary identifiers as a new Scope
