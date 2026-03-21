@@ -20,19 +20,24 @@ import Move.Translations.Utils
 -- NOTE: It is needed by the logic in `rewriteFunctionCalls` that the type witnesses whould be named identical to the corresponding type parameters
 --
 -- Additionally, rewrites all occurrences of type parameters in the body of the function.
-translateTParamsInRoot :: Root -> State Int Root
-translateTParamsInRoot root = do
+translateTParamsInRoot :: [Root] -> State Int [Root]
+translateTParamsInRoot roots = do
   -- Rewrite the function and struct definitions
-  root' <- case root of
-    RModule rModule@Module {moduleTopLevels} -> do
+  roots'' <- iterateWithOthers helper' roots
+  -- Then, rewrite the function calls
+  iterateWithOthers helper'' roots''
+  where
+    helper' :: Root -> [Root] -> State Int Root
+    helper' (RModule rModule@Module {moduleTopLevels}) _ = do
       mappedTL <- mapM rewriteTopLevel moduleTopLevels
       return $ RModule $ rModule {moduleTopLevels = mappedTL}
-    RScript rScript@Script {scriptTopLevels} -> do
+    helper' (RScript rScript@Script {scriptTopLevels}) _ = do
       mappedTL <- mapM rewriteTopLevel scriptTopLevels
       return $ RScript $ rScript {scriptTopLevels = mappedTL}
-  -- Then, rewrite the function calls
-  return $ fst $ traverseRootPostOrder rewriteFunctionCalls traversalIdentity root' ()
-  where
+
+    helper'' :: Root -> [Root] -> State Int Root
+    helper'' root otherRoots = return $ fst $ traverseRootPostOrder rewriteFunctionCalls traversalIdentity root () otherRoots
+
     -- Helper function, used to rewrite a single type argument to a type witness
     mapTArgToFArg :: Type -> Set.Set Identifier -> IntermediateTypeWitnessExpr
     mapTArgToFArg (TypeConstructor (LocalNameAccessChain tCons) tArgs) tParams
