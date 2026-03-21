@@ -8,15 +8,14 @@ module Move.Translations.Utils
     cpsIdentifier,
     isIdentifierInScope,
     getNacFromScopes,
-    getUseIdentifiers,
     extractVariablesFromBindings,
     extractVariablesFromSingleBind,
     annotateBindingsWithUUID,
     inferExprType,
-    mapTemporaryBindingsToScope,
     tryIO,
     utilsLibAddress,
     isTypeParametric,
+    iterateWithOthers,
   )
 where
 
@@ -55,7 +54,7 @@ data VariableAnnotations = VariableAnnotations (Maybe AnnotatedUUID) Type
   deriving (Eq, Show)
 
 -- | Represents a local scope
-type Scope = Map.Map Identifier VariableAnnotations
+type Scope = Map.Map NameAccessChain VariableAnnotations
 
 -- |
 -- The identifier to use for the whole CPS state,
@@ -70,37 +69,22 @@ utilsLibAddress = NamedAddress $ Identifier "utils"
 
 -- |
 -- Checks if the identifier is present in any of the input scopes
+-- FIXME: change to nac
 isIdentifierInScope :: Identifier -> [Scope] -> Bool
 isIdentifierInScope _ [] = False
-isIdentifierInScope ident (x : xs) = Map.member ident x || isIdentifierInScope ident xs
+isIdentifierInScope ident (x : xs) = Map.member (LocalNameAccessChain ident) x || isIdentifierInScope ident xs
 
 -- |
 -- Returns the UUID and inferred type of an identifier present in the scope.
 --
 -- Throws an error if the identifier is not present in the scope
 getNacFromScopes :: NameAccessChain -> [Scope] -> VariableAnnotations
-getNacFromScopes _ = error "TODO:"
--- getNacFromScopes ident [] = error ("Cannot get identifier type. Not in scope: " ++ show ident)
--- getNacFromScopes ident (x : xs) = case Map.lookup ident x of
---   -- The identifier is not in this scope, proceed recursively
---   Nothing -> getNacFromScopes ident xs
---   -- The identifier is in this scope, return its UUID and type (if available)
---   Just res -> res
-
--- |
--- Given a Use, returns all the alias identifiers.
---
--- Also handles the use members and the Self member
-getUseIdentifiers :: Use -> [Identifier]
-getUseIdentifiers use = case use of
-  Use {useIdentifier, useAlias, useMembers = []} -> [getIdentifier useAlias useIdentifier]
-  Use {useIdentifier, useMembers = [UseMember {useMemberIdentifier = Identifier "Self", useMemberUseAlias}]} -> [getIdentifier useMemberUseAlias useIdentifier]
-  Use {useMembers = [UseMember {useMemberIdentifier, useMemberUseAlias}]} -> [getIdentifier useMemberUseAlias useMemberIdentifier]
-  use'@Use {useMembers = x : xs} -> getUseIdentifiers use' {useMembers = [x]} ++ getUseIdentifiers use' {useMembers = xs}
-  where
-    getIdentifier :: Maybe Identifier -> Identifier -> Identifier
-    getIdentifier Nothing def = def
-    getIdentifier (Just ident) _ = ident
+getNacFromScopes nac [] = error $ "Name access chain not found on the scope: " ++ show nac
+getNacFromScopes nac (x : xs) = case Map.lookup nac x of
+  -- The identifier is not in this scope, proceed recursively
+  Nothing -> getNacFromScopes nac xs
+  -- The identifier is in this scope, return its UUID and type (if available)
+  Just res -> res
 
 -- |
 -- Given a binding, returns a list with every binded identifier along with its type, if it could be inferred
@@ -416,23 +400,6 @@ resolveParametricType IntermediateTypeWitnessType _ = IntermediateTypeWitnessTyp
 resolveParametricType IntermediateTypeData _ = IntermediateTypeData
 
 -- |
--- Given all the temporary bindings, retrieves the original type of the temporary identifiers as a new Scope
--- In this way, it is possible to infer the type of expressions that depend on those temporary identifiers
---
--- FIXME: This is called multiple times with the same input, and moreover might often be not needed
--- Can a possible fix be inserting this scope as the last one, and leave the work to the lazy evaluation?
-mapTemporaryBindingsToScope :: Map.Map Identifier Bindings -> Scope
-mapTemporaryBindingsToScope = Map.map handleTempBind
-  where
-    handleTempBind :: Bindings -> VariableAnnotations
-    handleTempBind
-      Bindings
-        { bindings = BindedTuple [BindIdentifier _ tempUUID, _],
-          bindingsBindType = Just (TypeTuple [tempT, IntermediateTypeScopes])
-        } = VariableAnnotations tempUUID tempT
-    handleTempBind bind = error $ "Unexpected temporary binding: " ++ show bind
-
--- |
 -- Tries to execute an IO operation, intercepting any error if thrown and providing additional informations
 tryIO :: String -> IO a -> IO a
 tryIO stepName step = do
@@ -458,3 +425,26 @@ isTypeParametric (TypeArrow _ _) _ = False
 isTypeParametric t@(IntermediateTypeNamedStructDeclaration _ _) _ = error $ "Unexpected type: " ++ show t
 isTypeParametric IntermediateTypeWitnessType _ = False
 isTypeParametric IntermediateTypeData _ = False
+
+-- |
+-- Used mainly to perform traversal over multiple ASTs
+--
+-- What it does is, given a mapper function and a list of elements to loop on,
+-- iterates over each element, providing all the others as a second argument for the mapper function.
+-- During the iteration, forwards a custom state and collects all the intermediate results,
+-- returning the final state and a list with all the mapped results
+iterateWithOthers :: (a -> [a] -> State st b) -> [a] -> State st [b]
+iterateWithOthers _ [] = return []
+iterateWithOthers func (x : xs) = iterateWithOthers' func [] x xs
+
+-- |
+-- Helper function for `iterateWithOthers`
+-- Accepts the mapper function, the previous (already mapped on) elements, the current element to map and the next elements yet to map
+iterateWithOthers' :: (a -> [a] -> State st b) -> [a] -> a -> [a] -> State st [b]
+iterateWithOthers' func prev curr [] = do
+  res <- func curr prev
+  return [res]
+iterateWithOthers' func prev curr (n : ns) = do
+  res <- func curr prev
+  resN <- iterateWithOthers' func (prev ++ [curr]) n ns
+  return (res : resN)

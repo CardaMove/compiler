@@ -7,7 +7,7 @@ import Data.Maybe (fromMaybe)
 import Data.Set qualified as Set
 import Move.AST
 import Move.Translations.TraversalUtils (TraversalMapper, traversalIdentity, traverseRootPostOrder)
-import Move.Translations.Utils (Scope, VariableAnnotations (VariableAnnotations), cpsIdentifier, getNacFromScopes, inferExprType, mapTemporaryBindingsToScope, unitType)
+import Move.Translations.Utils (Scope, VariableAnnotations (VariableAnnotations), cpsIdentifier, getNacFromScopes, inferExprType, unitType)
 
 -- |
 -- Given the AST, marks all the variables that need to be inserted in the explicit local scope
@@ -44,6 +44,26 @@ markVariablesForLocalScope root = snd $ traverseRootPostOrder vaiableMarker bind
     -- In fact, reference variables do not always need to be inserted in the local scope
     -- They should be added only if mutated themselves, like normal variables
     bindsMapper binds _scopes mutRes = (binds, mutRes)
+
+
+-- |
+-- Utility function
+--
+-- Given all the temporary bindings, retrieves the original type of the temporary identifiers as a new Scope
+-- In this way, it is possible to infer the type of expressions that depend on those temporary identifiers
+--
+-- FIXME: This is called multiple times with the same input, and moreover might often be not needed
+-- Can a possible fix be inserting this scope as the last one, and leave the work to the lazy evaluation?
+mapTemporaryBindingsToScope :: Map.Map Identifier Bindings -> Scope
+mapTemporaryBindingsToScope bindingsToAdd = Map.map handleTempBind $ Map.mapKeys LocalNameAccessChain bindingsToAdd
+  where
+    handleTempBind :: Bindings -> VariableAnnotations
+    handleTempBind
+      Bindings
+        { bindings = BindedTuple [BindIdentifier _ tempUUID, _],
+          bindingsBindType = Just (TypeTuple [tempT, IntermediateTypeScopes])
+        } = VariableAnnotations tempUUID tempT
+    handleTempBind bind = error $ "Unexpected temporary binding: " ++ show bind
 
 -- |
 -- Utility function

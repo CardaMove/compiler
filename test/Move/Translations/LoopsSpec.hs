@@ -54,7 +54,7 @@ testTranslateWhilesToFunctionsInRoot = describe "Tests for the function `transla
     let fromModule = parse $ scan fromModuleStr
     let toModule = parse $ scan toModuleStr
 
-    translateWhilesToFunctionsInRoot fromModule `shouldBe` toModule
+    translateWhilesToFunctionsInRoot [fromModule] `shouldBe` [toModule]
 
   it "Translates a while loop with break and continue inside" $ do
     fromModuleStr <- readFile "test/Move/Translations/files/LoopsSpec_2.move"
@@ -63,7 +63,7 @@ testTranslateWhilesToFunctionsInRoot = describe "Tests for the function `transla
     let fromModule = parse $ scan fromModuleStr
     let toModule = parse $ scan toModuleStr
 
-    translateWhilesToFunctionsInRoot fromModule `shouldBe` toModule
+    translateWhilesToFunctionsInRoot [fromModule] `shouldBe` [toModule]
 
 spec :: Spec
 spec = do

@@ -677,8 +677,7 @@ data IntermediateExpr
     -- `& r.b[.c]` where `r` is already a reference
     -- Note that it is possible to extend more than one field since only `r` needs to be a reference
     IntermediateReferenceExtension Expr [Int] Type
-  |
-    -- | Represents an invocation of `as_data(expr)` in Aiken
+  | -- | Represents an invocation of `as_data(expr)` in Aiken
     -- Used to solve problems when performing casting
     IntermediateAsData Expr
   deriving (Eq, Show, Read, Data, Typeable, Ord)
@@ -696,7 +695,7 @@ data IntermediateExpr
 -- To distinguish the two cases, two variant instances have been defined
 --
 -- In the final code, the type witness has to be translated as a variable name, while the other as a string value
-data IntermediateTypeWitnessExpr = 
-  IntermediateTypeWithnessC NameAccessChain [IntermediateTypeWitnessExpr]
+data IntermediateTypeWitnessExpr
+  = IntermediateTypeWithnessC NameAccessChain [IntermediateTypeWitnessExpr]
   | IntermediateTypeWitnessIdent Identifier
   deriving (Eq, Show, Read, Data, Typeable, Ord)

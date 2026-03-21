@@ -1,15 +1,16 @@
-module Move.Translations.Loops (translateLoopsToWhile, translateWhilesToFunctions, translateWhilesToFunctionsInRoot) where
+module Move.Translations.Loops (translateLoopsToWhile, translateWhilesToFunctionsInRoot) where
 
 -- Importing from Uniplate.Data allows to derive Biplate instances automatically from data types that derive Data
 
+import Control.Monad.State (State, evalState)
 import Data.Data (Data)
 import Data.Generics.Uniplate.Data (children, transformBi)
 import Data.List (nub, sort)
 import Data.Map qualified as Map
 import Data.Set qualified as Set
 import Move.AST
-import Move.Translations.TraversalUtils (traverseExprPostOrder, traverseRootPostOrder, traversalIdentity)
-import Move.Translations.Utils (Scope, VariableAnnotations (VariableAnnotations), booleanType, getNacFromScopes, isIdentifierInScope)
+import Move.Translations.TraversalUtils (traversalIdentity, traverseExprPostOrder, traverseRootPostOrder)
+import Move.Translations.Utils (Scope, VariableAnnotations (VariableAnnotations), booleanType, getNacFromScopes, isIdentifierInScope, iterateWithOthers)
 
 -- |
 -- Translates all `loop expr` expressions into `while(true) expr`.
@@ -116,7 +117,7 @@ mapWhileToFunction (While {whileCondition, whileExpr}) scopes containsBreak func
       -- Note: These new variables will not have any UUID
       scopes' =
         if containsBreak
-          then Map.fromList [(Identifier "break_hit", VariableAnnotations Nothing booleanType), (Identifier "continue_hit", VariableAnnotations Nothing booleanType)] : scopes
+          then Map.fromList [(LocalNameAccessChain $ Identifier "break_hit", VariableAnnotations Nothing booleanType), (LocalNameAccessChain $ Identifier "continue_hit", VariableAnnotations Nothing booleanType)] : scopes
           else scopes
 
       -- Get all the free variables with their type
@@ -331,24 +332,19 @@ traversalHelper expr _ (functionDecls, exprsWithBreak) =
    in (expr, (functionDecls, exprsWithBreak'))
 
 -- |
--- Given an expression, recursively converts each while loop into a function declaration,
--- and substitutes the loop expression with that function call
--- Also see documentation of `mapWhileToFunction`
-translateWhilesToFunctions :: Expr -> [Scope] -> (Expr, [Function])
-translateWhilesToFunctions expr scopes =
-  let (expr', (functionDecls, _)) = traverseExprPostOrder traversalHelper traversalIdentity expr scopes ([], Set.empty)
-   in (expr', functionDecls)
-
--- |
 -- Given a module or a script, translates all while loops into function calls.
 --
 -- The corresponding function declarations are added inside the module or script
 -- Also see documentation of `mapWhileToFunction`
-translateWhilesToFunctionsInRoot :: Root -> Root
-translateWhilesToFunctionsInRoot root = case traverseRootPostOrder traversalHelper traversalIdentity root ([], Set.empty) of
-  (RModule translatedModule@Module {moduleTopLevels}, (functionDecls, _)) ->
-    let newTopLevels = map TopLevelFunction functionDecls
-     in RModule $ translatedModule {moduleTopLevels = newTopLevels ++ moduleTopLevels}
-  (RScript translatedScript@Script {scriptTopLevels}, (functionDecls, _)) ->
-    let newTopLevels = map TopLevelFunction functionDecls
-     in RScript $ translatedScript {scriptTopLevels = newTopLevels ++ scriptTopLevels}
+translateWhilesToFunctionsInRoot :: [Root] -> [Root]
+translateWhilesToFunctionsInRoot roots = evalState (iterateWithOthers helper roots) ()
+  where
+    helper :: Root -> [Root] -> State () Root
+    helper root otherModules =
+      case traverseRootPostOrder traversalHelper traversalIdentity root ([], Set.empty) otherModules of
+        (RModule translatedModule@Module {moduleTopLevels}, (functionDecls, _)) ->
+          let newTopLevels = map TopLevelFunction functionDecls
+           in return $ RModule $ translatedModule {moduleTopLevels = newTopLevels ++ moduleTopLevels}
+        (RScript translatedScript@Script {scriptTopLevels}, (functionDecls, _)) ->
+          let newTopLevels = map TopLevelFunction functionDecls
+           in return $ RScript $ translatedScript {scriptTopLevels = newTopLevels ++ scriptTopLevels}

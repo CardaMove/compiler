@@ -2,7 +2,7 @@ module Move.Translations.TraversalUtils (traverseExprPostOrder, traverseRootPost
 
 import Control.Monad.State qualified as State
 import Data.Generics.Uniplate.Data (descendM)
-import Data.List (mapAccumL)
+import Data.List (find, mapAccumL)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
 import Move.AST
@@ -11,7 +11,6 @@ import Move.Translations.Utils
     VariableAnnotations (VariableAnnotations),
     booleanType,
     extractVariablesFromBindings,
-    getUseIdentifiers,
     unitType,
   )
 
@@ -27,7 +26,7 @@ traversalIdentity node _ state = (node, state)
 -- Performs a post-order traversal of a tree of expressions.
 --
 -- Accepts as input a function that takes the current expression, all the accumulated scopes at that node,
--- and a custom state. The function should return an expression to substitute and a new state
+-- a custom state and all the other modules that might be imported. The function should return an expression to substitute and a new state
 --
 -- As its second version, includes another function to map `let` bindings found in inner sequences
 traverseExprPostOrder :: TraversalMapper Expr state -> TraversalMapper Bindings state -> Expr -> [Scope] -> state -> (Expr, state)
@@ -54,10 +53,11 @@ traverseExprPostOrder exprMapper bindsMapper expr scopes state =
 traverseSequencePostOrder :: TraversalMapper Expr state -> TraversalMapper Bindings state -> Sequence -> [Scope] -> state -> (Sequence, state)
 traverseSequencePostOrder _ _ _ [] _ = error "Cannot traverse Sequence with no scopes"
 traverseSequencePostOrder exprMapper bindsMapper (Sequence {sequenceUses, sequenceItems, sequenceEndExpr}) (localScope : outerScopes) state =
-  -- First, add the uses to the local scope
-  -- TODO: They will not have any UUID nor type
-  let usesIdentifiers = concatMap getUseIdentifiers sequenceUses
-      usesScope :: Scope = Map.fromList (map (,VariableAnnotations Nothing TypeUnknown) usesIdentifiers)
+  let --
+      -- First, add the uses to the local scope
+      -- TODO: Currently not supported. It is better to extract all inner uses to top levels and just rename them to avoid name clashes,
+      -- so to avoid having to supply external modules to the expression and sequence traversals
+      usesScope = Map.empty
       scopesBeforeSeqItems = Map.union usesScope localScope : outerScopes
       -- Then, recursively traverse the sequence items, and collect the new scope and state
       ((scopesAfterSeqItems, stateAfterSeqItems), sequenceItems') = mapAccumL fAcc (scopesBeforeSeqItems, state) sequenceItems
@@ -81,7 +81,7 @@ traverseSequencePostOrder exprMapper bindsMapper (Sequence {sequenceUses, sequen
                 -- Also note that it is passed the mapped right value, not the original one
                 (mappedBindings, stateAfterTraversingBindings) = bindsMapper bindings {bindingsBindExpr = traversedBindExpr} scopesBeforeBind stateAfterTraversingBindExpr
                 -- Then, add the binded identifiers to the local scope
-                bindScopes = Map.fromList $ extractVariablesFromBindings mappedBindings scopesBeforeBind
+                bindScopes = Map.fromList $ map (\(ident, annot) -> (LocalNameAccessChain ident, annot)) $ extractVariablesFromBindings mappedBindings scopesBeforeBind
                 localScopeAfterBind = Map.union bindScopes localScopeBeforeBind
              in ( (localScopeAfterBind : outerScopesBeforeBind, stateAfterTraversingBindings),
                   SequenceItemBindExpr mappedBindings
@@ -110,8 +110,8 @@ traverseSequencePostOrder exprMapper bindsMapper (Sequence {sequenceUses, sequen
 -- As its second version, also includes a function to map `let` bindings
 --
 -- TODO: Should probably be rewritten so to pass scopes coming from other modules
-traverseRootPostOrder :: TraversalMapper Expr state -> TraversalMapper Bindings state -> Root -> state -> (Root, state)
-traverseRootPostOrder exprMapper bindsMapper root state = case root of
+traverseRootPostOrder :: TraversalMapper Expr state -> TraversalMapper Bindings state -> Root -> state -> [Root] -> (Root, state)
+traverseRootPostOrder exprMapper bindsMapper root state otherRoots = case root of
   RModule rModule@Module {moduleTopLevels} ->
     let (mappedTopLevels, stateAfterTraversal) = traversalHelper moduleTopLevels
      in (RModule $ rModule {moduleTopLevels = mappedTopLevels}, stateAfterTraversal)
@@ -119,22 +119,15 @@ traverseRootPostOrder exprMapper bindsMapper root state = case root of
     let (mappedTopLevels, stateAfterTraversal) = traversalHelper scriptTopLevels
      in (RScript $ rScript {scriptTopLevels = mappedTopLevels}, stateAfterTraversal)
   where
+    -- Only modules can be imported, so discard any script
+    otherModules = [m | RModule m <- otherRoots]
+
     traversalHelper topLevels =
-      -- Since top level identifiers are never renamed, add all of them to the module scope before starting to traverse
-      let topLevelIdentifiersAnnotated = concatMap topLevelMap topLevels
-            where
-              -- TODO: uses for now do not have a type
-              -- TODO: Positional structs should be handled similarly to named structs
-              topLevelMap (TopLevelUse use) = map (,VariableAnnotations Nothing TypeUnknown) (getUseIdentifiers use)
-              topLevelMap (TopLevelFriend _) = []
-              topLevelMap (TopLevelNamedStruct (NamedStruct {namedStructIdentifier, namedStructTypeParameters, namedStructFields})) = [(namedStructIdentifier, VariableAnnotations Nothing $ IntermediateTypeNamedStructDeclaration (map typeIdentifier namedStructTypeParameters) namedStructFields)]
-              topLevelMap (TopLevelPositionalStruct (PositionalStruct {positionalStructIdentifier})) = [(positionalStructIdentifier, VariableAnnotations Nothing $ TypeConstructor (LocalNameAccessChain positionalStructIdentifier) [])]
-              -- Functions have a type, which is the arrow type of all its parameter types and return type (or unit if not specified)
-              -- Additionally, type parameters are considered
-              topLevelMap (TopLevelFunction (Function {functionName, functionUUID, functionParameters, functionReturnType, functionTypeParameters})) =
-                [(functionName, VariableAnnotations functionUUID $ TypeArrow (map typeIdentifier functionTypeParameters) (map parameterType functionParameters ++ [fromMaybe unitType functionReturnType]))]
-              topLevelMap (TopLevelConstant (Constant {constantIdentifier, constantType, constantUUID})) = [(constantIdentifier, VariableAnnotations constantUUID constantType)]
-          moduleScope :: Scope = Map.fromList topLevelIdentifiersAnnotated
+      let --
+          moduleUses :: [Use] = [u | TopLevelUse u <- topLevels]
+          localScope = map (\(ident, annot) -> (LocalNameAccessChain ident, annot)) $ getRootIdentifiers root
+          -- Build the scope of the current module, combining function and structs declarations, constants and imports
+          moduleScope :: Scope = Map.fromList (localScope ++ buildImportedScope moduleUses otherModules)
 
           -- Add the std lib to the scope
           topLevelScope :: [Scope] = [moduleScope, moveStdLibScope]
@@ -150,7 +143,7 @@ traverseRootPostOrder exprMapper bindsMapper root state = case root of
               -- Each function will have an additional scope for both the parameters and the body
               topLevelMap state' (TopLevelFunction function@Function {functionParameters, functionBody = Just bodySequence}) =
                 -- Create a new local scope including the function parameters
-                let functionParametersScope :: Scope = Map.fromList $ map (\(Parameter {parameterIdentifier, parameterType, parameterUUID}) -> (parameterIdentifier, VariableAnnotations parameterUUID parameterType)) functionParameters
+                let functionParametersScope :: Scope = Map.fromList $ map (\(Parameter {parameterIdentifier, parameterType, parameterUUID}) -> (LocalNameAccessChain parameterIdentifier, VariableAnnotations parameterUUID parameterType)) functionParameters
                     (mappedSequence, state'') = traverseSequencePostOrder exprMapper bindsMapper bodySequence (functionParametersScope : topLevelScope) state'
                  in (state'', TopLevelFunction $ function {functionBody = Just mappedSequence})
               -- Otherwise do nothing
@@ -167,9 +160,77 @@ traverseRootPostOrder exprMapper bindsMapper root state = case root of
 moveStdLibScope :: Scope
 moveStdLibScope =
   Map.fromList
-    [ (Identifier "move_to", VariableAnnotations (Just $ -2) (TypeArrow [Identifier "T"] [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "signer") [], TypeConstructor (LocalNameAccessChain $ Identifier "T") [], IntermediateTypeWitnessType, unitType])),
-      (Identifier "move_from", VariableAnnotations (Just $ -3) (TypeArrow [Identifier "T"] [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [], IntermediateTypeWitnessType, TypeConstructor (LocalNameAccessChain $ Identifier "T") []])),
-      (Identifier "borrow_global_mut", VariableAnnotations (Just $ -4) (TypeArrow [Identifier "T"] [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [], IntermediateTypeWitnessType, TypeMutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "T") []])),
-      (Identifier "borrow_global", VariableAnnotations (Just $ -5) (TypeArrow [Identifier "T"] [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [], IntermediateTypeWitnessType, TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "T") []])),
-      (Identifier "exists", VariableAnnotations (Just $ -5) (TypeArrow [Identifier "T"] [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [], IntermediateTypeWitnessType, booleanType]))
+    [ (LocalNameAccessChain $ Identifier "move_to", VariableAnnotations (Just $ -2) (TypeArrow [Identifier "T"] [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "signer") [], TypeConstructor (LocalNameAccessChain $ Identifier "T") [], IntermediateTypeWitnessType, unitType])),
+      (LocalNameAccessChain $ Identifier "move_from", VariableAnnotations (Just $ -3) (TypeArrow [Identifier "T"] [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [], IntermediateTypeWitnessType, TypeConstructor (LocalNameAccessChain $ Identifier "T") []])),
+      (LocalNameAccessChain $ Identifier "borrow_global_mut", VariableAnnotations (Just $ -4) (TypeArrow [Identifier "T"] [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [], IntermediateTypeWitnessType, TypeMutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "T") []])),
+      (LocalNameAccessChain $ Identifier "borrow_global", VariableAnnotations (Just $ -5) (TypeArrow [Identifier "T"] [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [], IntermediateTypeWitnessType, TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "T") []])),
+      (LocalNameAccessChain $ Identifier "exists", VariableAnnotations (Just $ -5) (TypeArrow [Identifier "T"] [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [], IntermediateTypeWitnessType, booleanType]))
     ]
+
+-- |
+-- Given multiple imports via Uses and the list of all the other available modules,
+-- returns all the imported symbols
+--
+-- Note that the current module is not present in the imputs, just its imports
+buildImportedScope :: [Use] -> [Module] -> [(NameAccessChain, VariableAnnotations)]
+buildImportedScope uses otherModules = concatMap buildImportedScope' uses
+  where
+    buildImportedScope' :: Use -> [(NameAccessChain, VariableAnnotations)]
+    buildImportedScope' use@(Use {useAddress, useIdentifier, useAlias, useMembers}) =
+      let --
+          -- First, retrieve the imported module, that is the module that matches both the address and identifier
+          importedModule = find (\m -> moduleAddress m == useAddress && moduleIdentifier m == useIdentifier) otherModules
+
+          -- If not found, throw an error
+          importedModule' = case importedModule of
+            Nothing -> error $ "Imported module not found: " ++ show use
+            Just m -> m
+
+          -- Then, get all the symbols (identifiers declared in that module
+          moduleDecls = getRootIdentifiers $ RModule importedModule'
+
+          -- Each symbol can be used either by providing the full module nac, or the aliased one
+          imported' :: [(NameAccessChain, VariableAnnotations)] =
+            concatMap
+              ( \(ident, annot) ->
+                  [ (UnaliasedNameAccessChain useAddress useIdentifier ident, annot),
+                    -- FIXME: this is a bit weird, since the module should be aliased by its identifier, not address
+                    -- Check both the Parser.y with its comment on NameAccessChain and the Move compiler
+                    -- Seems that the LeadingNameAccess allows for an identifier too
+                    (AliasedNameAccessChain useAddress ident, annot)
+                  ]
+              )
+              moduleDecls
+       in -- If the module is aliased, symbols can also be used by the alias of that module
+          -- FIXME: This is the same problem as the above fixme, basically the leading nac can be an identifier too
+          -- imported'' = case useAlias of
+          --   Nothing -> imported'
+          --   Just useAlias' -> imported' ++ map (\(ident, annot) -> (AliasedNameAccessChain useAlias' ident, annot)) moduleDecls
+
+          -- TODO: Use memebers, each with its own optional alias
+          imported'
+
+-- |
+-- Given an AST (either script or module) returns all the identifiers defined as top levels of that AST,
+--
+-- This means declarations for named and positional structs, as well as function definitions and constant expressions,
+-- while uses are instead not considered
+getRootIdentifiers :: Root -> [(Identifier, VariableAnnotations)]
+getRootIdentifiers root =
+  let topLevels = case root of
+        (RScript Script {scriptTopLevels}) -> scriptTopLevels
+        (RModule Module {moduleTopLevels}) -> moduleTopLevels
+   in concatMap topLevelMap topLevels
+  where
+    -- TODO: Positional structs should be handled similarly to named structs
+    topLevelMap :: TopLevel -> [(Identifier, VariableAnnotations)]
+    -- Uses are ignored in this function since they do not contribute the the local scope of the module
+    topLevelMap (TopLevelUse _) = []
+    topLevelMap (TopLevelFriend _) = []
+    topLevelMap (TopLevelNamedStruct (NamedStruct {namedStructIdentifier, namedStructTypeParameters, namedStructFields})) = [(namedStructIdentifier, VariableAnnotations Nothing $ IntermediateTypeNamedStructDeclaration (map typeIdentifier namedStructTypeParameters) namedStructFields)]
+    topLevelMap (TopLevelPositionalStruct (PositionalStruct {positionalStructIdentifier})) = [(positionalStructIdentifier, VariableAnnotations Nothing $ TypeConstructor (LocalNameAccessChain positionalStructIdentifier) [])]
+    -- Functions have a type, which is the arrow type of all its parameter types and return type (or unit if not specified)
+    -- Additionally, type parameters are considered
+    topLevelMap (TopLevelFunction (Function {functionName, functionUUID, functionParameters, functionReturnType, functionTypeParameters})) =
+      [(functionName, VariableAnnotations functionUUID $ TypeArrow (map typeIdentifier functionTypeParameters) (map parameterType functionParameters ++ [fromMaybe unitType functionReturnType]))]
+    topLevelMap (TopLevelConstant (Constant {constantIdentifier, constantType, constantUUID})) = [(constantIdentifier, VariableAnnotations constantUUID constantType)]

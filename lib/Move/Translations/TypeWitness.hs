@@ -53,8 +53,9 @@ translateTParamsInRoot root = do
     extractTypeWitnessesFromScopes (sc : scs) = extractFromScope sc `Set.union` extractTypeWitnessesFromScopes scs
       where
         -- Inner helper function that given a single scope, extracts all the identifiers corresponding to type witnesses
+        -- Note that type witnesses can only be local identifiers
         extractFromScope :: Scope -> Set.Set Identifier
-        extractFromScope scope = Set.fromList [ident | (ident, VariableAnnotations _ IntermediateTypeWitnessType) <- Map.toList scope]
+        extractFromScope scope = Set.fromList [ident | (LocalNameAccessChain ident, VariableAnnotations _ IntermediateTypeWitnessType) <- Map.toList scope]
 
     -- Rewrites function calls to add the type witnesses as function parameters
     rewriteFunctionCalls :: TraversalMapper Expr ()
