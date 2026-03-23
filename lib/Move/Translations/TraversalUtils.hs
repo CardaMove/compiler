@@ -120,7 +120,8 @@ traverseRootPostOrder exprMapper bindsMapper root state otherRoots = case root o
      in (RScript $ rScript {scriptTopLevels = mappedTopLevels}, stateAfterTraversal)
   where
     -- Only modules can be imported, so discard any script
-    otherModules = [m | RModule m <- otherRoots]
+    -- Additionally, add the modules provided by the Move stdlib
+    otherModules = [m | RModule m <- otherRoots] ++ moveStdLibModules
 
     traversalHelper topLevels =
       let --
@@ -152,7 +153,7 @@ traverseRootPostOrder exprMapper bindsMapper root state otherRoots = case root o
 
 -- |
 -- Contains some functions that Move recognizes as stdlib,
--- such as global storage operators and TODO: Coin library
+-- such as global storage operators
 --
 -- Note that the global storage definitions have a final parameter for the type witness.
 -- This will correspond to the actual AST only after the TypeWitness step,
@@ -166,6 +167,45 @@ moveStdLibScope =
       (LocalNameAccessChain $ Identifier "borrow_global", VariableAnnotations (Just $ -5) (TypeArrow [Identifier "T"] [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [], IntermediateTypeWitnessType, TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "T") []])),
       (LocalNameAccessChain $ Identifier "exists", VariableAnnotations (Just $ -5) (TypeArrow [Identifier "T"] [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [], IntermediateTypeWitnessType, booleanType]))
     ]
+
+-- |
+-- Contains all the modules provided by the Move stdlib, such as the Signer module and TODO: the Coin module
+-- These will be used simply to resolve imports and types, but will not generate any Aiken code
+moveStdLibModules :: [Module]
+moveStdLibModules =
+  [ Module
+      { moduleAddress = NamedAddress $ Identifier "std",
+        moduleIdentifier = Identifier "signer",
+        moduleTopLevels =
+          [ TopLevelFunction $
+              Function
+                { functionHasNativeModifier = False,
+                  functionVisibilityModifier = Just VisibilityModifierPublic,
+                  functionHasEntryModifier = False,
+                  functionName = Identifier "address_of",
+                  functionTypeParameters = [],
+                  functionParameters = [Parameter {parameterIdentifier = Identifier "signer", parameterType = TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "signer") [], parameterUUID = Nothing}],
+                  functionReturnType = Just $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [],
+                  functionAcquires = [],
+                  functionBody = Nothing,
+                  functionUUID = Nothing
+                },
+            TopLevelFunction $
+              Function
+                { functionHasNativeModifier = False,
+                  functionVisibilityModifier = Just VisibilityModifierPublic,
+                  functionHasEntryModifier = False,
+                  functionName = Identifier "borrow_address",
+                  functionTypeParameters = [],
+                  functionParameters = [Parameter {parameterIdentifier = Identifier "signer", parameterType = TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "signer") [], parameterUUID = Nothing}],
+                  functionReturnType = Just $ TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [],
+                  functionAcquires = [],
+                  functionBody = Nothing,
+                  functionUUID = Nothing
+                }
+          ]
+      }
+  ]
 
 -- |
 -- Given multiple imports via Uses and the list of all the other available modules,
@@ -182,12 +222,11 @@ buildImportedScope uses otherModules = concatMap buildImportedScope' uses
           importedModule = find (\m -> moduleAddress m == useAddress && moduleIdentifier m == useIdentifier) otherModules
 
           -- If not found, throw an error
-          -- FIXME: What about stdlib modules such as std:signer? it should be imported by default
           importedModule' = case importedModule of
             Nothing -> error $ "Imported module not found: " ++ show use
             Just m -> m
 
-          -- Then, get all the symbols (identifiers declared in that module
+          -- Then, get all the symbols (identifiers declared in that module)
           moduleDecls = getRootIdentifiers $ RModule importedModule'
 
           -- Each symbol can be used either by providing the full module nac, or the aliased one
@@ -195,21 +234,32 @@ buildImportedScope uses otherModules = concatMap buildImportedScope' uses
             concatMap
               ( \(ident, annot) ->
                   [ (UnaliasedNameAccessChain useAddress useIdentifier ident, annot),
-                    -- FIXME: this is a bit weird, since the module should be aliased by its identifier, not address
-                    -- Check both the Parser.y with its comment on NameAccessChain and the Move compiler
-                    -- Seems that the LeadingNameAccess allows for an identifier too
-                    (AliasedNameAccessChain useAddress ident, annot)
+                    (AliasedNameAccessChain (NamedAddress useIdentifier) ident, annot)
                   ]
               )
               moduleDecls
-       in -- If the module is aliased, symbols can also be used by the alias of that module
-          -- FIXME: This is the same problem as the above fixme, basically the leading nac can be an identifier too
-          -- imported'' = case useAlias of
-          --   Nothing -> imported'
-          --   Just useAlias' -> imported' ++ map (\(ident, annot) -> (AliasedNameAccessChain useAlias' ident, annot)) moduleDecls
+          -- If the module is aliased, symbols can also be used by the alias of that module
+          imported'' = case useAlias of
+            Nothing -> imported'
+            Just useAlias' -> imported' ++ map (\(ident, annot) -> (AliasedNameAccessChain (NamedAddress useAlias') ident, annot)) moduleDecls
 
-          -- TODO: Use memebers, each with its own optional alias
-          imported'
+          -- Imported members can also be used with their own local nac
+          moduleDeclsByIdent = Map.fromList moduleDecls
+          importedMembers :: [(NameAccessChain, VariableAnnotations)] = concatMap (`buildUseMember` moduleDeclsByIdent) useMembers
+       in imported'' ++ importedMembers
+
+    -- Given an imported member, along with all the modules declarations as map,
+    -- returns the available definitions to refer to that member
+    buildUseMember :: UseMember -> (Map.Map Identifier VariableAnnotations) -> [(NameAccessChain, VariableAnnotations)]
+    buildUseMember UseMember {useMemberIdentifier, useMemberUseAlias} declsByIdent =
+      let annot = case Map.lookup useMemberIdentifier declsByIdent of
+            Nothing -> error $ "Non existing useMember: " ++ show useMemberIdentifier
+            Just annot' -> annot'
+          -- If the member is aliased, this is another way to refer to it
+          aliased = case useMemberUseAlias of
+            Nothing -> []
+            Just alias -> [(LocalNameAccessChain alias, annot)]
+       in (LocalNameAccessChain useMemberIdentifier, annot) : aliased
 
 -- |
 -- Given an AST (either script or module) returns all the identifiers defined as top levels of that AST,

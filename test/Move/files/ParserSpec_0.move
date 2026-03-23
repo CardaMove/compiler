@@ -1,4 +1,6 @@
 module NamedAddr::TestingModule {
+    use std::signer;
+
     struct F<T1> has key, store {
         val: T1
     }
@@ -21,7 +23,7 @@ module NamedAddr::TestingModule {
         // Extract sequence `let (temp_i, scopes) = {...}`
         let a = {
             // Push scope
-            let g2 = borrow_global_mut<G<bool>>(address_of(s));
+            let g2 = borrow_global_mut<G<bool>>(signer::address_of(s));
 
             // (GET g2).f.val, PUT (g2).f.val
             g2.f.val = g2.f.val * 5;

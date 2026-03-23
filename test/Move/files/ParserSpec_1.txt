@@ -3,7 +3,15 @@ RModule
     { moduleAddress = NamedAddress (Identifier "NamedAddr"),
         moduleIdentifier = Identifier "TestingModule",
         moduleTopLevels =
-        [ TopLevelNamedStruct
+        [ 
+            TopLevelUse 
+            ( Use {
+                useAddress = NamedAddress (Identifier "std"),
+                useIdentifier = Identifier "signer",
+                useAlias = Nothing,
+                useMembers = []
+            }),
+            TopLevelNamedStruct
             ( NamedStruct
                 { namedStructIdentifier = Identifier "F",
                     namedStructTypeParameters =
@@ -136,7 +144,7 @@ RModule
                                                                                 pseofcFields =
                                                                                     [ PositionalStructExprOrFunctionCallExpr
                                                                                         ( PositionalStructExprOrFunctionCall
-                                                                                            { pseofcNameAccessChain = LocalNameAccessChain (Identifier "address_of"),
+                                                                                            { pseofcNameAccessChain = AliasedNameAccessChain (NamedAddress (Identifier "signer")) (Identifier "address_of"),
                                                                                             pseofcTypeArgs = [],
                                                                                             pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "s"))]
                                                                                             }

@@ -161,7 +161,7 @@ RModule
                                   SequenceItemExpr (NameAccessChainExpr (LocalNameAccessChain (Identifier "temp_9"))),
                                   SequenceItemBindExpr
                                     ( Bindings
-                                        { bindings = BindedTuple [BindIdentifier (Identifier "temp_10") (Just 10), BindIdentifier (Identifier "cps_state") (Just (-1))],
+                                        { bindings = BindedTuple [BindIdentifier (Identifier "temp_11") (Just 11), BindIdentifier (Identifier "cps_state") (Just (-1))],
                                           bindingsBindType = Just (TypeTuple [TypeConstructor (LocalNameAccessChain (Identifier "u64")) [], IntermediateTypeScopes]),
                                           bindingsBindExpr =
                                             Just
@@ -177,6 +177,28 @@ RModule
                                                                   }
                                                               ),
                                                             SequenceItemBindExpr
+                                                              (
+                                                                Bindings {
+                                                                  bindings = BindedTuple [BindIdentifier (Identifier "temp_10") (Just 10), BindIdentifier (Identifier "cps_state") (Just (-1))],
+                                                                  bindingsBindType = Just (TypeTuple [
+                                                                    TypeConstructor (LocalNameAccessChain (Identifier "address")) [],
+                                                                    IntermediateTypeScopes
+                                                                  ]),
+                                                                  bindingsBindExpr = Just (
+                                                                    PositionalStructExprOrFunctionCallExpr (
+                                                                      PositionalStructExprOrFunctionCall {
+                                                                        pseofcNameAccessChain = LocalNameAccessChain (Identifier "address_of"),
+                                                                        pseofcTypeArgs = [],
+                                                                        pseofcFields = [
+                                                                          NameAccessChainExpr (LocalNameAccessChain (Identifier "s")),
+                                                                          NameAccessChainExpr (LocalNameAccessChain (Identifier "cps_state"))
+                                                                        ]
+                                                                      }
+                                                                    )
+                                                                  )
+                                                                }
+                                                              ),
+                                                            SequenceItemBindExpr
                                                               ( Bindings
                                                                   { bindings = BindedSingle (BindIdentifier (Identifier "cps_state") (Just (-1))),
                                                                     bindingsBindType = Just IntermediateTypeScopes,
@@ -188,13 +210,7 @@ RModule
                                                                                 ( Just
                                                                                     ( IntermediateExprExpr
                                                                                         ( IntermediateBorrowGlobalMut
-                                                                                            ( PositionalStructExprOrFunctionCallExpr
-                                                                                                ( PositionalStructExprOrFunctionCall
-                                                                                                    { pseofcNameAccessChain = LocalNameAccessChain (Identifier "address_of"),
-                                                                                                      pseofcTypeArgs = [],
-                                                                                                      pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "s"))]
-                                                                                                    }
-                                                                                                )
+                                                                                            ( NameAccessChainExpr (LocalNameAccessChain (Identifier "temp_10"))
                                                                                             )
                                                                                             (TypeConstructor (LocalNameAccessChain (Identifier "G")) [TypeConstructor (LocalNameAccessChain (Identifier "bool")) []])
                                                                                             (IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "G")) [IntermediateTypeWithnessC (LocalNameAccessChain (Identifier "bool")) []])
@@ -297,7 +313,7 @@ RModule
                                     ( Bindings
                                         { bindings = BindedSingle (BindIdentifier (Identifier "a") (Just 5)),
                                           bindingsBindType = Nothing,
-                                          bindingsBindExpr = Just (NameAccessChainExpr (LocalNameAccessChain (Identifier "temp_10")))
+                                          bindingsBindExpr = Just (NameAccessChainExpr (LocalNameAccessChain (Identifier "temp_11")))
                                         }
                                     )
                                 ],
