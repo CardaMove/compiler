@@ -1,13 +1,13 @@
 module Move.Translations.PolymorphismSpec (spec) where
 
-import Control.Monad.State (runState)
+import Control.Monad.State (runState, evalState)
 import Move.AST
 import Move.Lexer (scan)
 import Move.Parser (parse)
 import Move.Translations.Polymorphism (translatePolymorphismInRoot)
 import Move.Translations.Scopes (addLocalScopeInRoot, markVariablesForLocalScope)
 import Move.Translations.TypeWitness (translateTParamsInRoot)
-import Move.Translations.Utils (annotateBindingsWithUUID)
+import Move.Translations.Utils (annotateBindingsWithUUID, iterateWithOthers, unionSet)
 import Test.Hspec
 
 testTranslatePolymorphismInRoot :: Spec
@@ -19,17 +19,13 @@ testTranslatePolymorphismInRoot = describe "Tests the function `translatePolymor
     let parsed = parse $ scan fromModuleStr
     let toModule = read toModuleStr :: Root
 
-    let (annotated, currUUID) = runState (annotateBindingsWithUUID parsed >>= translateTParamsInRoot) 0
+    let (annotated, currUUID) = runState (mapM annotateBindingsWithUUID [parsed] >>= translateTParamsInRoot) 0
 
-    let markedVars = markVariablesForLocalScope annotated
+    let markedVars = unionSet $ evalState (iterateWithOthers (\root otherRoots -> return $ markVariablesForLocalScope root otherRoots) annotated) ()
 
-    let updated = addLocalScopeInRoot annotated markedVars currUUID
-
-    print updated
+    let updated = evalState (addLocalScopeInRoot annotated markedVars >>= translatePolymorphismInRoot) currUUID
     
-    let updated' = translatePolymorphismInRoot updated
-
-    updated' `shouldBe` toModule
+    updated `shouldBe` [toModule]
 
 spec :: Spec
 spec = do

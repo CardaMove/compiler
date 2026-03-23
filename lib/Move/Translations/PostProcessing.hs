@@ -13,8 +13,11 @@ import Move.Translations.Utils (utilsLibAddress)
 --
 -- Resolves named addresses into numerical addresses.
 -- If a named address other than the utils is not resolved, an error is thrown
+--
 postProcessRoot :: Root -> AddrAssociations -> Root
 postProcessRoot root addrAssociations =
+  -- Note that this step does not need to consider other modules that might be imported,
+  -- since it just substitutes certain AST nodes
   let root' = case root of
         (RModule m@Module {moduleTopLevels}) -> RModule $ m {moduleTopLevels = stdLibUses ++ moduleTopLevels}
         (RScript s@Script {scriptTopLevels}) -> RScript $ s {scriptTopLevels = stdLibUses ++ scriptTopLevels}

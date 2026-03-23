@@ -1,15 +1,15 @@
 module Move.Translations.ScopesSpec (spec) where
 
-import Move.Lexer (scan)
-import Data.Set qualified as Set
-import Move.Parser (parse)
-import Test.Hspec
-import Move.Translations.Utils (annotateBindingsWithUUID)
 import Control.Monad.State (evalState, runState)
-import Move.Translations.Scopes (markVariablesForLocalScope, rewriteAssignments, rewriteRefs, rewriteVars, rewriteLetBinds, addLocalScopeInRoot)
+import Data.Set qualified as Set
 import Move.AST
-import Move.Translations.TraversalUtils (traverseRootPostOrder, traversalIdentity)
+import Move.Lexer (scan)
+import Move.Parser (parse)
+import Move.Translations.Scopes (addLocalScopeInRoot, markVariablesForLocalScope, rewriteAssignments, rewriteLetBinds, rewriteRefs, rewriteVars)
+import Move.Translations.TraversalUtils (traversalIdentity, traverseRootPostOrder)
 import Move.Translations.TypeWitness (translateTParamsInRoot)
+import Move.Translations.Utils (annotateBindingsWithUUID, iterateWithOthers, unionSet)
+import Test.Hspec
 
 testMarkVariablesForLocalScope :: Spec
 testMarkVariablesForLocalScope = describe "Tests the function `markVariablesForLocalScope`" $ do
@@ -18,10 +18,9 @@ testMarkVariablesForLocalScope = describe "Tests the function `markVariablesForL
 
     let parsed = parse $ scan moveInput
 
-    let annotated = evalState (annotateBindingsWithUUID parsed >>= translateTParamsInRoot) 0
+    let annotated = head $ evalState (mapM annotateBindingsWithUUID [parsed] >>= translateTParamsInRoot) 0
 
-    markVariablesForLocalScope annotated `shouldBe` Set.fromList [1,2,4,8,10]
-
+    markVariablesForLocalScope annotated [] `shouldBe` Set.fromList [1, 2, 4, 8, 10]
 
 testRewriteAssignments :: Spec
 testRewriteAssignments = describe "Tests the function `rewriteAssignments`" $ do
@@ -33,12 +32,11 @@ testRewriteAssignments = describe "Tests the function `rewriteAssignments`" $ do
 
     let toModule = read toModuleStr :: Root
 
-    let annotated = evalState (annotateBindingsWithUUID parsed >>= translateTParamsInRoot) 0
+    let annotated = head $ evalState (mapM annotateBindingsWithUUID [parsed] >>= translateTParamsInRoot) 0
 
     let scopeUUID :: AnnotatedUUID = -1
 
-    rewriteAssignments annotated scopeUUID `shouldBe` toModule
-
+    rewriteAssignments annotated [] scopeUUID `shouldBe` toModule
 
 testRewriteRefs :: Spec
 testRewriteRefs = describe "Tests the function `rewriteRefs`" $ do
@@ -50,12 +48,12 @@ testRewriteRefs = describe "Tests the function `rewriteRefs`" $ do
 
     let toModule = read toModuleStr :: Root
 
-    let annotated = evalState (annotateBindingsWithUUID parsed >>= translateTParamsInRoot) 0
+    let annotated = head $ evalState (mapM annotateBindingsWithUUID [parsed] >>= translateTParamsInRoot) 0
 
     let scopeUUID :: AnnotatedUUID = -1
 
-    let firstPass :: Root = rewriteAssignments annotated scopeUUID
-    let secondPass :: Root = fst $ traverseRootPostOrder rewriteRefs traversalIdentity firstPass ()
+    let firstPass :: Root = rewriteAssignments annotated [] scopeUUID
+    let secondPass :: Root = fst $ traverseRootPostOrder rewriteRefs traversalIdentity firstPass () []
     secondPass `shouldBe` toModule
 
 testRewriteVars :: Spec
@@ -68,18 +66,17 @@ testRewriteVars = describe "Tests the function `rewriteVars`" $ do
 
     let toModule = read toModuleStr :: Root
 
-    let annotated = evalState (annotateBindingsWithUUID parsed >>= translateTParamsInRoot) 0
+    let annotated = head $ evalState (mapM annotateBindingsWithUUID [parsed] >>= translateTParamsInRoot) 0
 
-    let markedVars = markVariablesForLocalScope annotated
+    let markedVars = markVariablesForLocalScope annotated []
 
     let scopeUUID :: AnnotatedUUID = -1
 
-    let firstPass :: Root = rewriteAssignments annotated scopeUUID
-    let secondPass :: Root = fst $ traverseRootPostOrder rewriteRefs traversalIdentity firstPass ()
-    let thirdPass :: Root = fst $ traverseRootPostOrder (rewriteVars markedVars) traversalIdentity secondPass ()
+    let firstPass :: Root = rewriteAssignments annotated [] scopeUUID
+    let secondPass :: Root = fst $ traverseRootPostOrder rewriteRefs traversalIdentity firstPass () []
+    let thirdPass :: Root = fst $ traverseRootPostOrder (rewriteVars markedVars) traversalIdentity secondPass () []
 
     thirdPass `shouldBe` toModule
-
 
 testRewriteLetBinds :: Spec
 testRewriteLetBinds = describe "Tests the function `rewriteLetBinds`" $ do
@@ -91,16 +88,16 @@ testRewriteLetBinds = describe "Tests the function `rewriteLetBinds`" $ do
 
     let toModule = read toModuleStr :: Root
 
-    let annotated = evalState (annotateBindingsWithUUID parsed >>= translateTParamsInRoot) 0
+    let annotated = head $ evalState (mapM annotateBindingsWithUUID [parsed] >>= translateTParamsInRoot) 0
 
-    let markedVars = markVariablesForLocalScope annotated
+    let markedVars = markVariablesForLocalScope annotated []
 
     let scopeUUID :: AnnotatedUUID = -1
 
-    let firstPass :: Root = rewriteAssignments annotated scopeUUID
-    let secondPass :: Root = fst $ traverseRootPostOrder rewriteRefs traversalIdentity firstPass ()
-    let thirdPass :: Root = fst $ traverseRootPostOrder (rewriteVars markedVars) traversalIdentity secondPass ()
-    let fourthPass :: Root = fst $ traverseRootPostOrder traversalIdentity (rewriteLetBinds markedVars scopeUUID) thirdPass ()
+    let firstPass :: Root = rewriteAssignments annotated [] scopeUUID
+    let secondPass :: Root = fst $ traverseRootPostOrder rewriteRefs traversalIdentity firstPass () []
+    let thirdPass :: Root = fst $ traverseRootPostOrder (rewriteVars markedVars) traversalIdentity secondPass () []
+    let fourthPass :: Root = fst $ traverseRootPostOrder traversalIdentity (rewriteLetBinds markedVars scopeUUID) thirdPass () []
 
     fourthPass `shouldBe` toModule
 
@@ -113,14 +110,13 @@ testAddLocalScopeInRoot = describe "Tests the function `addLocalScopeInRoot`" $ 
     let parsed = parse $ scan fromModuleStr
     let toModule = read toModuleStr :: Root
 
+    let (annotated, currUUID) = runState (mapM annotateBindingsWithUUID [parsed] >>= translateTParamsInRoot) 0
 
-    let (annotated, currUUID) = runState (annotateBindingsWithUUID parsed >>= translateTParamsInRoot) 0
+    let markedVars = unionSet $ evalState (iterateWithOthers (\root otherRoots -> return $ markVariablesForLocalScope root otherRoots) annotated) ()
 
-    let markedVars = markVariablesForLocalScope annotated
+    let updated = evalState (addLocalScopeInRoot annotated markedVars) currUUID
 
-    let updated = addLocalScopeInRoot annotated markedVars currUUID
-
-    updated `shouldBe` toModule
+    updated `shouldBe` [toModule]
 
   it "Handles nested sequences, function calls" $ do
     fromModuleStr <- readFile "test/Move/Translations/files/ScopesSpec_11.move"
@@ -129,14 +125,13 @@ testAddLocalScopeInRoot = describe "Tests the function `addLocalScopeInRoot`" $ 
     let parsed = parse $ scan fromModuleStr
     let toModule = read toModuleStr :: Root
 
+    let (annotated, currUUID) = runState (mapM annotateBindingsWithUUID [parsed] >>= translateTParamsInRoot) 0
 
-    let (annotated, currUUID) = runState (annotateBindingsWithUUID parsed >>= translateTParamsInRoot) 0
+    let markedVars = unionSet $ evalState (iterateWithOthers (\root otherRoots -> return $ markVariablesForLocalScope root otherRoots) annotated) ()
 
-    let markedVars = markVariablesForLocalScope annotated
+    let updated = evalState (addLocalScopeInRoot annotated markedVars) currUUID
 
-    let updated = addLocalScopeInRoot annotated markedVars currUUID
-
-    updated `shouldBe` toModule
+    updated `shouldBe` [toModule]
 
   it "Handles global storage operations and resolves type parameters, handles syntactic sugar on references" $ do
     fromModuleStr <- readFile "test/Move/Translations/files/ScopesSpec_13.move"
@@ -145,14 +140,13 @@ testAddLocalScopeInRoot = describe "Tests the function `addLocalScopeInRoot`" $ 
     let parsed = parse $ scan fromModuleStr
     let toModule = read toModuleStr :: Root
 
+    let (annotated, currUUID) = runState (mapM annotateBindingsWithUUID [parsed] >>= translateTParamsInRoot) 0
 
-    let (annotated, currUUID) = runState (annotateBindingsWithUUID parsed >>= translateTParamsInRoot) 0
+    let markedVars = unionSet $ evalState (iterateWithOthers (\root otherRoots -> return $ markVariablesForLocalScope root otherRoots) annotated) ()
 
-    let markedVars = markVariablesForLocalScope annotated
+    let updated = evalState (addLocalScopeInRoot annotated markedVars) currUUID
 
-    let updated = addLocalScopeInRoot annotated markedVars currUUID
-
-    updated `shouldBe` toModule
+    updated `shouldBe` [toModule]
 
   it "Rewrites if-then-else accordingly if the branches mutate the state, respecting the resulting type" $ do
     fromModuleStr <- readFile "test/Move/Translations/files/ScopesSpec_15.move"
@@ -161,17 +155,15 @@ testAddLocalScopeInRoot = describe "Tests the function `addLocalScopeInRoot`" $ 
     let parsed = parse $ scan fromModuleStr
     let toModule = read toModuleStr :: Root
 
+    let (annotated, currUUID) = runState (mapM annotateBindingsWithUUID [parsed] >>= translateTParamsInRoot) 0
 
-    let (annotated, currUUID) = runState (annotateBindingsWithUUID parsed >>= translateTParamsInRoot) 0
+    let markedVars = unionSet $ evalState (iterateWithOthers (\root otherRoots -> return $ markVariablesForLocalScope root otherRoots) annotated) ()
 
-    let markedVars = markVariablesForLocalScope annotated
-
-    let updated = addLocalScopeInRoot annotated markedVars currUUID
+    let updated = evalState (addLocalScopeInRoot annotated markedVars) currUUID
 
     -- FIXME: Was expecting that a sequence branch would be translated into a single temporary variable
     -- but it is not. Still working
-    updated `shouldBe` toModule
-
+    updated `shouldBe` [toModule]
 
 spec :: Spec
 spec = do

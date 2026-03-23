@@ -17,9 +17,9 @@ testTranslateTParamsInRoot = describe "Tests for the function `translateTParamsI
     let parsed = parse $ scan fromModuleStr
     let toModule = read toModuleStr :: Root
 
-    let updated = evalState (annotateBindingsWithUUID parsed >>= translateTParamsInRoot) 0
+    let updated = evalState (mapM annotateBindingsWithUUID [parsed] >>= translateTParamsInRoot) 0
 
-    updated `shouldBe` toModule
+    updated `shouldBe` [toModule]
 
   it "Rewrites named and positional structs declarations so that type args are in snake_case" $ do
     fromModuleStr <- readFile "test/Move/Translations/files/TypeWitnessSpec_4.move"
@@ -28,9 +28,9 @@ testTranslateTParamsInRoot = describe "Tests for the function `translateTParamsI
     let parsed = parse $ scan fromModuleStr
     let toModule = read toModuleStr :: Root
 
-    let updated = evalState (annotateBindingsWithUUID parsed >>= translateTParamsInRoot) 0
+    let updated = evalState (mapM annotateBindingsWithUUID [parsed] >>= translateTParamsInRoot) 0
 
-    updated `shouldBe` toModule
+    updated `shouldBe` [toModule]
 
 testToSnake :: Spec
 testToSnake = describe "Tests the function `toSnake`" $ do

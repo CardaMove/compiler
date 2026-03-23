@@ -337,10 +337,10 @@ traversalHelper expr _ (functionDecls, exprsWithBreak) =
 -- The corresponding function declarations are added inside the module or script
 -- Also see documentation of `mapWhileToFunction`
 translateWhilesToFunctionsInRoot :: [Root] -> [Root]
-translateWhilesToFunctionsInRoot roots = evalState (iterateWithOthers helper roots) ()
+translateWhilesToFunctionsInRoot roots = evalState (iterateWithOthers helperIterator roots) ()
   where
-    helper :: Root -> [Root] -> State () Root
-    helper root otherRoots =
+    helperIterator :: Root -> [Root] -> State () Root
+    helperIterator root otherRoots =
       case traverseRootPostOrder traversalHelper traversalIdentity root ([], Set.empty) otherRoots of
         (RModule translatedModule@Module {moduleTopLevels}, (functionDecls, _)) ->
           let newTopLevels = map TopLevelFunction functionDecls

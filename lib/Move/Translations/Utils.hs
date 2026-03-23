@@ -16,6 +16,7 @@ module Move.Translations.Utils
     utilsLibAddress,
     isTypeParametric,
     iterateWithOthers,
+    unionSet
   )
 where
 
@@ -139,6 +140,7 @@ extractVariablesFromSingleBind bind maybeType maybeExpr scopes =
 -- Given an AST, adds a unique identifier to all bindings
 --
 -- Note that existing UUIDs will be overwritten
+-- FIXME: The State should be AnnotatedUUID not Int
 annotateBindingsWithUUID :: Root -> State Int Root
 annotateBindingsWithUUID root = do
   -- First, handle both a Module and a Script
@@ -448,3 +450,7 @@ iterateWithOthers' func prev curr (n : ns) = do
   res <- func curr prev
   resN <- iterateWithOthers' func (prev ++ [curr]) n ns
   return (res : resN)
+
+-- Helper function to perform the union of a list of sets
+unionSet :: (Ord a) => [Set.Set a] -> Set.Set a
+unionSet = foldr Set.union Set.empty

@@ -109,7 +109,7 @@ traverseSequencePostOrder exprMapper bindsMapper (Sequence {sequenceUses, sequen
 --
 -- As its second version, also includes a function to map `let` bindings
 --
--- TODO: Should probably be rewritten so to pass scopes coming from other modules
+-- Additionally, allow to pass other modules that might be imported by the traversed one
 traverseRootPostOrder :: TraversalMapper Expr state -> TraversalMapper Bindings state -> Root -> state -> [Root] -> (Root, state)
 traverseRootPostOrder exprMapper bindsMapper root state otherRoots = case root of
   RModule rModule@Module {moduleTopLevels} ->
@@ -182,6 +182,7 @@ buildImportedScope uses otherModules = concatMap buildImportedScope' uses
           importedModule = find (\m -> moduleAddress m == useAddress && moduleIdentifier m == useIdentifier) otherModules
 
           -- If not found, throw an error
+          -- FIXME: What about stdlib modules such as std:signer? it should be imported by default
           importedModule' = case importedModule of
             Nothing -> error $ "Imported module not found: " ++ show use
             Just m -> m

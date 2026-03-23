@@ -18,7 +18,7 @@ testTraverseRootPostOrder = describe "Tests the function `traverseRootPostOrder`
     -- The traversal function increments by 1 each literal decimal value and keeps track of how many modifications
     -- Also, appends a _2 to each variable name found in let bindings
     -- Note: the output Move code will be invalid due to variable renamings
-    let (traversedModule, finalState) = traverseRootPostOrder exprMapper bindsMapper fromModule 0
+    let (traversedModule, finalState) = traverseRootPostOrder exprMapper bindsMapper fromModule 0 []
           where
             exprMapper (ValueLiteral (Numerical (LiteralIntDec val))) _ state = (ValueLiteral $ Numerical $ LiteralIntDec $ val + 1, state + 1)
             exprMapper expr _ state = (expr, state)

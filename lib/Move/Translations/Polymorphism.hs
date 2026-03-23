@@ -1,32 +1,45 @@
 module Move.Translations.Polymorphism (translatePolymorphismInRoot) where
 
+import Control.Monad.State (MonadState (get, put), State)
 import Data.Foldable (toList)
 import Data.Generics.Uniplate.Data (transformBi)
 import Data.Sequence (fromList, mapWithIndex)
 import Data.Set qualified as Set
 import Move.AST
 import Move.Translations.TraversalUtils (TraversalMapper, traversalIdentity, traverseRootPostOrder)
-import Move.Translations.Utils (VariableAnnotations (..), getNacFromScopes, inferExprType, isTypeParametric)
+import Move.Translations.Utils (VariableAnnotations (..), getNacFromScopes, inferExprType, isTypeParametric, iterateWithOthers)
 
 -- |
 -- Given an AST with parametric polymorphism, rewrites it by removing generics and replacing them via
 -- an intermediate supertype `IntermediateTypeData`, adding downcasts or upcasts when needed
-translatePolymorphismInRoot :: Root -> Root
-translatePolymorphismInRoot root =
-  let --
-      -- First, introduce the required downcasts or upcasts when needed
-      root' = fst $ traverseRootPostOrder insertCasting traversalIdentity root ()
+translatePolymorphismInRoot :: [Root] -> State AnnotatedUUID [Root]
+translatePolymorphismInRoot roots = do
+  -- First, introduce the required downcasts or upcasts when needed
+  roots' <- iterateWithOthers castingIterator roots
 
-      -- Then, replace each occurrence of type parameter with the intermediate supertype
-      root'' = case root' of
-        RModule rModule@Module {moduleTopLevels} ->
-          let mappedTL = map replaceTParamsWithData moduleTopLevels
-           in RModule $ rModule {moduleTopLevels = mappedTL}
-        RScript rScript@Script {scriptTopLevels} ->
-          let mappedTL = map replaceTParamsWithData scriptTopLevels
-           in RScript $ rScript {scriptTopLevels = mappedTL}
-   in root''
+  -- Then, replace each occurrence of type parameter with the intermediate supertype
+  -- Note that for this passage there is no need to consider other roots when iterating,
+  -- since it just performs substitution of some nodes
+  let root'' = map tParamsToDataIterator roots'
+  return root''
   where
+    -- Iterator to add the necessary castings
+    castingIterator :: Root -> [Root] -> State AnnotatedUUID Root
+    castingIterator root otherRoots = do
+      currUUID <- get
+      let (root', updatedUUID) = traverseRootPostOrder insertCasting traversalIdentity root currUUID otherRoots
+      put updatedUUID
+      return root'
+
+    -- Iterator to replace type parameters with intermediate supertype
+    tParamsToDataIterator :: Root -> Root
+    tParamsToDataIterator (RModule rModule@Module {moduleTopLevels}) =
+      let mappedTL = map replaceTParamsWithData moduleTopLevels
+       in RModule $ rModule {moduleTopLevels = mappedTL}
+    tParamsToDataIterator (RScript rScript@Script {scriptTopLevels}) =
+      let mappedTL = map replaceTParamsWithData scriptTopLevels
+       in RScript $ rScript {scriptTopLevels = mappedTL}
+
     -- Given a function declaration, rewrites each occurrence of type parameters with the intermediate supertype `IntermediateTypeData`
     replaceTParamsWithData :: TopLevel -> TopLevel
     replaceTParamsWithData tlf@(TopLevelFunction Function {functionTypeParameters}) =
@@ -60,8 +73,8 @@ translatePolymorphismInRoot root =
 --  el_1 // since CPS
 -- )
 -- ```
-castExpr :: Expr -> Type -> Type -> Expr
-castExpr expr (TypeTuple tsFrom) (TypeTuple tsTo) =
+castExpr :: Expr -> Type -> Type -> AnnotatedUUID -> Expr
+castExpr expr (TypeTuple tsFrom) (TypeTuple tsTo) currUUID =
   SequenceExpr $
     Sequence
       { sequenceUses = [],
@@ -88,16 +101,16 @@ castExpr expr (TypeTuple tsFrom) (TypeTuple tsTo) =
                     -- Do not cast the CPS
                     IntermediateTypeScopes -> NameAccessChainExpr $ LocalNameAccessChain $ Identifier $ "el_" ++ show idx
                     -- Recursively cast any other type
-                    _ -> castExpr (NameAccessChainExpr $ LocalNameAccessChain $ Identifier $ "el_" ++ show idx) tData t
+                    _ -> castExpr (NameAccessChainExpr $ LocalNameAccessChain $ Identifier $ "el_" ++ show idx) tData t currUUID
               )
             $ fromList
             $ zip tsFrom tsTo
       }
 -- It is not possible that the initial and final types have different arity
-castExpr expr (TypeTuple _) _ = error $ "Mismatching function return type parametric and not: " ++ show expr
-castExpr expr _ (TypeTuple _) = error $ "Mismatching function return type parametric and not: " ++ show expr
+castExpr expr (TypeTuple _) _ _ = error $ "Mismatching function return type parametric and not: " ++ show expr
+castExpr expr _ (TypeTuple _) _ = error $ "Mismatching function return type parametric and not: " ++ show expr
 -- If the type is not a tuple, simply cast it
-castExpr expr _ t =
+castExpr expr _ t currUUID =
   CastingTerm $
     Casting
       { castingExpr = IntermediateExprExpr $ IntermediateAsData expr,
@@ -121,8 +134,9 @@ castExpr expr _ t =
 -- in this case the casting is not needed, but in any case it does not impact runtime exectution
 --
 -- Similarly, it also performs an (up)casting when function arguments are passed to function parameters that are themselves type-parametric
-insertCasting :: TraversalMapper Expr ()
-insertCasting expr@(PositionalStructExprOrFunctionCallExpr fc@PositionalStructExprOrFunctionCall {pseofcNameAccessChain, pseofcFields}) scopes st =
+-- TODO: return an updated current UUID
+insertCasting :: TraversalMapper Expr AnnotatedUUID
+insertCasting expr@(PositionalStructExprOrFunctionCallExpr fc@PositionalStructExprOrFunctionCall {pseofcNameAccessChain, pseofcFields}) scopes currUUID =
   case getNacFromScopes pseofcNameAccessChain scopes of
     -- In this case, it is a function call and not a positional struct
     VariableAnnotations _ (TypeArrow tParams tFunc) ->
@@ -139,7 +153,7 @@ insertCasting expr@(PositionalStructExprOrFunctionCallExpr fc@PositionalStructEx
               -- For example, an argument passed to a parameter of type `MyType<tw_a>` is upcasted to `MyType<IntermediateTypeData>`
               upcastFuncArg :: Expr -> Type -> Expr
               upcastFuncArg fArg tParam
-                | isTypeParametric tParam tParamsSet = castExpr fArg (inferExprType fArg scopes) (transformBi (rewriteTypeAsData tParamsSet) tParam)
+                | isTypeParametric tParam tParamsSet = castExpr fArg (inferExprType fArg scopes) (transformBi (rewriteTypeAsData tParamsSet) tParam) currUUID
               upcastFuncArg fArg _ = fArg
 
           fc' = fc {pseofcFields = pseofcFields'}
@@ -150,12 +164,12 @@ insertCasting expr@(PositionalStructExprOrFunctionCallExpr fc@PositionalStructEx
               -- Function calls always return a tuple since at least we have the CPS
               -- So, infer the final type and also check the type returned by the function (with Data already replaced)
               -- Then, forward the casting to the helper function
-              then castExpr (PositionalStructExprOrFunctionCallExpr fc') (transformBi (rewriteTypeAsData tParamsSet) (last tFunc)) (inferExprType expr scopes)
+              then castExpr (PositionalStructExprOrFunctionCallExpr fc') (transformBi (rewriteTypeAsData tParamsSet) (last tFunc)) (inferExprType expr scopes) currUUID
               else
                 PositionalStructExprOrFunctionCallExpr fc'
-       in (expr', st)
+       in (expr', currUUID)
     -- Otherwise, leave the function call / positional struct unchanged
-    _ -> (expr, st)
+    _ -> (expr, currUUID)
 insertCasting expr _scopes st = (expr, st)
 
 -- |

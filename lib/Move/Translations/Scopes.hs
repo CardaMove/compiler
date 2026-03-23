@@ -1,5 +1,6 @@
 module Move.Translations.Scopes (markVariablesForLocalScope, rewriteAssignments, rewriteRefs, rewriteVars, rewriteLetBinds, rewriteInlineStateMutation, addLocalScopeInRoot) where
 
+import Control.Monad.State (MonadState (get, put), State)
 import Data.Generics.Uniplate.Data (transformBi, universe)
 import Data.List (elemIndex, sortOn)
 import Data.Map qualified as Map
@@ -7,12 +8,15 @@ import Data.Maybe (fromMaybe)
 import Data.Set qualified as Set
 import Move.AST
 import Move.Translations.TraversalUtils (TraversalMapper, traversalIdentity, traverseRootPostOrder)
-import Move.Translations.Utils (Scope, VariableAnnotations (VariableAnnotations), cpsIdentifier, getNacFromScopes, inferExprType, unitType)
+import Move.Translations.Utils (Scope, VariableAnnotations (VariableAnnotations), cpsIdentifier, getNacFromScopes, inferExprType, iterateWithOthers, unitType)
 
 -- |
 -- Given the AST, marks all the variables that need to be inserted in the explicit local scope
-markVariablesForLocalScope :: Root -> Set.Set AnnotatedUUID
-markVariablesForLocalScope root = snd $ traverseRootPostOrder vaiableMarker bindsMapper root Set.empty
+--
+-- Accepts other modules that might be imported by the current one, but the motivation is simply for better inferring expression types,
+-- since in any case it is not expected for non-local variables to be mutated in any way and thus inserted into the scope
+markVariablesForLocalScope :: Root -> [Root] -> Set.Set AnnotatedUUID
+markVariablesForLocalScope root otherRoots = snd $ traverseRootPostOrder vaiableMarker bindsMapper root Set.empty otherRoots
   where
     insertMaybe :: (Ord a) => Maybe a -> Set.Set a -> Set.Set a
     insertMaybe Nothing set = set
@@ -44,7 +48,6 @@ markVariablesForLocalScope root = snd $ traverseRootPostOrder vaiableMarker bind
     -- In fact, reference variables do not always need to be inserted in the local scope
     -- They should be added only if mutated themselves, like normal variables
     bindsMapper binds _scopes mutRes = (binds, mutRes)
-
 
 -- |
 -- Utility function
@@ -142,8 +145,8 @@ unconstrDotAccess expr' scopes' =
 -- The rewriting is performed on two steps:
 -- first, a traversal uses the scope to rewrite the assignments into an `IntermediateScopeBinding` expression, that must be present only in this function
 -- then, a transformBi is performed in order to rewrite a `SequenceItemExpr` corresponding to the assignement into a let bind `SequenceItemBindExpr`
-rewriteAssignments :: Root -> AnnotatedUUID -> Root
-rewriteAssignments root scopeUUID = transformBi helperBindRewriter $ fst $ traverseRootPostOrder exprMapper traversalIdentity root ()
+rewriteAssignments :: Root -> [Root] -> AnnotatedUUID -> Root
+rewriteAssignments root otherRoots scopeUUID = transformBi helperBindRewriter $ fst $ traverseRootPostOrder exprMapper traversalIdentity root () otherRoots
   where
     -- Translates assignments into the `IntermediateScopeBinding` expressions
     exprMapper :: TraversalMapper Expr ()
@@ -866,15 +869,22 @@ rewriteFunctionDeclaration root markedVars bindingsToAdd scopeUUID = case root o
 --    - Function calls and structs namings only apply to local names
 --    - Tuple bindings, destructuring of structs and tuple assignments in the cases where at least one variable has to be inserted in the scope are not supported
 --    - Dot accesses expect the left part to always be a struct, inline values are currently not supported
-addLocalScopeInRoot :: Root -> Set.Set AnnotatedUUID -> AnnotatedUUID -> Root
-addLocalScopeInRoot root markedVars currUUID =
-  let scopeUUID :: AnnotatedUUID = -1
-
-      firstPass :: Root = rewriteAssignments root scopeUUID
-      secondPass :: Root = fst $ traverseRootPostOrder rewriteRefs traversalIdentity firstPass ()
-      thirdPass :: Root = fst $ traverseRootPostOrder (rewriteVars markedVars) traversalIdentity secondPass ()
-      fourthPass :: Root = fst $ traverseRootPostOrder traversalIdentity (rewriteLetBinds markedVars scopeUUID) thirdPass ()
-      (fifthPass, (_, bindingsToAdd)) = traverseRootPostOrder (rewriteInlineStateMutation scopeUUID) traversalIdentity fourthPass (currUUID, Map.empty)
-      sixthPass = rewriteFunctionDeclaration fifthPass markedVars bindingsToAdd scopeUUID
-   in -- TODO: Also missing liftings
-      sixthPass
+addLocalScopeInRoot :: [Root] -> Set.Set AnnotatedUUID -> State AnnotatedUUID [Root]
+addLocalScopeInRoot roots markedVars = do
+  let scopeUUID = -1
+  -- It is safe to perform all intermediate passes on each Root, since only local variables are affected
+  -- This is more performant than performing each intermediate pass on all roots, then the second on all roots and so on
+  -- TODO: Also missing liftings
+  iterateWithOthers (addLocalScopeIterator scopeUUID) roots
+  where
+    addLocalScopeIterator :: AnnotatedUUID -> Root -> [Root] -> State AnnotatedUUID Root
+    addLocalScopeIterator scopeUUID root otherRoots = do
+      let firstPass :: Root = rewriteAssignments root otherRoots scopeUUID
+      let secondPass :: Root = fst $ traverseRootPostOrder rewriteRefs traversalIdentity firstPass () otherRoots
+      let thirdPass :: Root = fst $ traverseRootPostOrder (rewriteVars markedVars) traversalIdentity secondPass () otherRoots
+      let fourthPass :: Root = fst $ traverseRootPostOrder traversalIdentity (rewriteLetBinds markedVars scopeUUID) thirdPass () otherRoots
+      currUUID <- get
+      let (fifthPass, (updatedUUID, bindingsToAdd)) = traverseRootPostOrder (rewriteInlineStateMutation scopeUUID) traversalIdentity fourthPass (currUUID, Map.empty) otherRoots
+      put updatedUUID
+      let sixthPass = rewriteFunctionDeclaration fifthPass markedVars bindingsToAdd scopeUUID
+      return sixthPass

@@ -23,20 +23,24 @@ import Move.Translations.Utils
 translateTParamsInRoot :: [Root] -> State Int [Root]
 translateTParamsInRoot roots = do
   -- Rewrite the function and struct definitions
-  roots'' <- iterateWithOthers helper' roots
+  roots'' <- iterateWithOthers topLevelIterator roots
   -- Then, rewrite the function calls
-  iterateWithOthers helper'' roots''
+  -- Note that the reason why two distinct iterations are performed is because the logic in `functionCallsIterator` needs
+  -- the type witnesses to already be present in the function signatures and thus in the scope of the function
+  iterateWithOthers functionCallsIterator roots''
   where
-    helper' :: Root -> [Root] -> State Int Root
-    helper' (RModule rModule@Module {moduleTopLevels}) _ = do
+    -- Iterator to rewrite top levels
+    topLevelIterator :: Root -> [Root] -> State Int Root
+    topLevelIterator (RModule rModule@Module {moduleTopLevels}) _ = do
       mappedTL <- mapM rewriteTopLevel moduleTopLevels
       return $ RModule $ rModule {moduleTopLevels = mappedTL}
-    helper' (RScript rScript@Script {scriptTopLevels}) _ = do
+    topLevelIterator (RScript rScript@Script {scriptTopLevels}) _ = do
       mappedTL <- mapM rewriteTopLevel scriptTopLevels
       return $ RScript $ rScript {scriptTopLevels = mappedTL}
 
-    helper'' :: Root -> [Root] -> State Int Root
-    helper'' root otherRoots = return $ fst $ traverseRootPostOrder rewriteFunctionCalls traversalIdentity root () otherRoots
+    -- Iterator to rewrite function calls
+    functionCallsIterator :: Root -> [Root] -> State Int Root
+    functionCallsIterator root otherRoots = return $ fst $ traverseRootPostOrder rewriteFunctionCalls traversalIdentity root () otherRoots
 
     -- Helper function, used to rewrite a single type argument to a type witness
     mapTArgToFArg :: Type -> Set.Set Identifier -> IntermediateTypeWitnessExpr
