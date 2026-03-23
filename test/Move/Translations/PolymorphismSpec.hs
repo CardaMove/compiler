@@ -21,7 +21,7 @@ testTranslatePolymorphismInRoot = describe "Tests the function `translatePolymor
 
     let (annotated, currUUID) = runState (mapM annotateBindingsWithUUID [parsed] >>= translateTParamsInRoot) 0
 
-    let markedVars = unionSet $ evalState (iterateWithOthers (\root otherRoots -> return $ markVariablesForLocalScope root otherRoots) annotated) ()
+    let markedVars = markVariablesForLocalScope annotated
 
     let updated = evalState (addLocalScopeInRoot annotated markedVars >>= translatePolymorphismInRoot) currUUID
     

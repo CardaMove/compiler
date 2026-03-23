@@ -1,6 +1,6 @@
 module Move.Translations.Scopes (markVariablesForLocalScope, rewriteAssignments, rewriteRefs, rewriteVars, rewriteLetBinds, rewriteInlineStateMutation, addLocalScopeInRoot) where
 
-import Control.Monad.State (MonadState (get, put), State)
+import Control.Monad.State (MonadState (get, put), State, evalState)
 import Data.Generics.Uniplate.Data (transformBi, universe)
 import Data.List (elemIndex, sortOn)
 import Data.Map qualified as Map
@@ -8,16 +8,20 @@ import Data.Maybe (fromMaybe)
 import Data.Set qualified as Set
 import Move.AST
 import Move.Translations.TraversalUtils (TraversalMapper, traversalIdentity, traverseRootPostOrder)
-import Move.Translations.Utils (Scope, VariableAnnotations (VariableAnnotations), cpsIdentifier, getNacFromScopes, inferExprType, iterateWithOthers, unitType)
+import Move.Translations.Utils (Scope, VariableAnnotations (VariableAnnotations), cpsIdentifier, getNacFromScopes, inferExprType, iterateWithOthers, unionSet, unitType)
 
 -- |
--- Given the AST, marks all the variables that need to be inserted in the explicit local scope
+-- Given multiple ASTs, marks all the variables that need to be inserted in the explicit local scope
 --
 -- Accepts other modules that might be imported by the current one, but the motivation is simply for better inferring expression types,
 -- since in any case it is not expected for non-local variables to be mutated in any way and thus inserted into the scope
-markVariablesForLocalScope :: Root -> [Root] -> Set.Set AnnotatedUUID
-markVariablesForLocalScope root otherRoots = snd $ traverseRootPostOrder vaiableMarker bindsMapper root Set.empty otherRoots
+markVariablesForLocalScope :: [Root] -> Set.Set AnnotatedUUID
+markVariablesForLocalScope roots = unionSet $ evalState (iterateWithOthers markVariablesIterator roots) ()
   where
+    markVariablesIterator :: Root -> [Root] -> State () (Set.Set AnnotatedUUID)
+    markVariablesIterator root otherRoots = do
+      return $ snd $ traverseRootPostOrder vaiableMarker bindsMapper root Set.empty otherRoots
+
     insertMaybe :: (Ord a) => Maybe a -> Set.Set a -> Set.Set a
     insertMaybe Nothing set = set
     insertMaybe (Just val) set = Set.insert val set

@@ -20,7 +20,7 @@ testMarkVariablesForLocalScope = describe "Tests the function `markVariablesForL
 
     let annotated = head $ evalState (mapM annotateBindingsWithUUID [parsed] >>= translateTParamsInRoot) 0
 
-    markVariablesForLocalScope annotated [] `shouldBe` Set.fromList [1, 2, 4, 8, 10]
+    markVariablesForLocalScope [annotated] `shouldBe` Set.fromList [1, 2, 4, 8, 10]
 
 testRewriteAssignments :: Spec
 testRewriteAssignments = describe "Tests the function `rewriteAssignments`" $ do
@@ -68,7 +68,7 @@ testRewriteVars = describe "Tests the function `rewriteVars`" $ do
 
     let annotated = head $ evalState (mapM annotateBindingsWithUUID [parsed] >>= translateTParamsInRoot) 0
 
-    let markedVars = markVariablesForLocalScope annotated []
+    let markedVars = markVariablesForLocalScope [annotated]
 
     let scopeUUID :: AnnotatedUUID = -1
 
@@ -90,7 +90,7 @@ testRewriteLetBinds = describe "Tests the function `rewriteLetBinds`" $ do
 
     let annotated = head $ evalState (mapM annotateBindingsWithUUID [parsed] >>= translateTParamsInRoot) 0
 
-    let markedVars = markVariablesForLocalScope annotated []
+    let markedVars = markVariablesForLocalScope [annotated]
 
     let scopeUUID :: AnnotatedUUID = -1
 
@@ -112,7 +112,7 @@ testAddLocalScopeInRoot = describe "Tests the function `addLocalScopeInRoot`" $ 
 
     let (annotated, currUUID) = runState (mapM annotateBindingsWithUUID [parsed] >>= translateTParamsInRoot) 0
 
-    let markedVars = unionSet $ evalState (iterateWithOthers (\root otherRoots -> return $ markVariablesForLocalScope root otherRoots) annotated) ()
+    let markedVars = markVariablesForLocalScope annotated
 
     let updated = evalState (addLocalScopeInRoot annotated markedVars) currUUID
 
@@ -127,7 +127,7 @@ testAddLocalScopeInRoot = describe "Tests the function `addLocalScopeInRoot`" $ 
 
     let (annotated, currUUID) = runState (mapM annotateBindingsWithUUID [parsed] >>= translateTParamsInRoot) 0
 
-    let markedVars = unionSet $ evalState (iterateWithOthers (\root otherRoots -> return $ markVariablesForLocalScope root otherRoots) annotated) ()
+    let markedVars = markVariablesForLocalScope annotated
 
     let updated = evalState (addLocalScopeInRoot annotated markedVars) currUUID
 
@@ -142,7 +142,7 @@ testAddLocalScopeInRoot = describe "Tests the function `addLocalScopeInRoot`" $ 
 
     let (annotated, currUUID) = runState (mapM annotateBindingsWithUUID [parsed] >>= translateTParamsInRoot) 0
 
-    let markedVars = unionSet $ evalState (iterateWithOthers (\root otherRoots -> return $ markVariablesForLocalScope root otherRoots) annotated) ()
+    let markedVars = markVariablesForLocalScope annotated
 
     let updated = evalState (addLocalScopeInRoot annotated markedVars) currUUID
 
@@ -157,7 +157,7 @@ testAddLocalScopeInRoot = describe "Tests the function `addLocalScopeInRoot`" $ 
 
     let (annotated, currUUID) = runState (mapM annotateBindingsWithUUID [parsed] >>= translateTParamsInRoot) 0
 
-    let markedVars = unionSet $ evalState (iterateWithOthers (\root otherRoots -> return $ markVariablesForLocalScope root otherRoots) annotated) ()
+    let markedVars = markVariablesForLocalScope annotated
 
     let updated = evalState (addLocalScopeInRoot annotated markedVars) currUUID
 
