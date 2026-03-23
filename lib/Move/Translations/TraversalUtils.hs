@@ -223,7 +223,7 @@ buildImportedScope uses otherModules = concatMap buildImportedScope' uses
 
           -- If not found, throw an error
           importedModule' = case importedModule of
-            Nothing -> error $ "Imported module not found: " ++ show use
+            Nothing -> error $ "Imported module not found: " ++ show use ++ ", total of other modules: " ++ (show $ length otherModules)
             Just m -> m
 
           -- Then, get all the symbols (identifiers declared in that module)

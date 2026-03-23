@@ -1,11 +1,11 @@
 module Move.Translations.UtilsSpec (spec) where
 
-import Control.Monad.State (evalState)
+import Control.Monad.State (evalState, modify, runState)
 import Move.AST
-import Move.Translations.Utils ( extractVariablesFromSingleBind, annotateBindingsWithUUID, VariableAnnotations (VariableAnnotations) )
-import Test.Hspec
-import Move.Parser (parse)
 import Move.Lexer (scan)
+import Move.Parser (parse)
+import Move.Translations.Utils (VariableAnnotations (VariableAnnotations), annotateBindingsWithUUID, extractVariablesFromSingleBind, iterateWithOthers)
+import Test.Hspec
 
 testExtractVariablesFromSingleBind :: Spec
 testExtractVariablesFromSingleBind = describe "Tests the function `extractVariablesFromSingleBind`" $ do
@@ -30,7 +30,6 @@ testExtractVariablesFromSingleBind = describe "Tests the function `extractVariab
 
     extractVariablesFromSingleBind bind Nothing Nothing [] `shouldBe` [(Identifier "a", VariableAnnotations (Just 0) TypeUnknown), (Identifier "b_alias", VariableAnnotations (Just 1) TypeUnknown)]
 
-
 testAnnotateBindingsWithUUID :: Spec
 testAnnotateBindingsWithUUID = describe "Tests the function `annotateBindingsWithUUID`" $ do
   it "Assigns incremental UUIDs to all bindings, starting from zero" $ do
@@ -46,7 +45,27 @@ testAnnotateBindingsWithUUID = describe "Tests the function `annotateBindingsWit
 
     annotated `shouldBe` toModule
 
+testIterateWithOthers :: Spec
+testIterateWithOthers = describe "Tests the function `iterateWithOthers`" $ do
+  it "Should correctly loop over each element and provide all the others along" $ do
+    let elems = ["A", "B", "C", "D", "E"]
+
+    let (iterated, st) =
+          runState
+            ( iterateWithOthers
+                ( \el others -> do
+                    modify (+ 1)
+                    return (el, others)
+                )
+                elems
+            )
+            0
+
+    iterated `shouldBe` [("A", ["B", "C", "D", "E"]), ("B", ["A", "C", "D", "E"]), ("C", ["A", "B", "D", "E"]), ("D", ["A", "B", "C", "E"]), ("E", ["A", "B", "C", "D"])]
+    st `shouldBe` length elems
+
 spec :: Spec
 spec = do
   testExtractVariablesFromSingleBind
   testAnnotateBindingsWithUUID
+  testIterateWithOthers

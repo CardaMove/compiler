@@ -20,7 +20,7 @@ markVariablesForLocalScope roots = unionSet $ evalState (iterateWithOthers markV
   where
     markVariablesIterator :: Root -> [Root] -> State () (Set.Set AnnotatedUUID)
     markVariablesIterator root otherRoots = do
-      return $ snd $ traverseRootPostOrder vaiableMarker bindsMapper root Set.empty otherRoots
+      return $ snd $ traverseRootPostOrder variableMarker bindsMapper root Set.empty otherRoots
 
     insertMaybe :: (Ord a) => Maybe a -> Set.Set a -> Set.Set a
     insertMaybe Nothing set = set
@@ -39,13 +39,13 @@ markVariablesForLocalScope roots = unionSet $ evalState (iterateWithOthers markV
     getLeftmostIdentInRef nac@(NameAccessChainExpr _) _ = error $ "Unsupported reference to non-local name access chain: " ++ show nac
     getLeftmostIdentInRef _ _ = Nothing
 
-    vaiableMarker :: TraversalMapper Expr (Set.Set AnnotatedUUID)
+    variableMarker :: TraversalMapper Expr (Set.Set AnnotatedUUID)
     -- Every referenced variable `&[mut] a[.b.c]` should be added to the local scope
-    vaiableMarker expr@(UnaryOpExpr (MutableReference referencedExpr)) scopes res = (expr, insertMaybe (getLeftmostIdentInRef referencedExpr scopes) res)
-    vaiableMarker expr@(UnaryOpExpr (ImmutableReference referencedExpr)) scopes res = (expr, insertMaybe (getLeftmostIdentInRef referencedExpr scopes) res)
+    variableMarker expr@(UnaryOpExpr (MutableReference referencedExpr)) scopes res = (expr, insertMaybe (getLeftmostIdentInRef referencedExpr scopes) res)
+    variableMarker expr@(UnaryOpExpr (ImmutableReference referencedExpr)) scopes res = (expr, insertMaybe (getLeftmostIdentInRef referencedExpr scopes) res)
     -- Every mutated variable `a[.b.c] = ...` should be added to the local scope
-    vaiableMarker expr@(AssignmentExpr (Assignment {assignmentLeft})) scopes res = (expr, insertMaybe (getLeftmostIdentInRef assignmentLeft scopes) res)
-    vaiableMarker expr _scopes res = (expr, res)
+    variableMarker expr@(AssignmentExpr (Assignment {assignmentLeft})) scopes res = (expr, insertMaybe (getLeftmostIdentInRef assignmentLeft scopes) res)
+    variableMarker expr _scopes res = (expr, res)
 
     bindsMapper :: TraversalMapper Bindings (Set.Set AnnotatedUUID)
     -- Regarding let bindings, there is no need to analyze anything

@@ -446,8 +446,8 @@ iterateWithOthers' :: (a -> [a] -> State st b) -> [a] -> a -> [a] -> State st [b
 iterateWithOthers' func prev curr [] = do
   res <- func curr prev
   return [res]
-iterateWithOthers' func prev curr (n : ns) = do
-  res <- func curr prev
+iterateWithOthers' func prev curr next@(n : ns) = do
+  res <- func curr (prev ++ next)
   resN <- iterateWithOthers' func (prev ++ [curr]) n ns
   return (res : resN)
 
