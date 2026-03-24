@@ -20,6 +20,8 @@ import Move.Translations.Utils
 -- NOTE: It is needed by the logic in `rewriteFunctionCalls` that the type witnesses whould be named identical to the corresponding type parameters
 --
 -- Additionally, rewrites all occurrences of type parameters in the body of the function.
+--
+-- Note that this step also handles global storage operators, since they are still represented as function calls and not `IntermediateExprExpr` nodes
 translateTParamsInRoot :: [Root] -> State Int [Root]
 translateTParamsInRoot roots = do
   -- Rewrite the function and struct definitions

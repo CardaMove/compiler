@@ -135,6 +135,11 @@ castExpr expr _ t currUUID =
 --
 -- Similarly, it also performs an (up)casting when function arguments are passed to function parameters that are themselves type-parametric
 -- TODO: return an updated current UUID
+--
+-- The same reasoning might be applied to all global storage operators,
+-- however, they are designed in the custom Aiken library such that they accept `Data` as parameter, in which case no casting is needed,
+-- or they return `(Data, CPS)` only in the case of the `move_from`
+-- This means that a more specific approach can be performed, by just considering the return of the `move_from` and ignoring all the other operators
 insertCasting :: TraversalMapper Expr AnnotatedUUID
 insertCasting expr@(PositionalStructExprOrFunctionCallExpr fc@PositionalStructExprOrFunctionCall {pseofcNameAccessChain, pseofcFields}) scopes currUUID =
   case getNacFromScopes pseofcNameAccessChain scopes of
@@ -170,6 +175,10 @@ insertCasting expr@(PositionalStructExprOrFunctionCallExpr fc@PositionalStructEx
        in (expr', currUUID)
     -- Otherwise, leave the function call / positional struct unchanged
     _ -> (expr, currUUID)
+-- For the `move_from`, handle just the return value (see above comment)
+insertCasting expr@(IntermediateExprExpr (IntermediateMoveFrom _ t _)) _scopes currUUID =
+  -- The `move_from` returns `(Data, CPS)`, translate to the concrete type
+  (castExpr expr (TypeTuple [IntermediateTypeData, IntermediateTypeScopes]) (TypeTuple [t, IntermediateTypeScopes]) currUUID, currUUID)
 insertCasting expr _scopes st = (expr, st)
 
 -- |

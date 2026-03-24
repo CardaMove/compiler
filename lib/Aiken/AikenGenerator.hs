@@ -517,20 +517,13 @@ generateExpression (IntermediateExprExpr (IntermediateMoveTo signer expr _t tWit
     expr' = generateExpression expr
     cpsIdentifier' = packIdent cpsIdentifier
 -- `move_from<T>(address)`
--- Requires a manual casting after calling the Aiken lib
--- Note: expect with a tuple is not accepted by Aiken because the type checker complains both for incompatible tuple types and for reckless opaque cast.
--- If each element of a tuple is needed, the solution is to expect each one of them alone
--- FIXME: Might be removed this unnecessary expect logic since casting has been addded
-generateExpression (IntermediateExprExpr (IntermediateMoveFrom expr t tWitness)) =
+-- Note that the manual casting is handled by the Polymorphism step,
+-- that basically handles downcasting the returned tuple
+generateExpression (IntermediateExprExpr (IntermediateMoveFrom expr _t tWitness)) =
   [trimming|
-    {
-      let (val, $cpsIdentifier') = $lib.move_from($addr, $resourceType, $cpsIdentifier')
-      expect val: $casted' = val
-      (val, $cpsIdentifier')
-    }
+    $lib.move_from($addr, $resourceType, $cpsIdentifier')
   |]
   where
-    casted' = generateType t
     lib = packIdent gsUtilsIdent
     addr = generateExpression expr
     resourceType = generateTWitness tWitness
