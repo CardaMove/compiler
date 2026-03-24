@@ -395,11 +395,11 @@ generateExpression Continue = error "Unexpected continue"
 --
 generateExpression (IntermediateExprExpr (IntermediateReferenceLocalState ident fields _)) =
   [trimming|
-    $lib.make_ref($ident', $fields', $cpsIdentifier')
+    $lib.make_ref($identStr', $fields', $cpsIdentifier')
   |]
   where
     lib = packIdent refUtilsIdent
-    ident' = packIdent ident
+    identStr' = packStringify $ packIdent ident
     fields' = pack $ show fields
     cpsIdentifier' = packIdent cpsIdentifier
 -- Any `*a` on the right side
@@ -431,33 +431,33 @@ generateExpression (IntermediateExprExpr (IntermediatePutDereferenceLocalState i
 generateExpression (IntermediateExprExpr (IntermediateGetLocalState ident t)) =
   [trimming|
     {
-      expect val: $casted' = $lib.get_scope($ident', $cpsIdentifier')
+      expect val: $casted' = $lib.get_scope($identStr', $cpsIdentifier')
       val
     }
   |]
   where
     casted' = generateType t
     lib = packIdent scopeUtilsIdent
-    ident' = packIdent ident
+    identStr' = packStringify $ packIdent ident
     cpsIdentifier' = packIdent cpsIdentifier
 generateExpression (IntermediateExprExpr (IntermediatePutLocalState ident expr fields)) =
   [trimming|
-    $lib.put_scope($ident', $fields', $expr', $cpsIdentifier')
+    $lib.put_scope($identStr', $fields', $expr', $cpsIdentifier')
   |]
   where
     lib = packIdent scopeUtilsIdent
-    ident' = packIdent ident
+    identStr' = packStringify $ packIdent ident
     fields' = pack $ show fields
     expr' = generateExpression expr
     cpsIdentifier' = packIdent cpsIdentifier
 -- Any `a[.b.c] = ...`
 generateExpression (IntermediateExprExpr (IntermediatePostLocalState ident expr)) =
   [trimming|
-    $lib.post_scope($ident', $expr', $cpsIdentifier')
+    $lib.post_scope($identStr', $expr', $cpsIdentifier')
   |]
   where
     lib = packIdent scopeUtilsIdent
-    ident' = packIdent ident
+    identStr' = packStringify $ packIdent ident
     expr' = generateExpression $ fromMaybe (CommaExpr []) expr
     cpsIdentifier' = packIdent cpsIdentifier
 -- PUSH and POP operations on the scope
