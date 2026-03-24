@@ -12,7 +12,6 @@ import Move.Transpiler (transpiler)
 import System.Directory (createDirectoryIfMissing)
 import System.FilePath (takeDirectory, (<.>), (</>))
 
--- FIXME: Something wrong in `module1.ak` when multiple return types are `((Void, CPS), CPS)`
 
 main :: IO ()
 main = do
