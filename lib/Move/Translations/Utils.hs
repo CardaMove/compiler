@@ -70,7 +70,6 @@ utilsLibAddress = NamedAddress $ Identifier "utils"
 
 -- |
 -- Checks if the identifier is present in any of the input scopes
--- FIXME: change to nac
 isIdentifierInScope :: Identifier -> [Scope] -> Bool
 isIdentifierInScope _ [] = False
 isIdentifierInScope ident (x : xs) = Map.member (LocalNameAccessChain ident) x || isIdentifierInScope ident xs
@@ -140,8 +139,7 @@ extractVariablesFromSingleBind bind maybeType maybeExpr scopes =
 -- Given an AST, adds a unique identifier to all bindings
 --
 -- Note that existing UUIDs will be overwritten
--- FIXME: The State should be AnnotatedUUID not Int
-annotateBindingsWithUUID :: Root -> State Int Root
+annotateBindingsWithUUID :: Root -> State AnnotatedUUID Root
 annotateBindingsWithUUID root = do
   -- First, handle both a Module and a Script
   case root of
@@ -153,11 +151,11 @@ annotateBindingsWithUUID root = do
       return $ RScript $ rScript {scriptTopLevels = mappedTopLevels}
   where
     -- Each top level function should be annotated both in its parameters and function body
-    handleTopLevels :: [TopLevel] -> State Int [TopLevel]
+    handleTopLevels :: [TopLevel] -> State AnnotatedUUID [TopLevel]
     handleTopLevels topLevels = do mapM topLevelAnnotator topLevels
 
     -- Annotates any top level
-    topLevelAnnotator :: TopLevel -> State Int TopLevel
+    topLevelAnnotator :: TopLevel -> State AnnotatedUUID TopLevel
     topLevelAnnotator (TopLevelFunction topLFunction@Function {functionParameters, functionBody}) = do
       -- Annotate the function itself
       functionUUID <- get
@@ -191,7 +189,7 @@ annotateBindingsWithUUID root = do
     topLevelAnnotator otherTL = return otherTL
 
     -- Annotates all the bindings in the function body
-    functionBodyAnnotator :: Bind -> State Int Bind
+    functionBodyAnnotator :: Bind -> State AnnotatedUUID Bind
     -- Single bind
     functionBodyAnnotator (BindIdentifier ident _) = do
       curr <- get
@@ -208,13 +206,13 @@ annotateBindingsWithUUID root = do
         return $ BindPositionalStruct $ str {bpsFields = mappedFields}
 
     -- Helper function to annotate pattern matched fields
-    bindedFieldsAnnotator :: BindedFields -> State Int BindedFields
+    bindedFieldsAnnotator :: BindedFields -> State AnnotatedUUID BindedFields
     bindedFieldsAnnotator bindedFs@BindedFields {bindedFields} = do
       mappedFields <- mapM bindFldAnnotator bindedFields
       return bindedFs {bindedFields = mappedFields}
 
     -- Helper function to annotate a single matched field
-    bindFldAnnotator :: BindedField -> State Int BindedField
+    bindFldAnnotator :: BindedField -> State AnnotatedUUID BindedField
     -- A BindedField should have a UUID only if it has no inner binding.
     -- This is because if an inner binding is present, this identifier is not added to the scope
     bindFldAnnotator bindedField@BindedField {bindFieldInnerBind = Nothing} = do
