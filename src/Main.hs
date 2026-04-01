@@ -3,6 +3,7 @@
 module Main (main) where
 
 import Aiken.AikenGenerator (generateRoot)
+import Aiken.ValidatorGenerator (collectScriptMainMetadata, generateValidator)
 import Control.Monad (zipWithM_)
 import Control.Monad.State (MonadState (get, put), State, evalState)
 import Data.Text (unpack)
@@ -42,6 +43,11 @@ main = do
   let outFiles = evalState (mapM ((`buildOutFilePath` outDir) . snd) transpiled) 0
 
   zipWithM_ writeFile' outFiles (map (removeCarriage . unpack) aikenText)
+
+  let validatorPath = outDir </> "validator.ak"
+  let validatorText = generateValidator $ collectScriptMainMetadata transpiled
+
+  writeFile' validatorPath (removeCarriage . unpack $ validatorText)
 
   putStrLn $ "Written files at " ++ outDir
 

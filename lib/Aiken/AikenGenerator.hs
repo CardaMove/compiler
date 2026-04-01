@@ -1,6 +1,6 @@
 {-# LANGUAGE QuasiQuotes #-}
 
-module Aiken.AikenGenerator (generateRoot, generateTopLevel) where
+module Aiken.AikenGenerator (generateRoot, generateTopLevel, generateType) where
 
 import Control.Exception (evaluate)
 import Data.Maybe (fromMaybe)

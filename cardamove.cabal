@@ -23,6 +23,7 @@ extra-source-files:
 library
   exposed-modules:
       Aiken.AikenGenerator
+      Aiken.ValidatorGenerator
       Move.AST
       Move.Lexer
       Move.Loader.Loader
@@ -93,6 +94,7 @@ test-suite cardamove-test
   main-is: Spec.hs
   other-modules:
       Aiken.AikenGeneratorSpec
+      Aiken.ValidatorGeneratorSpec
       Move.LexerSpec
       Move.Loader.LoaderSpec
       Move.ParserSpec
