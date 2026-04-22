@@ -1,0 +1,16 @@
+[package]
+name = "Bet"
+version = "1.0.0"
+authors = []
+
+[addresses]
+BetAddr = "0xBE7"
+
+[dev-addresses]
+
+[dependencies.AptosFramework]
+git = "https://github.com/aptos-labs/aptos-framework.git"
+rev = "mainnet"
+subdir = "aptos-framework"
+
+[dev-dependencies]
