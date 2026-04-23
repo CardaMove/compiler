@@ -7,12 +7,13 @@ module Aiken.ValidatorGenerator (
   generateValidator
 ) where
 
-import Aiken.AikenGenerator (generateType)
+import Aiken.AikenGenerator (generateType, generateTopLevel)
 import Data.Char (isAlphaNum, toLower, toUpper)
 import Data.Text (Text, intercalate, pack)
 import Move.AST
 import NeatInterpolation (trimming)
 import System.FilePath (takeBaseName)
+import Move.Translations.Utils (stdLibUses)
 
 -- | Metadata needed to generate the project-level validator.
 data ScriptMainMetadata = ScriptMainMetadata
@@ -93,6 +94,13 @@ collectScriptMainMetadata files =
 generateValidator :: [ScriptMainMetadata] -> Text
 generateValidator scriptsMeta =
   [trimming|
+    use cardano/transaction.{OutputReference, Transaction}
+    use aiken/collection/list
+    use aiken/collection/dict.{Dict}
+    use cardano/assets.{Value}
+
+    $stdLibImports
+
     $imports
 
     pub type Redeemer {
@@ -100,9 +108,62 @@ generateValidator scriptsMeta =
     }
 
     validator cardamove_validator {
-      spend(_datum, redeemer: Redeemer, _own_ref, _tx) {
-        when redeemer is {
+      spend(
+        datum: Option<SerializedProgramState>,
+        redeemer: Redeemer,
+        utxo: OutputReference,
+        self: Transaction,
+      ) {
+        // At the start of the validator:
+
+        // 1- Retrieve assets in input and outputs. Outputs will have the fees automatically deducted
+        let tx_input_assets: Dict<Addr, Value> = list.map(self.inputs, fn (input) { input.output })
+          |> assets_utils.map_outputs_to_assets()
+
+        let tx_output_assets: Dict<Addr, Value> = self.outputs
+          |> assets_utils.map_outputs_to_assets()
+
+        // 2- Compute the initial state and the state in the tx output
+        let program_state: ProgramState = state_utils.get_tx_input_state(datum)
+          |> coin_utils.add_assets_to_state(tx_input_assets)
+
+        let output_state: ProgramState = state_utils.get_tx_output_state(utxo, self)
+
+        let cps: CPS = ([], program_state)
+
+        // Pattern matchin the Redeemer
+        let (_, program_state): CPS = when redeemer is {
           $spendBranches
+        }
+
+        // At the end of the validator:
+
+        // 1- Get the assets that are expected to be present as output, deducing the fees from them
+        // Additionally, the balance of the contract is removed. This is because it is not trivial to track when an asset is added to the contract
+        // (TODO: will still be needed to be done in Mesh) so at least for now, it is not checked. This is still secure since only one address is not checked
+        let contract_address: Addr = common_utils.get_contract_address(utxo, self)
+          |> common_utils.parse_contract_address()
+
+        let program_assets: Dict<Addr, Value> = program_state
+          |> coin_utils.get_assets_from_state()
+          |> assets_utils.deduce_transaction_fees_from_assets(signer_utils.get_tx_signer(self), self.fee)
+          |> dict.delete(contract_address)
+
+        let tx_output_assets = tx_output_assets
+          |> dict.delete(contract_address)
+
+        // 2- Remove from the program state the intermediate values used to keep track of the assets
+        // Or from addresses that have no more state
+        let program_state = program_state
+          |> coin_utils.remove_assets_from_state()
+          |> state_utils.purge_state()
+
+        // 3- Make final comparisons
+        and {
+          // Compare program_state with output_state
+          state_utils.compare_tx_states(program_state, output_state),
+          // Compare expected_assets with tx output assets
+          assets_utils.compare_assets(program_assets, tx_output_assets)
         }
       }
 
@@ -116,6 +177,7 @@ generateValidator scriptsMeta =
     }
   |]
   where
+    stdLibImports = joinLines $ map generateTopLevel stdLibUses
     imports = joinLines $ map mkImport scriptsMeta
     redeemerVariants = joinLines $ map mkRedeemerVariant scriptsMeta
     spendBranches = joinLines $ map mkSpendBranch scriptsMeta
@@ -149,14 +211,14 @@ generateValidator scriptsMeta =
         [] ->
           [trimming|
             $ctor' -> {
-              let _ = $moduleName'.$functionName'()
+              let _ = $moduleName'.$functionName'(cps)
               True
             }
           |]
         indexedParams ->
           [trimming|
             $ctor'($patternArgs) -> {
-              let _ = $moduleName'.$functionName'($callArgs)
+              let _ = $moduleName'.$functionName'($callArgs, cps)
               True
             }
           |]

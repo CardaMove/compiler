@@ -16,7 +16,11 @@ module Move.Translations.Utils
     utilsLibAddress,
     isTypeParametric,
     iterateWithOthers,
-    unionSet
+    unionSet,
+    stdLibUses,
+    scopeUtilsIdent,
+    refUtilsIdent,
+    gsUtilsIdent,
   )
 where
 
@@ -452,3 +456,49 @@ iterateWithOthers' func prev curr next@(n : ns) = do
 -- Helper function to perform the union of a list of sets
 unionSet :: (Ord a) => [Set.Set a] -> Set.Set a
 unionSet = foldr Set.union Set.empty
+
+-- |
+-- The imports to add to all modules, consisting in a custom Aiken library
+stdLibUses :: [TopLevel]
+stdLibUses =
+  [ TopLevelUse $
+      Use
+        { useAddress = utilsLibAddress,
+          useIdentifier = Identifier "common_utils",
+          useAlias = Nothing,
+          useMembers =
+            [ UseMember {useMemberIdentifier = Identifier "CPS", useMemberUseAlias = Nothing},
+              UseMember {useMemberIdentifier = Identifier "Reference", useMemberUseAlias = Nothing},
+              UseMember {useMemberIdentifier = Identifier "Addr", useMemberUseAlias = Nothing},
+              UseMember {useMemberIdentifier = Identifier "TWitness", useMemberUseAlias = Nothing},
+              UseMember {useMemberIdentifier = Identifier "TypeWithnessC", useMemberUseAlias = Nothing}
+            ]
+        },
+    TopLevelUse $ Use {useAddress = NamedAddress $ Identifier "utils", useIdentifier = scopeUtilsIdent, useAlias = Nothing, useMembers = []},
+    TopLevelUse $ Use {useAddress = NamedAddress $ Identifier "utils", useIdentifier = refUtilsIdent, useAlias = Nothing, useMembers = []},
+    TopLevelUse $ Use {useAddress = NamedAddress $ Identifier "utils", useIdentifier = gsUtilsIdent, useAlias = Nothing, useMembers = []},
+    TopLevelUse $
+      Use
+        { useAddress = NamedAddress $ Identifier "utils",
+          useIdentifier = Identifier "signer_utils",
+          useAlias = Nothing,
+          useMembers =
+            [ UseMember {useMemberIdentifier = Identifier "Signer", useMemberUseAlias = Nothing}
+            ]
+        }
+  ]
+
+-- |
+-- Name of the custom Aiken library for scopes
+scopeUtilsIdent :: Identifier
+scopeUtilsIdent = Identifier "scope_utils"
+
+-- |
+-- Name of the custom Aiken library for references
+refUtilsIdent :: Identifier
+refUtilsIdent = Identifier "reference_utils"
+
+-- |
+-- Name of the custom Aiken library for global storage
+gsUtilsIdent :: Identifier
+gsUtilsIdent = Identifier "global_storage_utils"

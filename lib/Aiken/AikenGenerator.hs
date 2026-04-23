@@ -6,8 +6,7 @@ import Control.Exception (evaluate)
 import Data.Maybe (fromMaybe)
 import Data.Text (Text, empty, intercalate, null, pack)
 import Move.AST
-import Move.Translations.PostProcessing (gsUtilsIdent, refUtilsIdent, scopeUtilsIdent)
-import Move.Translations.Utils (cpsIdentifier, tryIO, unitType)
+import Move.Translations.Utils (cpsIdentifier, tryIO, unitType, gsUtilsIdent, refUtilsIdent, scopeUtilsIdent)
 import NeatInterpolation (trimming)
 
 --

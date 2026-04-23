@@ -37,8 +37,8 @@ spec = do
       out `shouldSatisfy` isInfixOf "use scripts/script-user"
       out `shouldSatisfy` isInfixOf "Script0(Int)"
       out `shouldSatisfy` isInfixOf "ScriptUser(Reference<Signer>)"
-      out `shouldSatisfy` isInfixOf "script0.run(arg0)"
-      out `shouldSatisfy` isInfixOf "script-user.join_round(arg0)"
+      out `shouldSatisfy` isInfixOf "script0.run(arg0, cps)"
+      out `shouldSatisfy` isInfixOf "script-user.join_round(arg0, cps)"
 
 mkScript :: [TopLevel] -> Script
 mkScript tops = Script {scriptTopLevels = tops}
