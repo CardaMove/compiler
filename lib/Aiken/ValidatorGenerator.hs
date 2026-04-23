@@ -19,19 +19,24 @@ data ScriptMainMetadata = ScriptMainMetadata
   { scriptConstructorName :: Identifier,
     scriptModuleName :: Identifier,
     scriptImportPath :: FilePath,
+    scriptFunctionName :: Identifier,
     scriptMainParametersMeta :: [Parameter]
   }
   deriving (Eq, Show, Read)
 
--- | Given a Script, extracts parameters accepted by its main function.
+-- | Given a Script, extracts the only function it contains.
 --
--- Fails if there is no main or if multiple main definitions are found.
+-- Fails if there is no function or if multiple functions are found.
+scriptMainFunction :: Script -> Function
+scriptMainFunction Script {scriptTopLevels} =
+  case [function | TopLevelFunction function <- scriptTopLevels] of
+    [function] -> function
+    [] -> error "Expected exactly one function in script, found none"
+    _ -> error "Expected exactly one function in script, found multiple"
+
+-- | Given a Script, extracts parameters accepted by its only function.
 scriptMainParameters :: Script -> [Parameter]
-scriptMainParameters Script {scriptTopLevels} =
-  case [functionParameters | TopLevelFunction Function {functionName = Identifier "main", functionParameters} <- scriptTopLevels] of
-    [params] -> params
-    [] -> error "Expected exactly one 'main' function in script, found none"
-    _ -> error "Expected exactly one 'main' function in script, found multiple"
+scriptMainParameters = functionParameters . scriptMainFunction
 
 -- | Collects metadata for all transpiled scripts.
 --
@@ -43,22 +48,23 @@ collectScriptMainMetadata files =
    in buildMetas raw
   where
     -- | Extracts `(sourceFilePath, mainParameters)` from script roots only.
-    collectScriptsMains :: [(FilePath, Root)] -> [(FilePath, [Parameter])]
+    collectScriptsMains :: [(FilePath, Root)] -> [(FilePath, Function, [Parameter])]
     collectScriptsMains [] = []
     collectScriptsMains ((filePath, root) : rest) =
       case root of
         RScript script ->
-          let params = scriptMainParameters script
+          let function = scriptMainFunction script
+              params = functionParameters function
               tailData = collectScriptsMains rest
-           in (filePath, params) : tailData
+           in (filePath, function, params) : tailData
         _ -> collectScriptsMains rest
 
     -- | Maps extracted raw script information to validator metadata.
-    buildMetas :: [(FilePath, [Parameter])] -> [ScriptMainMetadata]
+    buildMetas :: [(FilePath, Function, [Parameter])] -> [ScriptMainMetadata]
     buildMetas = map mk
       where
-        mk :: (FilePath, [Parameter]) -> ScriptMainMetadata
-        mk (filePath, params) =
+        mk :: (FilePath, Function, [Parameter]) -> ScriptMainMetadata
+        mk (filePath, function, params) =
           let moduleName = Identifier $ takeBaseName filePath
               importPath = "scripts/" ++ takeBaseName filePath
               ctorName = constructorBase moduleName
@@ -66,6 +72,7 @@ collectScriptMainMetadata files =
                 { scriptConstructorName = ctorName,
                   scriptModuleName = moduleName,
                   scriptImportPath = importPath,
+                  scriptFunctionName = functionName function,
                   scriptMainParametersMeta = params
                 }
 
@@ -137,19 +144,19 @@ generateValidator scriptsMeta =
 
     -- | Generates one `spend` pattern-match branch that dispatches to `main`.
     mkSpendBranch :: ScriptMainMetadata -> Text
-    mkSpendBranch ScriptMainMetadata {scriptConstructorName = Identifier ctor, scriptModuleName = Identifier moduleName, scriptMainParametersMeta} =
+    mkSpendBranch ScriptMainMetadata {scriptConstructorName = Identifier ctor, scriptModuleName = Identifier moduleName, scriptFunctionName = Identifier functionName, scriptMainParametersMeta} =
       case zip [0 :: Int ..] scriptMainParametersMeta of
         [] ->
           [trimming|
             $ctor' -> {
-              let _ = $moduleName'.main()
+              let _ = $moduleName'.$functionName'()
               True
             }
           |]
         indexedParams ->
           [trimming|
             $ctor'($patternArgs) -> {
-              let _ = $moduleName'.main($callArgs)
+              let _ = $moduleName'.$functionName'($callArgs)
               True
             }
           |]
@@ -160,6 +167,7 @@ generateValidator scriptsMeta =
       where
         ctor' = pack ctor
         moduleName' = pack moduleName
+        functionName' = pack functionName
 
     -- | Joins generated lines with a newline separator.
     joinLines :: [Text] -> Text

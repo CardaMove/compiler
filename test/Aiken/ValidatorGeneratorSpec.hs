@@ -9,15 +9,15 @@ import Test.Hspec
 spec :: Spec
 spec = do
   describe "scriptMainParameters" $ do
-    it "Extracts main function parameters from a script" $ do
-      let script = mkScript [mkMain [mkParam "x" (primitiveType "u64")]]
+    it "Extracts the only function parameters from a script" $ do
+      let script = mkScript [mkFunction "do_work" [mkParam "x" (primitiveType "u64")]]
       scriptMainParameters script `shouldBe` [mkParam "x" (primitiveType "u64")]
 
   describe "collectScriptMainMetadata" $ do
     it "Collects metadata for transpiled scripts" $ do
       let files =
-            [ ("test/Move/Loader/files/scripts/script0.move", RScript $ mkScript [mkMain [mkParam "x" (primitiveType "u64")]]),
-              ("test/Move/Loader/files/scripts/script-user.move", RScript $ mkScript [mkMain [mkParam "sender" (TypeImmutableRef (primitiveType "signer"))]])
+            [ ("test/Move/Loader/files/scripts/script0.move", RScript $ mkScript [mkFunction "run" [mkParam "x" (primitiveType "u64")]]),
+              ("test/Move/Loader/files/scripts/script-user.move", RScript $ mkScript [mkFunction "join_round" [mkParam "sender" (TypeImmutableRef (primitiveType "signer"))]])
             ]
 
       let metas = collectScriptMainMetadata files
@@ -26,8 +26,8 @@ spec = do
   describe "generateValidator" $ do
     it "Generates redeemer variants and spend dispatch branches" $ do
       let files =
-            [ ("test/Move/Loader/files/scripts/script0.move", RScript $ mkScript [mkMain [mkParam "x" (primitiveType "u64")]]),
-              ("test/Move/Loader/files/scripts/script-user.move", RScript $ mkScript [mkMain [mkParam "sender" (TypeImmutableRef (primitiveType "signer"))]])
+            [ ("test/Move/Loader/files/scripts/script0.move", RScript $ mkScript [mkFunction "run" [mkParam "x" (primitiveType "u64")]]),
+              ("test/Move/Loader/files/scripts/script-user.move", RScript $ mkScript [mkFunction "join_round" [mkParam "sender" (TypeImmutableRef (primitiveType "signer"))]])
             ]
 
       let metas = collectScriptMainMetadata files
@@ -37,20 +37,20 @@ spec = do
       out `shouldSatisfy` isInfixOf "use scripts/script-user"
       out `shouldSatisfy` isInfixOf "Script0(Int)"
       out `shouldSatisfy` isInfixOf "ScriptUser(Reference<Signer>)"
-      out `shouldSatisfy` isInfixOf "script0.main(arg0)"
-      out `shouldSatisfy` isInfixOf "script-user.main(arg0)"
+      out `shouldSatisfy` isInfixOf "script0.run(arg0)"
+      out `shouldSatisfy` isInfixOf "script-user.join_round(arg0)"
 
 mkScript :: [TopLevel] -> Script
 mkScript tops = Script {scriptTopLevels = tops}
 
-mkMain :: [Parameter] -> TopLevel
-mkMain params =
+mkFunction :: String -> [Parameter] -> TopLevel
+mkFunction name params =
   TopLevelFunction
     Function
       { functionHasNativeModifier = False,
         functionVisibilityModifier = Nothing,
         functionHasEntryModifier = False,
-        functionName = Identifier "main",
+        functionName = Identifier name,
         functionTypeParameters = [],
         functionParameters = params,
         functionReturnType = Nothing,
