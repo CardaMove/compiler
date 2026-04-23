@@ -66,8 +66,9 @@ collectScriptMainMetadata files =
       where
         mk :: (FilePath, Function, [Parameter]) -> ScriptMainMetadata
         mk (filePath, function, params) =
-          let moduleName = Identifier $ takeBaseName filePath
-              importPath = "scripts/" ++ takeBaseName filePath
+          let moduleStem = map toLower $ takeBaseName filePath
+              moduleName = Identifier moduleStem
+              importPath = "scripts/" ++ moduleStem
               ctorName = constructorBase moduleName
            in ScriptMainMetadata
                 { scriptConstructorName = ctorName,
