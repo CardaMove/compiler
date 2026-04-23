@@ -4,13 +4,13 @@ module Main (main) where
 
 import Aiken.AikenGenerator (generateRoot)
 import Aiken.ValidatorGenerator (collectScriptMainMetadata, generateValidator)
-import Control.Monad (zipWithM_)
+import Control.Monad (zipWithM_, when)
 import Control.Monad.State (MonadState (get, put), State, evalState)
 import Data.Text (unpack)
 import Move.AST (Address (NamedAddress, NumericalAddress), Identifier (Identifier), Module (Module, moduleAddress, moduleIdentifier), Numerical (LiteralIntDec, LiteralIntHex), Root (RModule, RScript))
 import Move.Loader.Loader (loadToml)
 import Move.Transpiler (transpiler)
-import System.Directory (createDirectoryIfMissing)
+import System.Directory (copyFile, createDirectoryIfMissing, doesDirectoryExist, doesPathExist, listDirectory, removePathForcibly)
 import System.FilePath (takeDirectory, (<.>), (</>))
 
 
@@ -37,14 +37,18 @@ main = do
 
   putStrLn "Generated Aiken text"
 
-  let outDir = "test/out"
+  let outDir = "aiken_out"
+  let templateDir = "resources/template_project"
+
+  cleanOutDir outDir
+  copyDirectoryContents templateDir outDir
 
   -- For each source file, create the output path of the corresponding Aiken file
-  let outFiles = evalState (mapM ((`buildOutFilePath` outDir) . snd) transpiled) 0
+  let outFiles = evalState (mapM ((`buildOutFilePath` (outDir </> "lib")) . snd) transpiled) 0
 
   zipWithM_ writeFile' outFiles (map (removeCarriage . unpack) aikenText)
 
-  let validatorPath = outDir </> "validator.ak"
+  let validatorPath = outDir </> "validators" </> "validator.ak"
   let validatorText = generateValidator $ collectScriptMainMetadata transpiled
 
   writeFile' validatorPath (removeCarriage . unpack $ validatorText)
@@ -80,3 +84,30 @@ writeFile' :: FilePath -> String -> IO ()
 writeFile' path content = do
   createDirectoryIfMissing True $ takeDirectory path
   writeFile path content
+
+-- |
+-- Removes the output directory if it exists, then recreates it
+cleanOutDir :: FilePath -> IO ()
+cleanOutDir outDir = do
+  exists <- doesPathExist outDir
+  when exists $ removePathForcibly outDir
+  createDirectoryIfMissing True outDir
+
+-- |
+-- Copies all files and folders from a template directory into the output directory
+-- No intermediate root folder is added
+copyDirectoryContents :: FilePath -> FilePath -> IO ()
+copyDirectoryContents srcDir dstDir = do
+  contents <- listDirectory srcDir
+  mapM_ (copyEntry srcDir dstDir) contents
+  where
+    copyEntry :: FilePath -> FilePath -> FilePath -> IO ()
+    copyEntry src dst name = do
+      let srcPath = src </> name
+      let dstPath = dst </> name
+      isDir <- doesDirectoryExist srcPath
+      if isDir
+        then do
+          createDirectoryIfMissing True dstPath
+          copyDirectoryContents srcPath dstPath
+        else copyFile srcPath dstPath
