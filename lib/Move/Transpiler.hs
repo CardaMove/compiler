@@ -16,6 +16,7 @@ import Move.Translations.Utils (annotateBindingsWithUUID, tryIO)
 transpiler :: [(FilePath, Root)] -> AddrAssociations -> IO [(FilePath, Root)]
 transpiler files addrAssoc = do
   let allRoots = map snd files
+  -- FIXME: Also invoke `translateLoopsToWhile`
   step1NoLoops <- tryIO "translateWhilesToFunctionsInRoot" $ evaluate $ translateWhilesToFunctionsInRoot allRoots
 
   (step2Annotated, uuidAfterAnnotations) <- tryIO "annotateBindingsWithUUID" $ evaluate $ runState (mapM annotateBindingsWithUUID step1NoLoops) 0
