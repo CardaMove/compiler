@@ -3,7 +3,6 @@
 module Aiken.AikenGenerator (generateRoot, generateTopLevel, generateType) where
 
 import Control.Exception (evaluate)
-import Data.Char (toLower)
 import Data.Maybe (fromMaybe)
 import Data.Text (Text, empty, intercalate, null, pack)
 import Move.AST
@@ -45,8 +44,7 @@ generateTopLevel (TopLevelUse Use {useAddress, useIdentifier, useAlias, useMembe
       NamedAddress addrIdent -> pack "module_" <> packIdent addrIdent
       NumericalAddress (LiteralIntDec numAddr) -> pack "module_" <> pack (show numAddr)
       NumericalAddress (LiteralIntHex numAddr) -> pack "module_" <> pack numAddr
-    ident = case useIdentifier of
-      Identifier ident' -> pack $ map toLower ident'
+    ident = packIdent useIdentifier
     alias = case useAlias of
       Nothing -> empty
       Just alias' -> pack " as " <> packIdent alias'

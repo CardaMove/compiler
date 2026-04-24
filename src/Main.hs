@@ -6,7 +6,6 @@ import Aiken.AikenGenerator (generateRoot)
 import Aiken.ValidatorGenerator (collectScriptMainMetadata, generateValidator)
 import Control.Monad (zipWithM_, when)
 import Control.Monad.State (MonadState (get, put), State, evalState)
-import Data.Char (toLower)
 import Data.Text (unpack)
 import Move.AST (Address (NamedAddress, NumericalAddress), Identifier (Identifier), Module (Module, moduleAddress, moduleIdentifier), Numerical (LiteralIntDec, LiteralIntHex), Root (RModule, RScript))
 import Move.Loader.Loader (loadToml)
@@ -73,7 +72,7 @@ buildOutFilePath (RModule Module {moduleAddress, moduleIdentifier = Identifier i
           NumericalAddress (LiteralIntDec val) -> show val
           NumericalAddress (LiteralIntHex val) -> val
           NamedAddress (Identifier str) -> str
-  return $ outDir </> folderName </> map toLower identStr <.> ".ak"
+  return $ outDir </> folderName </> identStr <.> ".ak"
 -- Scripts are instead written in `scripts/script_idx.ak`
 buildOutFilePath (RScript _) outDir = do
   idx <- get
