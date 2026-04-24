@@ -1,6 +1,6 @@
 module Aiken.ValidatorGeneratorSpec (spec) where
 
-import Aiken.ValidatorGenerator (collectScriptMainMetadata, generateValidator, scriptMainParameters)
+import Aiken.ValidatorGenerator (ScriptMainMetadata (..), collectScriptMainMetadata, generateValidator, scriptMainParameters)
 import Data.List (isInfixOf)
 import Data.Text (unpack)
 import Move.AST
@@ -9,25 +9,29 @@ import Test.Hspec
 spec :: Spec
 spec = do
   describe "scriptMainParameters" $ do
-    it "Extracts the only function parameters from a script" $ do
-      let script = mkScript [mkFunction "do_work" [mkParam "x" (primitiveType "u64")]]
+    it "Extracts non-CPS parameters from the only function in a script" $ do
+      let script = mkScript [mkFunction "do_work" [mkParam "x" (primitiveType "u64"), mkParam "cps" (primitiveType "CPS")]]
       scriptMainParameters script `shouldBe` [mkParam "x" (primitiveType "u64")]
 
   describe "collectScriptMainMetadata" $ do
     it "Collects metadata for transpiled scripts" $ do
       let files =
-            [ ("test/Move/Loader/files/scripts/script0.move", RScript $ mkScript [mkFunction "run" [mkParam "x" (primitiveType "u64")]]),
-              ("test/Move/Loader/files/scripts/script-user.move", RScript $ mkScript [mkFunction "join_round" [mkParam "sender" (TypeImmutableRef (primitiveType "signer"))]])
+            [ ("test/Move/Loader/files/scripts/script0.move", RScript $ mkScript [mkFunction "run" [mkParam "x" (primitiveType "u64"), mkParam "cps" (primitiveType "CPS")]]),
+              ("test/Move/Loader/files/scripts/script-user.move", RScript $ mkScript [mkFunction "join_round" [mkParam "sender" (TypeImmutableRef (primitiveType "signer")), mkParam "cps" (primitiveType "CPS")]])
             ]
 
       let metas = collectScriptMainMetadata files
       length metas `shouldBe` 2
+      map scriptMainParametersMeta metas `shouldBe`
+        [ [mkParam "x" (primitiveType "u64")],
+          [mkParam "sender" (TypeImmutableRef (primitiveType "signer"))]
+        ]
 
   describe "generateValidator" $ do
     it "Generates redeemer variants and spend dispatch branches" $ do
       let files =
-            [ ("test/Move/Loader/files/scripts/script0.move", RScript $ mkScript [mkFunction "run" [mkParam "x" (primitiveType "u64")]]),
-              ("test/Move/Loader/files/scripts/script-user.move", RScript $ mkScript [mkFunction "join_round" [mkParam "sender" (TypeImmutableRef (primitiveType "signer"))]])
+            [ ("test/Move/Loader/files/scripts/script0.move", RScript $ mkScript [mkFunction "run" [mkParam "x" (primitiveType "u64"), mkParam "cps" (primitiveType "CPS")]]),
+              ("test/Move/Loader/files/scripts/script-user.move", RScript $ mkScript [mkFunction "join_round" [mkParam "sender" (TypeImmutableRef (primitiveType "signer")), mkParam "cps" (primitiveType "CPS")]])
             ]
 
       let metas = collectScriptMainMetadata files

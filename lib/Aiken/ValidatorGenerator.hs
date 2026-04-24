@@ -37,7 +37,11 @@ scriptMainFunction Script {scriptTopLevels} =
 
 -- | Given a Script, extracts parameters accepted by its only function.
 scriptMainParameters :: Script -> [Parameter]
-scriptMainParameters = functionParameters . scriptMainFunction
+scriptMainParameters = dropLast . functionParameters . scriptMainFunction
+  where
+    dropLast :: [a] -> [a]
+    dropLast [] = []
+    dropLast xs = init xs
 
 -- | Collects metadata for all transpiled scripts.
 --
@@ -55,7 +59,7 @@ collectScriptMainMetadata files =
       case root of
         RScript script ->
           let function = scriptMainFunction script
-              params = functionParameters function
+              params = scriptMainParameters script
               tailData = collectScriptsMains rest
            in (filePath, function, params) : tailData
         _ -> collectScriptsMains rest
@@ -217,15 +221,15 @@ generateValidator scriptsMeta =
         [] ->
           [trimming|
             $ctor' -> {
-              let _ = $moduleName'.$functionName'(cps)
-              True
+              let (_, cps) = $moduleName'.$functionName'(cps)
+              cps
             }
           |]
         indexedParams ->
           [trimming|
             $ctor'($patternArgs) -> {
-              let _ = $moduleName'.$functionName'($callArgs, cps)
-              True
+              let (_, cps) = $moduleName'.$functionName'($callArgs, cps)
+              cps
             }
           |]
           where

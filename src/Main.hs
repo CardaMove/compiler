@@ -48,7 +48,9 @@ main = do
 
   zipWithM_ writeFile' outFiles (map (removeCarriage . unpack) aikenText)
 
-  let validatorPath = outDir </> "validators" </> "validator.ak"
+  -- The Aiken compiler forbids the name "validator" as the name for the validator itself
+  -- therefore, it is named as main.ak
+  let validatorPath = outDir </> "validators" </> "main.ak"
   let validatorText = generateValidator $ collectScriptMainMetadata transpiled
 
   writeFile' validatorPath (removeCarriage . unpack $ validatorText)
