@@ -11,8 +11,5 @@ lib/Move/Parser.info
 # vscode logs
 .vscode/phoityne.log
 
-# Testing output code
-test/
-
 # Compiled Aiken project
 aiken_out/
