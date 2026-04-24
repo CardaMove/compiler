@@ -102,6 +102,11 @@ generateValidator scriptsMeta =
 
     $stdLibImports
 
+    use utils/state_utils.{SerializedProgramState}
+    use utils/assets_utils
+    use utils/coin_utils
+    use utils/common_utils.{ProgramState}
+
     $imports
 
     pub type Redeemer {

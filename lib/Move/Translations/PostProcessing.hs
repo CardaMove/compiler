@@ -18,6 +18,8 @@ import Move.Translations.Utils (utilsLibAddress, stdLibUses)
 --
 -- In addition, module named addresses and identifiers are converted to lowercase due to restrictions
 -- imposed by the Aiken compiler
+--
+-- It also adds the "public entry" modifiers to the main function of each script, since by default Move does not explicitly require them
 postProcessRoot :: Root -> AddrAssociations -> Root
 postProcessRoot root addrAssociations =
   -- Note that this step does not need to consider other modules that might be imported,
@@ -39,7 +41,30 @@ postProcessRoot root addrAssociations =
           resolveAddress addr = addr
 
       root''' = transformBi normalizeModule $ transformBi normalizeUse $ transformBi normalizeUnaliasedNameAccessChain root''
-   in root'''
+
+      root'''' = forceScriptFunctionsPublicEntry root'''
+   in root''''
+
+-- | Scripts in Move expose entry points implicitly; normalize their function modifiers accordingly.
+forceScriptFunctionsPublicEntry :: Root -> Root
+forceScriptFunctionsPublicEntry root = case root of
+  RScript s@Script {scriptTopLevels} ->
+    RScript $
+      s
+        { scriptTopLevels = map forceTopLevelFunctionPublicEntry scriptTopLevels
+        }
+  _ -> root
+
+-- | Converts script top-level functions to `public entry`.
+forceTopLevelFunctionPublicEntry :: TopLevel -> TopLevel
+forceTopLevelFunctionPublicEntry topLevel = case topLevel of
+  TopLevelFunction f ->
+    TopLevelFunction
+      f
+        { functionVisibilityModifier = Just VisibilityModifierPublic,
+          functionHasEntryModifier = True
+        }
+  _ -> topLevel
 
 -- | Normalizes a module by converting its address and identifier to lowercase.
 normalizeModule :: Module -> Module

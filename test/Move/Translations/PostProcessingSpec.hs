@@ -131,6 +131,33 @@ testPostProcessRoot = describe "Tests the function `postProcessRoot`" $ do
           _ -> fail "Expected to find a TopLevelFunction"
       RScript _ -> fail "Expected RModule"
 
+  it "Marks script functions as public entry" $ do
+    let addrMap = Map.fromList [(Identifier "NamedAddr", LiteralIntDec 123)]
+    let function' =
+          Function
+            { functionHasNativeModifier = False,
+              functionVisibilityModifier = Nothing,
+              functionHasEntryModifier = False,
+              functionName = Identifier "main",
+              functionTypeParameters = [],
+              functionParameters = [Parameter (Identifier "x") (TypeConstructor (LocalNameAccessChain (Identifier "u64")) []) Nothing],
+              functionReturnType = Nothing,
+              functionAcquires = [],
+              functionBody = Just (Sequence {sequenceUses = [], sequenceItems = [], sequenceEndExpr = Nothing}),
+              functionUUID = Nothing
+            }
+    let root = RScript (Script {scriptTopLevels = [TopLevelFunction function']})
+
+    case postProcessRoot root addrMap of
+      RScript (Script {scriptTopLevels = topLevels}) -> do
+        let functions = [f | TopLevelFunction f <- topLevels]
+        case functions of
+          (resultFunc:_) -> do
+            functionVisibilityModifier resultFunc `shouldBe` Just VisibilityModifierPublic
+            functionHasEntryModifier resultFunc `shouldBe` True
+          _ -> fail "Expected to find a TopLevelFunction"
+      RModule _ -> fail "Expected RScript"
+
 spec :: Spec
 spec = do
   testLowercaseIdentifier

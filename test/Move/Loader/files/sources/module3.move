@@ -5,8 +5,8 @@ module NamedAddr::Module3 {
 
     fun noT(a: u64): () {}
 
-    fun my_fun<T, AnotherT>(a: u64, b: bool): F<AnotherT> {
-        // Note that does not compile since does not return anything
+    fun my_fun<T, AnotherT>(a: u64, b: bool, val: AnotherT): F<AnotherT> {
+        F<AnotherT> { val: val }
     }
 
     struct MyCoin<phantom CoinType> has key, store {

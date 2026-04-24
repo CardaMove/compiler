@@ -77,7 +77,7 @@ buildOutFilePath (RModule Module {moduleAddress, moduleIdentifier = Identifier i
 buildOutFilePath (RScript _) outDir = do
   idx <- get
   put $ idx + 1
-  return $ outDir </> "scripts" </> "script_" ++ show idx <.> ".ak"
+  return $ outDir </> "scripts" </> "script" ++ show idx <.> ".ak"
 
 -- |
 -- Extension of `writeFile` but ensures all the parent directories exist, then writes the file
