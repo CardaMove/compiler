@@ -238,8 +238,10 @@ OptionalUses_ :: { [Use] }
 
 
 -- Friend
+-- It has the form of address::identifier or simply an identifier if it has been imported and aliased
 Friend :: { Friend }
-  : friend NameAccessChain ';'            { Friend $2 }
+  : friend Address '::' Identifier ';'            { FriendUnaliased $2 $4 }
+  | friend Identifier ';'                         { FriendAliased $2 }
 
 
 -- Named struct
@@ -644,11 +646,16 @@ NamedStructExprField :: { NamedStructExprField }
 -- A name access chain is an access to a variable, struct or function that might be declared on another module
 --    Note: as on move-language/move/language/move-compiler/src/parser/ast.rs:419
 --    It's correct to consider a single (Identifier), a tuple with (Address, Identifier) and a triple (Address, Identifier, Identifier)
+--    however, aliased modules always come in the form of identifier::symbol_name, so it is better to consider it simply a pair of identifiers
 NameAccessChain :: { NameAccessChain }
   -- This is a normal identifier
   : Identifier                                            { LocalNameAccessChain $1 }
   -- This is an access to an aliased module
-  | Address '::' Identifier                               { AliasedNameAccessChain $1 $3 }
+  | Address '::' Identifier                               { 
+    case $1 of
+      NamedAddress ident -> AliasedNameAccessChain ident $3
+      addr -> error $ "Unexpected Address in NameAccessChain: " ++ show addr
+   }
   | Address '::' Identifier '::' Identifier               { UnaliasedNameAccessChain $1 $3 $5 }
 
 

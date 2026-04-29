@@ -144,7 +144,7 @@ RModule
                                                                                 pseofcFields =
                                                                                     [ PositionalStructExprOrFunctionCallExpr
                                                                                         ( PositionalStructExprOrFunctionCall
-                                                                                            { pseofcNameAccessChain = AliasedNameAccessChain (NamedAddress (Identifier "signer")) (Identifier "address_of"),
+                                                                                            { pseofcNameAccessChain = AliasedNameAccessChain (Identifier "signer") (Identifier "address_of"),
                                                                                             pseofcTypeArgs = [],
                                                                                             pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "s"))]
                                                                                             }

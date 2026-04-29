@@ -619,7 +619,7 @@ generateSequence sqn@Sequence {sequenceUses, sequenceItems, sequenceEndExpr} =
 generateNameAccessChain :: NameAccessChain -> Text
 generateNameAccessChain (LocalNameAccessChain ident) = packIdent ident
 generateNameAccessChain (AliasedNameAccessChain addr ident) =
-  packAddress addr <> pack "." <> packIdent ident
+  packIdent addr <> pack "." <> packIdent ident
 -- Note that in Aiken, modules are referred just by their name
 generateNameAccessChain (UnaliasedNameAccessChain _addr moduleIdent ident) =
   packIdent moduleIdent <> pack "." <> packIdent ident

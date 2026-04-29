@@ -181,7 +181,9 @@ data UseMember
   deriving (Eq, Show, Read, Data, Typeable, Ord)
 
 -- | Friend with another module
-newtype Friend = Friend NameAccessChain
+data Friend = 
+  FriendUnaliased Address Identifier
+  | FriendAliased Identifier
   deriving (Eq, Show, Read, Data, Typeable)
 
 -- | Definition of a struct type
@@ -489,7 +491,7 @@ data NamedStructExprField
 -- Examples: `my_local_variable`, `friendModule::my_struct`, `moduleAddress::moduleIdentifier::my_function`
 data NameAccessChain
   = LocalNameAccessChain Identifier
-  | AliasedNameAccessChain Address Identifier
+  | AliasedNameAccessChain Identifier Identifier
   | UnaliasedNameAccessChain Address Identifier Identifier
   deriving (Eq, Show, Read, Data, Typeable, Ord)
 
