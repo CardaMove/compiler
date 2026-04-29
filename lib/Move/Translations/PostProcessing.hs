@@ -5,7 +5,7 @@ import Data.Generics.Uniplate.Data (transformBi)
 import Data.Map qualified as Map
 import Move.AST
 import Move.Loader.Loader (AddrAssociations)
-import Move.Translations.Utils (utilsLibAddress, stdLibUses)
+import Move.Translations.Utils (aptosFrameworkLibAddress, stdLibAddress, stdLibUses, utilsLibAddress)
 
 -- |
 -- Performs some post processing on the AST before generating the Aiken code.
@@ -32,8 +32,8 @@ postProcessRoot root addrAssociations =
         where
           resolveAddress :: Address -> Address
           resolveAddress addr@(NamedAddress ident) =
-            if addr == utilsLibAddress
-              -- Leave the address for utils stdlib unchanged
+            if addr `elem` [utilsLibAddress, stdLibAddress, aptosFrameworkLibAddress]
+              -- Leave the address for utils, Move stdlib and aptos framework unchanged
               then addr
               else case Map.lookup ident addrAssociations of
                 Nothing -> error $ "Unresolved named address: " ++ show addr

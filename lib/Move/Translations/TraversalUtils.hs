@@ -11,7 +11,7 @@ import Move.Translations.Utils
     VariableAnnotations (VariableAnnotations),
     booleanType,
     extractVariablesFromBindings,
-    unitType,
+    unitType, stdLibAddress, aptosFrameworkLibAddress,
   )
 
 type TraversalMapper node state = node -> [Scope] -> state -> (node, state)
@@ -174,7 +174,7 @@ moveStdLibScope =
 moveStdLibModules :: [Module]
 moveStdLibModules =
   [ Module
-      { moduleAddress = NamedAddress $ Identifier "std",
+      { moduleAddress = stdLibAddress,
         moduleIdentifier = Identifier "signer",
         moduleTopLevels =
           [ TopLevelFunction $
@@ -206,7 +206,7 @@ moveStdLibModules =
           ]
       },
     Module
-      { moduleAddress = NamedAddress $ Identifier "aptos_framework",
+      { moduleAddress = aptosFrameworkLibAddress,
         moduleIdentifier = Identifier "coin",
         moduleTopLevels =
           [ TopLevelFunction $
@@ -220,7 +220,7 @@ moveStdLibModules =
                     [ Parameter {parameterIdentifier = Identifier "signer", parameterType = TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "signer") [], parameterUUID = Nothing},
                       Parameter {parameterIdentifier = Identifier "amount", parameterType = TypeConstructor (LocalNameAccessChain $ Identifier "u64") [], parameterUUID = Nothing}
                     ],
-                  functionReturnType = Just $ TypeConstructor (AliasedNameAccessChain (NamedAddress $ Identifier "coin") (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain $ Identifier "CoinType") []],
+                  functionReturnType = Just $ TypeConstructor (AliasedNameAccessChain (Identifier "coin") (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain $ Identifier "CoinType") []],
                   functionAcquires = [],
                   functionBody = Nothing,
                   functionUUID = Nothing
@@ -233,7 +233,7 @@ moveStdLibModules =
                   functionName = Identifier "value",
                   functionTypeParameters = [TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "CoinType", typeConstraints = []}],
                   functionParameters =
-                    [ Parameter {parameterIdentifier = Identifier "coin", parameterType = TypeImmutableRef $ TypeConstructor (AliasedNameAccessChain (NamedAddress $ Identifier "coin") (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain $ Identifier "CoinType") []], parameterUUID = Nothing}
+                    [ Parameter {parameterIdentifier = Identifier "coin", parameterType = TypeImmutableRef $ TypeConstructor (AliasedNameAccessChain (Identifier "coin") (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain $ Identifier "CoinType") []], parameterUUID = Nothing}
                     ],
                   functionReturnType = Just $ TypeConstructor (LocalNameAccessChain $ Identifier "u64") [],
                   functionAcquires = [],
@@ -248,8 +248,8 @@ moveStdLibModules =
                   functionName = Identifier "merge",
                   functionTypeParameters = [TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "CoinType", typeConstraints = []}],
                   functionParameters =
-                    [ Parameter {parameterIdentifier = Identifier "dst_coin", parameterType = TypeMutableRef $ TypeConstructor (AliasedNameAccessChain (NamedAddress $ Identifier "coin") (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain $ Identifier "CoinType") []], parameterUUID = Nothing},
-                      Parameter {parameterIdentifier = Identifier "source_coin", parameterType = TypeConstructor (AliasedNameAccessChain (NamedAddress $ Identifier "coin") (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain $ Identifier "CoinType") []], parameterUUID = Nothing}
+                    [ Parameter {parameterIdentifier = Identifier "dst_coin", parameterType = TypeMutableRef $ TypeConstructor (AliasedNameAccessChain (Identifier "coin") (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain $ Identifier "CoinType") []], parameterUUID = Nothing},
+                      Parameter {parameterIdentifier = Identifier "source_coin", parameterType = TypeConstructor (AliasedNameAccessChain (Identifier "coin") (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain $ Identifier "CoinType") []], parameterUUID = Nothing}
                     ],
                   functionReturnType = Nothing,
                   functionAcquires = [],
@@ -265,7 +265,7 @@ moveStdLibModules =
                   functionTypeParameters = [TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "CoinType", typeConstraints = []}],
                   functionParameters =
                     [ Parameter {parameterIdentifier = Identifier "account_addr", parameterType = TypeConstructor (LocalNameAccessChain $ Identifier "address") [], parameterUUID = Nothing},
-                      Parameter {parameterIdentifier = Identifier "coin", parameterType = TypeConstructor (AliasedNameAccessChain (NamedAddress $ Identifier "coin") (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain $ Identifier "CoinType") []], parameterUUID = Nothing}
+                      Parameter {parameterIdentifier = Identifier "coin", parameterType = TypeConstructor (AliasedNameAccessChain (Identifier "coin") (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain $ Identifier "CoinType") []], parameterUUID = Nothing}
                     ],
                   functionReturnType = Nothing,
                   functionAcquires = [],
@@ -303,14 +303,14 @@ buildImportedScope uses otherModules = concatMap buildImportedScope' uses
             concatMap
               ( \(ident, annot) ->
                   [ (UnaliasedNameAccessChain useAddress useIdentifier ident, annot),
-                    (AliasedNameAccessChain (NamedAddress useIdentifier) ident, annot)
+                    (AliasedNameAccessChain useIdentifier ident, annot)
                   ]
               )
               moduleDecls
           -- If the module is aliased, symbols can also be used by the alias of that module
           imported'' = case useAlias of
             Nothing -> imported'
-            Just useAlias' -> imported' ++ map (\(ident, annot) -> (AliasedNameAccessChain (NamedAddress useAlias') ident, annot)) moduleDecls
+            Just useAlias' -> imported' ++ map (\(ident, annot) -> (AliasedNameAccessChain useAlias' ident, annot)) moduleDecls
 
           -- Imported members can also be used with their own local nac
           moduleDeclsByIdent = Map.fromList moduleDecls

@@ -8,7 +8,7 @@ import Move.Parser (parse)
 import Move.Translations.Scopes (addLocalScopeInRoot, markVariablesForLocalScope, rewriteAssignments, rewriteLetBinds, rewriteRefs, rewriteVars)
 import Move.Translations.TraversalUtils (traversalIdentity, traverseRootPostOrder)
 import Move.Translations.TypeWitness (translateTParamsInRoot)
-import Move.Translations.Utils (annotateBindingsWithUUID, iterateWithOthers, unionSet)
+import Move.Translations.Utils (annotateBindingsWithUUID)
 import Test.Hspec
 
 testMarkVariablesForLocalScope :: Spec

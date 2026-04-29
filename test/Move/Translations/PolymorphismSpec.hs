@@ -7,7 +7,7 @@ import Move.Parser (parse)
 import Move.Translations.Polymorphism (translatePolymorphismInRoot)
 import Move.Translations.Scopes (addLocalScopeInRoot, markVariablesForLocalScope)
 import Move.Translations.TypeWitness (translateTParamsInRoot)
-import Move.Translations.Utils (annotateBindingsWithUUID, iterateWithOthers, unionSet)
+import Move.Translations.Utils (annotateBindingsWithUUID)
 import Test.Hspec
 
 testTranslatePolymorphismInRoot :: Spec

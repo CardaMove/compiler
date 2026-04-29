@@ -1,7 +1,7 @@
 module BetAddr::Bet {
     use aptos_framework::coin::{Coin, Self};
     use std::signer::{address_of};
-    use std::timestamp;
+    // use std::timestamp;
 
     struct Round<phantom CoinType> has key {
         player1: address,
@@ -24,7 +24,7 @@ module BetAddr::Bet {
         deadline: u64
     ): () {
         let bet = Round<CoinType> { player1, player2, oracle, stake, deadline };
-        move_to(bookmaker, bet);
+        move_to<Round<CoinType>>(bookmaker, bet);
     }
 
     public fun join<CoinType>(partecipant: &signer, bookmaker: address): () acquires Round {
@@ -34,11 +34,11 @@ module BetAddr::Bet {
                 || address_of(partecipant) == round.player2,
             0
         );
-        let bet = coin::withdraw(partecipant, round.stake);
+        let bet = coin::withdraw<CoinType>(partecipant, round.stake);
 
         assert!(coin::value<CoinType>(&bet) == round.stake, 0);
         let bet = Bet { value: bet };
-        move_to(partecipant, bet);
+        move_to<Bet<CoinType>>(partecipant, bet);
     }
 
     public fun win<CoinType>(
@@ -52,18 +52,18 @@ module BetAddr::Bet {
 
         let Bet { value: bet1 } = move_from<Bet<CoinType>>(player1);
         let Bet { value: bet2 } = move_from<Bet<CoinType>>(player2);
-        coin::merge(&mut bet1, bet2);
-        coin::deposit(winner, bet1);
+        coin::merge<CoinType>(&mut bet1, bet2);
+        coin::deposit<CoinType>(winner, bet1);
     }
 
     public fun timeout<CoinType>(bookmaker: address): () acquires Round, Bet {
         let Round { player1, player2, oracle: _, stake: _, deadline } =
             move_from<Round<CoinType>>(bookmaker);
-        assert!(deadline < timestamp::now_seconds(), 0);
+        // assert!(deadline < timestamp::now_seconds(), 0);
 
         let Bet { value: bet1 } = move_from<Bet<CoinType>>(player1);
         let Bet { value: bet2 } = move_from<Bet<CoinType>>(player2);
-        coin::deposit(player1, bet1);
-        coin::deposit(player2, bet2);
+        coin::deposit<CoinType>(player1, bet1);
+        coin::deposit<CoinType>(player2, bet2);
     }
 }

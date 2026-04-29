@@ -21,6 +21,8 @@ module Move.Translations.Utils
     scopeUtilsIdent,
     refUtilsIdent,
     gsUtilsIdent,
+    stdLibAddress,
+    aptosFrameworkLibAddress
   )
 where
 
@@ -71,6 +73,16 @@ cpsIdentifier = Identifier "cps_state"
 -- The named address representing the folder where the Aiken stdlib can be found
 utilsLibAddress :: Address
 utilsLibAddress = NamedAddress $ Identifier "utils"
+
+-- |
+-- The named address for Move stdlib modules
+stdLibAddress :: Address
+stdLibAddress = NamedAddress $ Identifier "std"
+
+-- |
+-- The named address for the aptos framework modules, such as Coin module
+aptosFrameworkLibAddress :: Address
+aptosFrameworkLibAddress = NamedAddress $ Identifier "aptos_framework"
 
 -- |
 -- Checks if the identifier is present in any of the input scopes

@@ -6,6 +6,7 @@ import Move.AST
 import Move.Lexer ( scan )
 import Move.Parser ( parse )
 import Test.Hspec
+import Move.Translations.Utils (stdLibAddress)
 
 testScan :: String -> Root -> SpecWith ()
 testScan str ast = it (filter (/= '\n') str) $ do
@@ -55,7 +56,7 @@ testParseModuleUse = describe "Parse a module with use keywords" $ do
         moduleTopLevels =
           [ TopLevelUse
               ( Use
-                  { useAddress = NamedAddress $ Identifier "std",
+                  { useAddress = stdLibAddress,
                     useIdentifier = Identifier "vector",
                     useAlias = Nothing,
                     useMembers = []
@@ -71,7 +72,7 @@ testParseModuleUse = describe "Parse a module with use keywords" $ do
               ),
             TopLevelUse
               ( Use
-                  { useAddress = NamedAddress $ Identifier "std",
+                  { useAddress = stdLibAddress,
                     useIdentifier = Identifier "vector",
                     useAlias = Nothing,
                     useMembers =
@@ -81,7 +82,7 @@ testParseModuleUse = describe "Parse a module with use keywords" $ do
               ),
             TopLevelUse
               ( Use
-                  { useAddress = NamedAddress $ Identifier "std",
+                  { useAddress = stdLibAddress,
                     useIdentifier = Identifier "vector",
                     useAlias = Nothing,
                     useMembers =
@@ -101,8 +102,8 @@ testParseModuleFriend = describe "Parse a module with friends" $ do
       { moduleAddress = NumericalAddress $ LiteralIntHex "0x42",
         moduleIdentifier = Identifier "answer",
         moduleTopLevels =
-          [ TopLevelFriend $ Friend $ AliasedNameAccessChain (NumericalAddress $ LiteralIntHex "0x42") (Identifier "b"),
-            TopLevelFriend $ Friend $ LocalNameAccessChain $ Identifier "aliased_friend"
+          [ TopLevelFriend $ FriendUnaliased (NumericalAddress $ LiteralIntHex "0x42") (Identifier "b"),
+            TopLevelFriend $ FriendAliased $ Identifier "aliased_friend"
           ]
       }
 
@@ -420,7 +421,7 @@ testParseFunctionWithBody =
                         { -- use ...
                           sequenceUses =
                             [ Use
-                                { useAddress = NamedAddress $ Identifier "std",
+                                { useAddress = stdLibAddress,
                                   useIdentifier = Identifier "vector",
                                   useAlias = Nothing,
                                   useMembers = []
