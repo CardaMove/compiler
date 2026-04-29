@@ -37,7 +37,7 @@ module BetAddr::Bet {
         let bet = coin::withdraw<CoinType>(partecipant, round.stake);
 
         assert!(coin::value<CoinType>(&bet) == round.stake, 0);
-        let bet = Bet { value: bet };
+        let bet = Bet<CoinType> { value: bet };
         move_to<Bet<CoinType>>(partecipant, bet);
     }
 
@@ -50,8 +50,8 @@ module BetAddr::Bet {
         assert!(address_of(oracle) == oracle_address, 0);
         assert!(winner == player1 || winner == player2, 0);
 
-        let Bet { value: bet1 } = move_from<Bet<CoinType>>(player1);
-        let Bet { value: bet2 } = move_from<Bet<CoinType>>(player2);
+        let Bet<CoinType> { value: bet1 } = move_from<Bet<CoinType>>(player1);
+        let Bet<CoinType> { value: bet2 } = move_from<Bet<CoinType>>(player2);
         coin::merge<CoinType>(&mut bet1, bet2);
         coin::deposit<CoinType>(winner, bet1);
     }
@@ -61,8 +61,8 @@ module BetAddr::Bet {
             move_from<Round<CoinType>>(bookmaker);
         // assert!(deadline < timestamp::now_seconds(), 0);
 
-        let Bet { value: bet1 } = move_from<Bet<CoinType>>(player1);
-        let Bet { value: bet2 } = move_from<Bet<CoinType>>(player2);
+        let Bet<CoinType> { value: bet1 } = move_from<Bet<CoinType>>(player1);
+        let Bet<CoinType> { value: bet2 } = move_from<Bet<CoinType>>(player2);
         coin::deposit<CoinType>(player1, bet1);
         coin::deposit<CoinType>(player2, bet2);
     }

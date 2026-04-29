@@ -209,7 +209,15 @@ moveStdLibModules =
       { moduleAddress = aptosFrameworkLibAddress,
         moduleIdentifier = Identifier "coin",
         moduleTopLevels =
-          [ TopLevelFunction $
+          [ TopLevelNamedStruct $ NamedStruct {
+                namedStructIdentifier = Identifier "Coin",
+                namedStructTypeParameters = [TypeParameter {typeParameterIsPhantom = True, typeIdentifier = Identifier "CoinType", typeConstraints = []}],
+                namedStructAbilities = [],
+                namedStructFields = [
+                  NamedField {fieldIdentifier = Identifier "amount", fieldType = TypeConstructor (LocalNameAccessChain $ Identifier "u64") []}
+                ]
+              },           
+            TopLevelFunction $
               Function
                 { functionHasNativeModifier = False,
                   functionVisibilityModifier = Just VisibilityModifierPublic,
@@ -319,7 +327,9 @@ buildImportedScope uses otherModules = concatMap buildImportedScope' uses
 
     -- Given an imported member, along with all the modules declarations as map,
     -- returns the available definitions to refer to that member
+    -- Note how the "Self" member is ignored, since it is already supported by this logic
     buildUseMember :: UseMember -> (Map.Map Identifier VariableAnnotations) -> [(NameAccessChain, VariableAnnotations)]
+    buildUseMember UseMember {useMemberIdentifier = Identifier "Self"} _ = []
     buildUseMember UseMember {useMemberIdentifier, useMemberUseAlias} declsByIdent =
       let annot = case Map.lookup useMemberIdentifier declsByIdent of
             Nothing -> error $ "Non existing useMember: " ++ show useMemberIdentifier
