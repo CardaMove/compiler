@@ -169,7 +169,7 @@ moveStdLibScope =
     ]
 
 -- |
--- Contains all the modules provided by the Move stdlib, such as the Signer module and TODO: the Coin module
+-- Contains all the modules provided by the Move stdlib, such as the Signer module and the Coin module
 -- These will be used simply to resolve imports and types, but will not generate any Aiken code
 moveStdLibModules :: [Module]
 moveStdLibModules =
@@ -199,6 +199,75 @@ moveStdLibModules =
                   functionTypeParameters = [],
                   functionParameters = [Parameter {parameterIdentifier = Identifier "signer", parameterType = TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "signer") [], parameterUUID = Nothing}],
                   functionReturnType = Just $ TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [],
+                  functionAcquires = [],
+                  functionBody = Nothing,
+                  functionUUID = Nothing
+                }
+          ]
+      },
+    Module
+      { moduleAddress = NamedAddress $ Identifier "aptos_framework",
+        moduleIdentifier = Identifier "coin",
+        moduleTopLevels =
+          [ TopLevelFunction $
+              Function
+                { functionHasNativeModifier = False,
+                  functionVisibilityModifier = Just VisibilityModifierPublic,
+                  functionHasEntryModifier = False,
+                  functionName = Identifier "withdraw",
+                  functionTypeParameters = [TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "CoinType", typeConstraints = []}],
+                  functionParameters =
+                    [ Parameter {parameterIdentifier = Identifier "signer", parameterType = TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "signer") [], parameterUUID = Nothing},
+                      Parameter {parameterIdentifier = Identifier "amount", parameterType = TypeConstructor (LocalNameAccessChain $ Identifier "u64") [], parameterUUID = Nothing}
+                    ],
+                  functionReturnType = Just $ TypeConstructor (AliasedNameAccessChain (NamedAddress $ Identifier "coin") (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain $ Identifier "CoinType") []],
+                  functionAcquires = [],
+                  functionBody = Nothing,
+                  functionUUID = Nothing
+                },
+            TopLevelFunction $
+              Function
+                { functionHasNativeModifier = False,
+                  functionVisibilityModifier = Just VisibilityModifierPublic,
+                  functionHasEntryModifier = False,
+                  functionName = Identifier "value",
+                  functionTypeParameters = [TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "CoinType", typeConstraints = []}],
+                  functionParameters =
+                    [ Parameter {parameterIdentifier = Identifier "coin", parameterType = TypeImmutableRef $ TypeConstructor (AliasedNameAccessChain (NamedAddress $ Identifier "coin") (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain $ Identifier "CoinType") []], parameterUUID = Nothing}
+                    ],
+                  functionReturnType = Just $ TypeConstructor (LocalNameAccessChain $ Identifier "u64") [],
+                  functionAcquires = [],
+                  functionBody = Nothing,
+                  functionUUID = Nothing
+                },
+            TopLevelFunction $
+              Function
+                { functionHasNativeModifier = False,
+                  functionVisibilityModifier = Just VisibilityModifierPublic,
+                  functionHasEntryModifier = False,
+                  functionName = Identifier "merge",
+                  functionTypeParameters = [TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "CoinType", typeConstraints = []}],
+                  functionParameters =
+                    [ Parameter {parameterIdentifier = Identifier "dst_coin", parameterType = TypeMutableRef $ TypeConstructor (AliasedNameAccessChain (NamedAddress $ Identifier "coin") (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain $ Identifier "CoinType") []], parameterUUID = Nothing},
+                      Parameter {parameterIdentifier = Identifier "source_coin", parameterType = TypeConstructor (AliasedNameAccessChain (NamedAddress $ Identifier "coin") (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain $ Identifier "CoinType") []], parameterUUID = Nothing}
+                    ],
+                  functionReturnType = Nothing,
+                  functionAcquires = [],
+                  functionBody = Nothing,
+                  functionUUID = Nothing
+                },
+            TopLevelFunction $
+              Function
+                { functionHasNativeModifier = False,
+                  functionVisibilityModifier = Just VisibilityModifierPublic,
+                  functionHasEntryModifier = False,
+                  functionName = Identifier "deposit",
+                  functionTypeParameters = [TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "CoinType", typeConstraints = []}],
+                  functionParameters =
+                    [ Parameter {parameterIdentifier = Identifier "account_addr", parameterType = TypeConstructor (LocalNameAccessChain $ Identifier "address") [], parameterUUID = Nothing},
+                      Parameter {parameterIdentifier = Identifier "coin", parameterType = TypeConstructor (AliasedNameAccessChain (NamedAddress $ Identifier "coin") (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain $ Identifier "CoinType") []], parameterUUID = Nothing}
+                    ],
+                  functionReturnType = Nothing,
                   functionAcquires = [],
                   functionBody = Nothing,
                   functionUUID = Nothing
