@@ -31,10 +31,7 @@ generateTopLevel :: TopLevel -> Text
 -- The Aiken generator considers named or numerical addresses identical,
 -- it is up to the caller to correctly associate the numerical address to each named address, and write the resulting files
 -- in the correct folder
-generateTopLevel (TopLevelUse Use {useAddress, useIdentifier, useAlias, useMembers}) =
-  [trimming|
-    use $addr/$ident$members$alias
-  |]
+generateTopLevel (TopLevelUse Use {useAddress, useIdentifier, useAlias, useMembers}) = pack "use " <> addr <> pack "/" <> ident <> members <> alias
   where
     -- Only in this case, the identifier should not be encosed by string quotes
     -- since just the name is needed
@@ -52,7 +49,7 @@ generateTopLevel (TopLevelUse Use {useAddress, useIdentifier, useAlias, useMembe
     -- TODO: use members alias are currently not supported
     members = case useMembers of
       [] -> empty
-      _ ->
+      _ -> 
         [trimming|
           .{$members'}
         |]
@@ -130,10 +127,7 @@ generateTopLevel (TopLevelFunction Function {functionHasNativeModifier = False, 
       Just sqnc -> generateSequence sqnc
 
     packFunctionParameter :: Parameter -> Text
-    packFunctionParameter Parameter {parameterIdentifier, parameterType} =
-      [trimming|
-        $paramName: $paramType
-      |]
+    packFunctionParameter Parameter {parameterIdentifier, parameterType} = paramName <> pack ": " <> paramType
       where
         paramName = packIdent parameterIdentifier
         paramType = generateType parameterType
@@ -166,10 +160,7 @@ generateType (TypeConstructor (LocalNameAccessChain (Identifier "u256")) []) = p
 -- Address and Signer are mapped to custom Aiken types
 generateType (TypeConstructor (LocalNameAccessChain (Identifier "address")) []) = pack "Addr"
 generateType (TypeConstructor (LocalNameAccessChain (Identifier "signer")) []) = pack "Signer"
-generateType (TypeConstructor nac tArgs) =
-  [trimming|
-    $name$packedTArgs
-  |]
+generateType (TypeConstructor nac tArgs) = name <> packedTArgs
   where
     name = generateNameAccessChain nac
     packedTArgs :: Text = packTypeArgs tArgs
@@ -254,10 +245,7 @@ generateExpression (BinaryOpExprExpr (Mod left right)) = binaryOpHelper left "%"
 -- Assignments should not be present
 generateExpression expr@(AssignmentExpr _) = error $ "Unexpected assignment expression: " ++ show expr
 -- Unary operations
-generateExpression (UnaryOpExpr (Negation inner)) =
-  [trimming|
-    !$inner'
-  |]
+generateExpression (UnaryOpExpr (Negation inner)) = pack "!" <> inner'
   where
     inner' = generateExpression inner
 -- References should not be present
@@ -312,10 +300,7 @@ generateExpression (NamedStructExprExpr NamedStructExpr {nseNameAccessChain, nse
     fields = intercalate (pack ", ") $ map packNamedStructField nseFields
 
     packNamedStructField :: NamedStructExprField -> Text
-    packNamedStructField NamedStructExprField {nsefIdentifier, nsefExpr} =
-      [trimming|
-        $fieldName: $fieldExpr
-      |]
+    packNamedStructField NamedStructExprField {nsefIdentifier, nsefExpr} = fieldName <> pack ": " <> fieldExpr
       where
         fieldName = packIdent nsefIdentifier
         -- If the named field has no associated expression, it defaults to the field name itself
@@ -606,10 +591,7 @@ generateSequence sqn@Sequence {sequenceUses, sequenceItems, sequenceEndExpr} =
 
         packBindedField :: BindedField -> Text
         packBindedField BindedField {bindFieldIdentifier, bindFieldInnerBind = Nothing} = packIdent bindFieldIdentifier
-        packBindedField BindedField {bindFieldIdentifier, bindFieldInnerBind = Just bindFieldInnerBind'} =
-          [trimming|
-            $name: $inner
-          |]
+        packBindedField BindedField {bindFieldIdentifier, bindFieldInnerBind = Just bindFieldInnerBind'} = name <> pack ": " <> inner
           where
             name = packIdent bindFieldIdentifier
             inner = generateBind bindFieldInnerBind'
