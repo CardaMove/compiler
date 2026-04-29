@@ -171,6 +171,8 @@ moveStdLibScope =
 -- |
 -- Contains all the modules provided by the Move stdlib, such as the Signer module and the Coin module
 -- These will be used simply to resolve imports and types, but will not generate any Aiken code
+--
+-- NOTE How the coin module is provided already with type witnesses and CPS, so to respect a fully translated module
 moveStdLibModules :: [Module]
 moveStdLibModules =
   [ Module
@@ -226,7 +228,9 @@ moveStdLibModules =
                   functionTypeParameters = [TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "CoinType", typeConstraints = []}],
                   functionParameters =
                     [ Parameter {parameterIdentifier = Identifier "signer", parameterType = TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "signer") [], parameterUUID = Nothing},
-                      Parameter {parameterIdentifier = Identifier "amount", parameterType = TypeConstructor (LocalNameAccessChain $ Identifier "u64") [], parameterUUID = Nothing}
+                      Parameter {parameterIdentifier = Identifier "amount", parameterType = TypeConstructor (LocalNameAccessChain $ Identifier "u64") [], parameterUUID = Nothing},
+                      Parameter {parameterIdentifier = Identifier "tw_coin_type", parameterType = IntermediateTypeWitnessType, parameterUUID = Nothing},
+                      Parameter {parameterIdentifier = Identifier "cps", parameterType = IntermediateTypeScopes, parameterUUID = Nothing}
                     ],
                   functionReturnType = Just $ TypeConstructor (AliasedNameAccessChain (Identifier "coin") (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain $ Identifier "CoinType") []],
                   functionAcquires = [],
@@ -241,7 +245,9 @@ moveStdLibModules =
                   functionName = Identifier "value",
                   functionTypeParameters = [TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "CoinType", typeConstraints = []}],
                   functionParameters =
-                    [ Parameter {parameterIdentifier = Identifier "coin", parameterType = TypeImmutableRef $ TypeConstructor (AliasedNameAccessChain (Identifier "coin") (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain $ Identifier "CoinType") []], parameterUUID = Nothing}
+                    [ Parameter {parameterIdentifier = Identifier "coin", parameterType = TypeImmutableRef $ TypeConstructor (AliasedNameAccessChain (Identifier "coin") (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain $ Identifier "CoinType") []], parameterUUID = Nothing},
+                      Parameter {parameterIdentifier = Identifier "tw_coin_type", parameterType = IntermediateTypeWitnessType, parameterUUID = Nothing},
+                      Parameter {parameterIdentifier = Identifier "cps", parameterType = IntermediateTypeScopes, parameterUUID = Nothing}
                     ],
                   functionReturnType = Just $ TypeConstructor (LocalNameAccessChain $ Identifier "u64") [],
                   functionAcquires = [],
@@ -257,7 +263,9 @@ moveStdLibModules =
                   functionTypeParameters = [TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "CoinType", typeConstraints = []}],
                   functionParameters =
                     [ Parameter {parameterIdentifier = Identifier "dst_coin", parameterType = TypeMutableRef $ TypeConstructor (AliasedNameAccessChain (Identifier "coin") (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain $ Identifier "CoinType") []], parameterUUID = Nothing},
-                      Parameter {parameterIdentifier = Identifier "source_coin", parameterType = TypeConstructor (AliasedNameAccessChain (Identifier "coin") (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain $ Identifier "CoinType") []], parameterUUID = Nothing}
+                      Parameter {parameterIdentifier = Identifier "source_coin", parameterType = TypeConstructor (AliasedNameAccessChain (Identifier "coin") (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain $ Identifier "CoinType") []], parameterUUID = Nothing},
+                      Parameter {parameterIdentifier = Identifier "tw_coin_type", parameterType = IntermediateTypeWitnessType, parameterUUID = Nothing},
+                      Parameter {parameterIdentifier = Identifier "cps", parameterType = IntermediateTypeScopes, parameterUUID = Nothing}
                     ],
                   functionReturnType = Nothing,
                   functionAcquires = [],
@@ -273,7 +281,9 @@ moveStdLibModules =
                   functionTypeParameters = [TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "CoinType", typeConstraints = []}],
                   functionParameters =
                     [ Parameter {parameterIdentifier = Identifier "account_addr", parameterType = TypeConstructor (LocalNameAccessChain $ Identifier "address") [], parameterUUID = Nothing},
-                      Parameter {parameterIdentifier = Identifier "coin", parameterType = TypeConstructor (AliasedNameAccessChain (Identifier "coin") (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain $ Identifier "CoinType") []], parameterUUID = Nothing}
+                      Parameter {parameterIdentifier = Identifier "coin", parameterType = TypeConstructor (AliasedNameAccessChain (Identifier "coin") (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain $ Identifier "CoinType") []], parameterUUID = Nothing},
+                      Parameter {parameterIdentifier = Identifier "tw_coin_type", parameterType = IntermediateTypeWitnessType, parameterUUID = Nothing},
+                      Parameter {parameterIdentifier = Identifier "cps", parameterType = IntermediateTypeScopes, parameterUUID = Nothing}
                     ],
                   functionReturnType = Nothing,
                   functionAcquires = [],
@@ -300,7 +310,7 @@ buildImportedScope uses otherModules = concatMap buildImportedScope' uses
 
           -- If not found, throw an error
           importedModule' = case importedModule of
-            Nothing -> error $ "Imported module not found: " ++ show use ++ ", total of other modules: " ++ (show $ length otherModules)
+            Nothing -> error $ "Imported module not found: " ++ show use ++ ", total of other modules: " ++ show (length otherModules)
             Just m -> m
 
           -- Then, get all the symbols (identifiers declared in that module)
