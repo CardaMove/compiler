@@ -51,6 +51,8 @@ module BetAddr::Bet {
         // assert!(winner == player1 || winner == player2, 0);
 
         let Bet<CoinType> { value: bet1 } = move_from<Bet<CoinType>>(player1);
+        // TODO: Needed since currently it is not supported to POST a variable introduced by a destructuring
+        let bet1 = bet1;
         let Bet<CoinType> { value: bet2 } = move_from<Bet<CoinType>>(player2);
         coin::merge<CoinType>(&mut bet1, bet2);
         coin::deposit<CoinType>(winner, bet1);
