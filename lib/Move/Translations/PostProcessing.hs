@@ -79,7 +79,8 @@ normalizeUse :: Use -> Use
 normalizeUse u@Use {useAddress, useIdentifier} =
   u
     { useAddress = lowercaseAddress useAddress,
-      useIdentifier = lowercaseIdentifier useIdentifier
+      useIdentifier = lowercaseIdentifier useIdentifier,
+      useMembers = filter (\um -> useMemberIdentifier um /= Identifier "Self") (useMembers u)
     }
 
 -- | Normalizes an unaliased name access chain by converting the first identifier to lowercase.
