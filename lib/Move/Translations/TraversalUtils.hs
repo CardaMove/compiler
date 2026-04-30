@@ -9,9 +9,11 @@ import Move.AST
 import Move.Translations.Utils
   ( Scope,
     VariableAnnotations (VariableAnnotations),
+    aptosFrameworkLibAddress,
     booleanType,
     extractVariablesFromBindings,
-    unitType, stdLibAddress, aptosFrameworkLibAddress,
+    stdLibAddress,
+    unitType,
   )
 
 type TraversalMapper node state = node -> [Scope] -> state -> (node, state)
@@ -211,14 +213,15 @@ moveStdLibModules =
       { moduleAddress = aptosFrameworkLibAddress,
         moduleIdentifier = Identifier "coin",
         moduleTopLevels =
-          [ TopLevelNamedStruct $ NamedStruct {
-                namedStructIdentifier = Identifier "Coin",
-                namedStructTypeParameters = [TypeParameter {typeParameterIsPhantom = True, typeIdentifier = Identifier "CoinType", typeConstraints = []}],
-                namedStructAbilities = [],
-                namedStructFields = [
-                  NamedField {fieldIdentifier = Identifier "amount", fieldType = TypeConstructor (LocalNameAccessChain $ Identifier "u64") []}
-                ]
-              },           
+          [ TopLevelNamedStruct $
+              NamedStruct
+                { namedStructIdentifier = Identifier "Coin",
+                  namedStructTypeParameters = [TypeParameter {typeParameterIsPhantom = True, typeIdentifier = Identifier "CoinType", typeConstraints = []}],
+                  namedStructAbilities = [],
+                  namedStructFields =
+                    [ NamedField {fieldIdentifier = Identifier "value", fieldType = TypeConstructor (LocalNameAccessChain $ Identifier "u64") []}
+                    ]
+                },
             TopLevelFunction $
               Function
                 { functionHasNativeModifier = False,
@@ -286,6 +289,41 @@ moveStdLibModules =
                       Parameter {parameterIdentifier = Identifier "cps", parameterType = IntermediateTypeScopes, parameterUUID = Nothing}
                     ],
                   functionReturnType = Nothing,
+                  functionAcquires = [],
+                  functionBody = Nothing,
+                  functionUUID = Nothing
+                },
+            TopLevelFunction $
+              Function
+                { functionHasNativeModifier = False,
+                  functionVisibilityModifier = Just VisibilityModifierPublic,
+                  functionHasEntryModifier = False,
+                  functionName = Identifier "extract",
+                  functionTypeParameters = [TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "CoinType", typeConstraints = []}],
+                  functionParameters =
+                    [ Parameter {parameterIdentifier = Identifier "coin", parameterType = TypeMutableRef $ TypeConstructor (AliasedNameAccessChain (Identifier "coin") (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain $ Identifier "CoinType") []], parameterUUID = Nothing},
+                      Parameter {parameterIdentifier = Identifier "amount", parameterType = TypeConstructor (LocalNameAccessChain $ Identifier "u64") [], parameterUUID = Nothing},
+                      Parameter {parameterIdentifier = Identifier "tw_coin_type", parameterType = IntermediateTypeWitnessType, parameterUUID = Nothing},
+                      Parameter {parameterIdentifier = Identifier "cps", parameterType = IntermediateTypeScopes, parameterUUID = Nothing}
+                    ],
+                  functionReturnType = Just $ TypeConstructor (AliasedNameAccessChain (Identifier "coin") (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain $ Identifier "CoinType") []],
+                  functionAcquires = [],
+                  functionBody = Nothing,
+                  functionUUID = Nothing
+                },
+            TopLevelFunction $
+              Function
+                { functionHasNativeModifier = False,
+                  functionVisibilityModifier = Just VisibilityModifierPublic,
+                  functionHasEntryModifier = False,
+                  functionName = Identifier "value",
+                  functionTypeParameters = [TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "CoinType", typeConstraints = []}],
+                  functionParameters =
+                    [ Parameter {parameterIdentifier = Identifier "coin", parameterType = TypeConstructor (AliasedNameAccessChain (Identifier "coin") (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain $ Identifier "CoinType") []], parameterUUID = Nothing},
+                      Parameter {parameterIdentifier = Identifier "tw_coin_type", parameterType = IntermediateTypeWitnessType, parameterUUID = Nothing},
+                      Parameter {parameterIdentifier = Identifier "cps", parameterType = IntermediateTypeScopes, parameterUUID = Nothing}
+                    ],
+                  functionReturnType = Just $ TypeConstructor (LocalNameAccessChain $ Identifier "u64") [],
                   functionAcquires = [],
                   functionBody = Nothing,
                   functionUUID = Nothing

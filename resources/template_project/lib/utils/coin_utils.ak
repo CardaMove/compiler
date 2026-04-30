@@ -2,8 +2,9 @@ use aiken/collection/dict.{Dict}
 use aiken/collection/list
 use aiken/primitive/bytearray
 use cardano/assets.{AssetName, PolicyId, Value}
-use utils/common_utils.{Addr, ProgramState, Str, TWitness, TypeWithnessC}
+use utils/common_utils.{Addr, ProgramState, Str, TWitness, TypeWithnessC, Reference, CPS}
 use utils/signer_utils.{Signer}
+use utils/reference_utils
 
 // Defined internally in Move
 pub type Coin {
@@ -22,22 +23,23 @@ const lovelace_resource_type: TWitness = TypeWithnessC("lovelace", [])
 
 /// Defined internally in Move, creates a coin from two coins of the same type
 /// Does never abort since Move already ensures that the CoinType(s) correspond
-pub fn coin_merge(coin1: Coin, coin2: Coin) -> Coin {
-  let Coin { value: value1 } = coin1
-  let Coin { value: value2 } = coin2
+pub fn merge(dst_coin: Reference<Coin>, source_coin: Coin, tw_coin_type: TWitness, cps: CPS) -> (Void, CPS) {
+  expect Coin { value: value1 } = reference_utils.deref(dst_coin, cps)
 
-  Coin { value: value1 + value2 }
+  let cps = reference_utils.put_deref(dst_coin, [], Coin{value: value1 + source_coin.value}, cps)
+
+  (Void, cps)
 }
 
 // Defined internally in Move, uses CoinStore
 // FIXME: Should transfer ADA only for Coin<AptosCoin>?
 // FIXME: Read about policies at https://aiken-lang.github.io/stdlib/cardano/assets.html#ada_asset_name
-pub fn coin_deposit(
+pub fn deposit(
   account_addr: Addr,
   coin: Coin,
   coin_type: TWitness,
-  state: ProgramState,
-) -> ProgramState {
+  cps: CPS,
+) -> (Void, CPS) {
   let Coin { value: _ } = coin
   let type_addr =
     common_utils.internal_concat_str(
@@ -49,10 +51,10 @@ pub fn coin_deposit(
       ],
     )
 
-  let ProgramState(state_dict) = state
+  let (scopes, ProgramState(state_dict)) = cps
   let coin_data: Data = coin
 
-  state_dict
+  let state_dict = state_dict
     |> dict.insert_with(
         key: account_addr,
         value: dict.from_pairs([Pair(type_addr, coin_data)]),
@@ -67,26 +69,27 @@ pub fn coin_deposit(
               right: new_value,
               // If the address already has some balance, add the coin value to it
               with: fn(_key: Addr, ex_coin_value: Data, new_coin_value: Data) {
-                expect c1: Coin = ex_coin_value
-                expect c2: Coin = new_coin_value
+                expect Coin { value: value1 } = ex_coin_value
+                expect Coin { value: value2 } = new_coin_value
 
-                let sum: Data = coin_merge(c1, c2)
+                let sum: Data = Coin{value: value1 + value2}
                 Some(sum)
               },
             ),
           )
         },
       )
-    |> ProgramState
+
+  (Void, (scopes, ProgramState(state_dict)))
 }
 
 /// Updates the program state so to include all assets presents in the outputs
 /// The ouputs parameter should not have zero-valued assets
 pub fn add_assets_to_state(
-  state: ProgramState,
   outputs: Dict<Addr, Value>,
-) -> ProgramState {
-  outputs
+  (scopes, state): CPS,
+) -> CPS {
+  let state = outputs
     |> dict.foldr(
         state,
         with: fn(addr, value, state) {
@@ -104,7 +107,7 @@ pub fn add_assets_to_state(
             with: fn(
               (policy_id, asset_name, qt): (PolicyId, AssetName, Int),
               state: ProgramState,
-            ) {
+            ) -> ProgramState {
               let is_ada: Bool =
                 policy_id == assets.ada_policy_id && asset_name == assets.ada_asset_name
 
@@ -116,17 +119,21 @@ pub fn add_assets_to_state(
                   TypeWithnessC(policy_id, [TypeWithnessC(asset_name, [])])
                 }
 
-              coin_deposit(addr, Coin { value: qt }, coin_type, state)
+              let (_, state) = deposit(addr, Coin { value: qt }, coin_type, (scopes, state)).2nd
+
+              state
             },
           )
         },
       )
+
+  (scopes, state)
 }
 
 /// Given the state, returns all the assets in it grouped by the target address
 /// Similar to `assets_utils.map_outputs_to_assets`
-pub fn get_assets_from_state(state: ProgramState) -> Dict<Addr, Value> {
-  let ProgramState(state_dict) = state
+pub fn get_assets_from_state(cps: CPS) -> Dict<Addr, Value> {
+  let (scopes, ProgramState(state_dict)) = cps
 
   let res_dict: Dict<Addr, Value> =
     state_dict
@@ -225,10 +232,10 @@ pub fn get_assets_from_state(state: ProgramState) -> Dict<Addr, Value> {
 }
 
 /// Given the state, removes all assets in it and returns the updated state
-pub fn remove_assets_from_state(state: ProgramState) -> ProgramState {
-  let ProgramState(state_dict) = state
+pub fn remove_assets_from_state(cps: CPS) -> CPS {
+  let (scopes, ProgramState(state_dict)) = cps
 
-  ProgramState(
+  let state = ProgramState(
     state_dict
       |> dict.map(
           fn(_addr: Addr, sub_dict: Dict<Str, Data>) {
@@ -253,12 +260,14 @@ pub fn remove_assets_from_state(state: ProgramState) -> ProgramState {
           },
         ),
   )
+
+  (scopes, state)
 }
 
 /// Deducts some amount from a coin, returning the new one as first place and the updated one as second place
 /// Aborts if the input coin has not enough value
-pub fn coin_extract(coin: Coin, amount: Int) -> Pair<Coin, Coin> {
-  let Coin { value } = coin
+pub fn extract(coin: Reference<Coin>, amount: Int, tw_coin_type: TWitness, cps: CPS) -> (Coin, CPS) {
+  expect Coin { value } = reference_utils.deref(coin, cps)
 
   if value < amount {
     fail @"Not enought Coin value to extract"
@@ -266,32 +275,34 @@ pub fn coin_extract(coin: Coin, amount: Int) -> Pair<Coin, Coin> {
     let updated_coin = Coin { value: value - amount }
     let new_coin = Coin { value: amount }
 
-    Pair(new_coin, updated_coin)
+    let cps = reference_utils.put_deref(coin, [], updated_coin, cps)
+
+    (new_coin, cps)
   }
 }
 
 /// Retrieves a certain amount of Coin<coin_type> from the signer's storage
-/// Returns a pair with `(retrieved_coin, updated_state)`
+/// Returns a pair with `(retrieved_coin, cps)`
 /// Aborts if the signer has not enought amount of the Coin
-pub fn coin_withdraw(
-  coin_type: TWitness,
-  account: Signer,
+pub fn withdraw(
+  signer: Reference<Signer>,
   amount: Int,
-  state: ProgramState,
-) -> Pair<Coin, ProgramState> {
+  tw_coin_type: TWitness,
+  cps: CPS,
+) -> (Coin, CPS) {
   let type_addr =
     common_utils.internal_concat_str(
       [
         coin_address_prefix,
         common_utils.internal_map_type_to_str(
-          TypeWithnessC("Coin", [coin_type]),
+          TypeWithnessC("Coin", [tw_coin_type]),
         ),
       ],
     )
 
-  let signer_addr = signer_utils.internal_signer_address_of_unref(account)
+  let (signer_addr, cps) = signer_utils.signer_address_of(signer, cps)
 
-  let ProgramState(state_dict) = state
+  let (scopes, ProgramState(state_dict)) = cps
   expect existing_coin: Coin =
     state_dict
       |> dict.get(signer_addr)
@@ -299,7 +310,8 @@ pub fn coin_withdraw(
       |> dict.get(type_addr)
       |> common_utils.expect_some("No Coin to withdraw")
 
-  let Pair(new_coin, updated_coin) = coin_extract(existing_coin, amount)
+  let updated_coin = Coin { value: existing_coin.value - amount }
+  let new_coin = Coin { value: amount }
 
   let updated_state =
     ProgramState(
@@ -317,5 +329,13 @@ pub fn coin_withdraw(
           ),
     )
 
-  Pair(new_coin, updated_state)
+  (new_coin, (scopes, updated_state))
+}
+
+pub fn value(
+  coin: Coin,
+  tw_coin_type: TWitness,
+  cps: CPS
+) -> (Int, CPS){
+  (coin.value, cps)
 }
