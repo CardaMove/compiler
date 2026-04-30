@@ -29,14 +29,14 @@ module BetAddr::Bet {
 
     public fun join<CoinType>(partecipant: &signer, bookmaker: address): () acquires Round {
         let round = borrow_global_mut<Round<CoinType>>(bookmaker);
-        assert!(
-            address_of(partecipant) == round.player1
-                || address_of(partecipant) == round.player2,
-            0
-        );
+        // assert!(
+        //     address_of(partecipant) == round.player1
+        //         || address_of(partecipant) == round.player2,
+        //     0
+        // );
         let bet = coin::withdraw<CoinType>(partecipant, round.stake);
 
-        assert!(coin::value<CoinType>(&bet) == round.stake, 0);
+        // assert!(coin::value<CoinType>(&bet) == round.stake, 0);
         let bet = Bet<CoinType> { value: bet };
         move_to<Bet<CoinType>>(partecipant, bet);
     }
@@ -44,11 +44,11 @@ module BetAddr::Bet {
     public fun win<CoinType>(
         oracle: &signer, winner: address, bookmaker: address
     ): () acquires Round, Bet {
-        assert!(exists<Round<CoinType>>(bookmaker), 0);
+        // assert!(exists<Round<CoinType>>(bookmaker), 0);
         let Round { player1, player2, oracle: oracle_address, stake: _, deadline: _ } =
             move_from<Round<CoinType>>(bookmaker);
-        assert!(address_of(oracle) == oracle_address, 0);
-        assert!(winner == player1 || winner == player2, 0);
+        // assert!(address_of(oracle) == oracle_address, 0);
+        // assert!(winner == player1 || winner == player2, 0);
 
         let Bet<CoinType> { value: bet1 } = move_from<Bet<CoinType>>(player1);
         let Bet<CoinType> { value: bet2 } = move_from<Bet<CoinType>>(player2);
