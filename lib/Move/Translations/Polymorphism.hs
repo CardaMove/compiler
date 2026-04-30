@@ -110,7 +110,7 @@ castExpr expr (TypeTuple tsFrom) (TypeTuple tsTo) currUUID =
 castExpr expr (TypeTuple _) _ _ = error $ "Mismatching function return type parametric and not: " ++ show expr
 castExpr expr _ (TypeTuple _) _ = error $ "Mismatching function return type parametric and not: " ++ show expr
 -- If the type is not a tuple, simply cast it
-castExpr expr _ t currUUID =
+castExpr expr _ t _currUUID =
   CastingTerm $
     Casting
       { castingExpr = IntermediateExprExpr $ IntermediateAsData expr,

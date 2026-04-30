@@ -22,7 +22,7 @@ module Move.Translations.Utils
     refUtilsIdent,
     gsUtilsIdent,
     stdLibAddress,
-    aptosFrameworkLibAddress
+    aptosFrameworkLibAddress,
   )
 where
 
@@ -32,6 +32,7 @@ import Control.Monad.State
     State,
   )
 import Data.Generics.Uniplate.Data (transformBiM)
+import Data.List (find)
 import Data.List qualified as List
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
@@ -142,14 +143,18 @@ extractVariablesFromSingleBind bind maybeType maybeExpr scopes =
             -- When an expression is provided, try to infer it
             (Nothing, Just expr, _) -> inferExprType expr scopes
        in [(ident, VariableAnnotations maybeUUID inferredType)]
-    (BindNamedStruct (BindedNamedStruct {bnsFields = BindedFields {bindedFields}})) -> concatMap getBindIdentifiersHelper bindedFields
-    (BindPositionalStruct (BindedPositionalStruct {bpsFields = BindedFields {bindedFields}})) -> concatMap getBindIdentifiersHelper bindedFields
+    (BindNamedStruct (BindedNamedStruct {bnsNameAccessChain, bnsFields = BindedFields {bindedFields}})) -> concatMap (getBindIdentifiersHelper $ getNacFromScopes bnsNameAccessChain scopes) bindedFields
+    (BindPositionalStruct (BindedPositionalStruct {bpsNameAccessChain, bpsFields = BindedFields {bindedFields}})) -> concatMap (getBindIdentifiersHelper $ getNacFromScopes bpsNameAccessChain scopes) bindedFields
   where
-    getBindIdentifiersHelper :: BindedField -> [(Identifier, VariableAnnotations)]
-    -- TODO: Type of the field can be inferred by looking at the type definition (and expression in case of generic type)
-    getBindIdentifiersHelper (BindedField {bindFieldIdentifier, bindFieldInnerBind = Nothing, bindedFieldUUID}) = [(bindFieldIdentifier, VariableAnnotations bindedFieldUUID TypeUnknown)]
-    -- TODO: Can be refined by passing the sub-expression to the recursive call
-    getBindIdentifiersHelper (BindedField {bindFieldInnerBind = Just innerBind}) = extractVariablesFromSingleBind innerBind Nothing Nothing scopes
+    getBindIdentifiersHelper :: VariableAnnotations -> BindedField -> [(Identifier, VariableAnnotations)]
+    -- In this case, the binding is performed on an inner field of a named struct, therefore retrieve the type of that field
+    -- TODO: Do the same for positional structs
+    getBindIdentifiersHelper (VariableAnnotations _ (IntermediateTypeNamedStructDeclaration _ fields)) f@(BindedField {bindFieldIdentifier, bindFieldInnerBind, bindedFieldUUID}) =
+      case find (\NamedField {fieldIdentifier} -> fieldIdentifier == bindFieldIdentifier) fields of
+        -- Recursively extract any inner binding, knowing that the type should be the one of the current field
+        Just (NamedField {fieldType}) -> extractVariablesFromSingleBind (fromMaybe (BindIdentifier bindFieldIdentifier bindedFieldUUID) bindFieldInnerBind) (Just fieldType) Nothing scopes -- [(bindFieldIdentifier, VariableAnnotations bindedFieldUUID fieldType)]
+        Nothing -> error $ "Found a bind to an unknown field of a named struct: " ++ show f
+    getBindIdentifiersHelper _ f = error $ "Found a bind to a struct that does not correspond to any struct declaration" ++ show f
 
 -- |
 -- Given an AST, adds a unique identifier to all bindings

@@ -1,10 +1,11 @@
 module Move.Translations.UtilsSpec (spec) where
 
 import Control.Monad.State (evalState, modify, runState)
+import Data.Map qualified as Map
 import Move.AST
 import Move.Lexer (scan)
 import Move.Parser (parse)
-import Move.Translations.Utils (VariableAnnotations (VariableAnnotations), annotateBindingsWithUUID, extractVariablesFromSingleBind, iterateWithOthers)
+import Move.Translations.Utils (Scope, VariableAnnotations (VariableAnnotations), annotateBindingsWithUUID, extractVariablesFromSingleBind, iterateWithOthers)
 import Test.Hspec
 
 testExtractVariablesFromSingleBind :: Spec
@@ -13,6 +14,18 @@ testExtractVariablesFromSingleBind = describe "Tests the function `extractVariab
     {- Code as follows:
       let MyStruct{a, b: b_alias} = e
     -}
+    let scopes :: [Scope] =
+          [ Map.singleton
+              (LocalNameAccessChain $ Identifier "MyStruct")
+              ( VariableAnnotations Nothing $
+                  IntermediateTypeNamedStructDeclaration
+                    []
+                    [ NamedField {fieldIdentifier = Identifier "a", fieldType = TypeConstructor (LocalNameAccessChain $ Identifier "u64") []},
+                      NamedField {fieldIdentifier = Identifier "b", fieldType = TypeConstructor (LocalNameAccessChain $ Identifier "bool") []}
+                    ]
+              )
+          ]
+
     let bind =
           BindNamedStruct $
             BindedNamedStruct
@@ -28,7 +41,10 @@ testExtractVariablesFromSingleBind = describe "Tests the function `extractVariab
                     }
               }
 
-    extractVariablesFromSingleBind bind Nothing Nothing [] `shouldBe` [(Identifier "a", VariableAnnotations (Just 0) TypeUnknown), (Identifier "b_alias", VariableAnnotations (Just 1) TypeUnknown)]
+    extractVariablesFromSingleBind bind Nothing Nothing scopes
+      `shouldBe` [ (Identifier "a", VariableAnnotations (Just 0) (TypeConstructor (LocalNameAccessChain $ Identifier "u64") [])),
+                   (Identifier "b_alias", VariableAnnotations (Just 1) (TypeConstructor (LocalNameAccessChain $ Identifier "bool") []))
+                 ]
 
 testAnnotateBindingsWithUUID :: Spec
 testAnnotateBindingsWithUUID = describe "Tests the function `annotateBindingsWithUUID`" $ do
