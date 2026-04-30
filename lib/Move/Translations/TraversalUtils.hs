@@ -189,7 +189,7 @@ moveStdLibModules =
                   functionName = Identifier "address_of",
                   functionTypeParameters = [],
                   functionParameters = [Parameter {parameterIdentifier = Identifier "signer", parameterType = TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "signer") [], parameterUUID = Nothing}],
-                  functionReturnType = Just $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [],
+                  functionReturnType = Just $ TypeTuple [TypeConstructor (LocalNameAccessChain $ Identifier "address") [], IntermediateTypeScopes],
                   functionAcquires = [],
                   functionBody = Nothing,
                   functionUUID = Nothing
@@ -202,7 +202,7 @@ moveStdLibModules =
                   functionName = Identifier "borrow_address",
                   functionTypeParameters = [],
                   functionParameters = [Parameter {parameterIdentifier = Identifier "signer", parameterType = TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "signer") [], parameterUUID = Nothing}],
-                  functionReturnType = Just $ TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [],
+                  functionReturnType = Just $ TypeTuple [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [], IntermediateTypeScopes],
                   functionAcquires = [],
                   functionBody = Nothing,
                   functionUUID = Nothing
@@ -235,7 +235,7 @@ moveStdLibModules =
                       Parameter {parameterIdentifier = Identifier "tw_coin_type", parameterType = IntermediateTypeWitnessType, parameterUUID = Nothing},
                       Parameter {parameterIdentifier = Identifier "cps", parameterType = IntermediateTypeScopes, parameterUUID = Nothing}
                     ],
-                  functionReturnType = Just $ TypeConstructor (AliasedNameAccessChain (Identifier "coin") (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain $ Identifier "CoinType") []],
+                  functionReturnType = Just $ TypeTuple [TypeConstructor (AliasedNameAccessChain (Identifier "coin") (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain $ Identifier "CoinType") []], IntermediateTypeScopes],
                   functionAcquires = [],
                   functionBody = Nothing,
                   functionUUID = Nothing
@@ -252,7 +252,7 @@ moveStdLibModules =
                       Parameter {parameterIdentifier = Identifier "tw_coin_type", parameterType = IntermediateTypeWitnessType, parameterUUID = Nothing},
                       Parameter {parameterIdentifier = Identifier "cps", parameterType = IntermediateTypeScopes, parameterUUID = Nothing}
                     ],
-                  functionReturnType = Just $ TypeConstructor (LocalNameAccessChain $ Identifier "u64") [],
+                  functionReturnType = Just $ TypeTuple [TypeConstructor (LocalNameAccessChain $ Identifier "u64") [], IntermediateTypeScopes],
                   functionAcquires = [],
                   functionBody = Nothing,
                   functionUUID = Nothing
@@ -270,7 +270,7 @@ moveStdLibModules =
                       Parameter {parameterIdentifier = Identifier "tw_coin_type", parameterType = IntermediateTypeWitnessType, parameterUUID = Nothing},
                       Parameter {parameterIdentifier = Identifier "cps", parameterType = IntermediateTypeScopes, parameterUUID = Nothing}
                     ],
-                  functionReturnType = Nothing,
+                  functionReturnType = Just $ TypeTuple [unitType, IntermediateTypeScopes],
                   functionAcquires = [],
                   functionBody = Nothing,
                   functionUUID = Nothing
@@ -288,7 +288,7 @@ moveStdLibModules =
                       Parameter {parameterIdentifier = Identifier "tw_coin_type", parameterType = IntermediateTypeWitnessType, parameterUUID = Nothing},
                       Parameter {parameterIdentifier = Identifier "cps", parameterType = IntermediateTypeScopes, parameterUUID = Nothing}
                     ],
-                  functionReturnType = Nothing,
+                  functionReturnType = Just $ TypeTuple [unitType, IntermediateTypeScopes],
                   functionAcquires = [],
                   functionBody = Nothing,
                   functionUUID = Nothing
@@ -306,7 +306,7 @@ moveStdLibModules =
                       Parameter {parameterIdentifier = Identifier "tw_coin_type", parameterType = IntermediateTypeWitnessType, parameterUUID = Nothing},
                       Parameter {parameterIdentifier = Identifier "cps", parameterType = IntermediateTypeScopes, parameterUUID = Nothing}
                     ],
-                  functionReturnType = Just $ TypeConstructor (AliasedNameAccessChain (Identifier "coin") (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain $ Identifier "CoinType") []],
+                  functionReturnType = Just $ TypeTuple [TypeConstructor (AliasedNameAccessChain (Identifier "coin") (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain $ Identifier "CoinType") []], IntermediateTypeScopes],
                   functionAcquires = [],
                   functionBody = Nothing,
                   functionUUID = Nothing
@@ -323,7 +323,7 @@ moveStdLibModules =
                       Parameter {parameterIdentifier = Identifier "tw_coin_type", parameterType = IntermediateTypeWitnessType, parameterUUID = Nothing},
                       Parameter {parameterIdentifier = Identifier "cps", parameterType = IntermediateTypeScopes, parameterUUID = Nothing}
                     ],
-                  functionReturnType = Just $ TypeConstructor (LocalNameAccessChain $ Identifier "u64") [],
+                  functionReturnType = Just $ TypeTuple [TypeConstructor (LocalNameAccessChain $ Identifier "u64") [], IntermediateTypeScopes],
                   functionAcquires = [],
                   functionBody = Nothing,
                   functionUUID = Nothing

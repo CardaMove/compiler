@@ -452,7 +452,7 @@ rewriteInlineStateMutation scopeUUID = rewriteInlineStateMutation'
     rewriteInlineStateMutation' expr@(PositionalStructExprOrFunctionCallExpr funcCall@PositionalStructExprOrFunctionCall {pseofcNameAccessChain, pseofcFields}) scopes (currUUID, bindingsToAdd) =
       case getNacFromScopes pseofcNameAccessChain scopes of
         -- In this case, it is a function call and not a positional struct
-        VariableAnnotations _ (TypeArrow _ _) ->
+        VariableAnnotations _ (TypeArrow _ tFunc) ->
           -- Since it is not possible (without a proper static analysis) to know if the function call accesses or modify the state,
           -- for now assume it always does that
           --
@@ -461,6 +461,13 @@ rewriteInlineStateMutation scopeUUID = rewriteInlineStateMutation'
               tempIdentifier' = case tempIdentifier of
                 Identifier str -> Identifier $ str ++ show currUUID
 
+              -- To correctly infer the type, it might be needed to access some temporary variables,
+              -- so they have been added as a new scope.
+              -- Adding a scope on top does not cause issues in this step
+              -- FIXME: Maybe it is needed to check if the function already updates the state, before creating a tuple?
+              -- similar to the bug dolved for inline sequences in `rewriteInlineStateMutation'`
+              functionCallType = inferExprType expr (scopes ++ [mapTemporaryBindingsToScope bindingsToAdd])
+
               newBinding =
                 Bindings
                   { bindings =
@@ -468,17 +475,11 @@ rewriteInlineStateMutation scopeUUID = rewriteInlineStateMutation'
                         [ BindIdentifier tempIdentifier' (Just currUUID),
                           BindIdentifier cpsIdentifier (Just scopeUUID)
                         ],
-                    bindingsBindType =
-                      Just $
-                        TypeTuple
-                          [ -- To correctly infer the type, it might be needed to access some temporary variables,
-                            -- so they have been added as a new scope.
-                            -- Adding a scope on top does not cause issues in this step
-                            -- FIXME: Maybe it is needed to check if the function already updates the state, before creating a tuple?
-                            -- similar to the bug dolved for inline sequences in `rewriteInlineStateMutation'`
-                            inferExprType expr (scopes ++ [mapTemporaryBindingsToScope bindingsToAdd]),
-                            IntermediateTypeScopes
-                          ],
+                    -- If the function already has the CPS as return type, it means it is a library function (such as coin module),
+                    -- therefore, do not add nested CPS, otherwise it would result in ((val, CPS), CPS)
+                    bindingsBindType = case last tFunc of
+                      TypeTuple [_, IntermediateTypeScopes] -> Just functionCallType
+                      _ -> Just $ TypeTuple [functionCallType, IntermediateTypeScopes],
                     bindingsBindExpr =
                       Just $
                         PositionalStructExprOrFunctionCallExpr
