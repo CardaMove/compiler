@@ -495,7 +495,8 @@ stdLibUses =
           useIdentifier = Identifier "signer_utils",
           useAlias = Nothing,
           useMembers =
-            [ UseMember {useMemberIdentifier = Identifier "Signer", useMemberUseAlias = Nothing}
+            [ UseMember {useMemberIdentifier = Identifier "Signer", useMemberUseAlias = Nothing},
+              UseMember {useMemberIdentifier = Identifier "address_of", useMemberUseAlias = Nothing}
             ]
         }
   ]

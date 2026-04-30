@@ -1,8 +1,8 @@
 module Move.Translations.PostProcessingSpec (spec) where
 
-import qualified Data.Map as Map
+import Data.Map qualified as Map
 import Move.AST
-import Move.Translations.PostProcessing (postProcessRoot)
+import Move.Translations.PostProcessing (isStdSignerTopLevel, postProcessRoot)
 import Test.Hspec
 
 testLowercaseIdentifier :: Spec
@@ -33,9 +33,9 @@ testLowercaseAddress = describe "Tests the function `lowercaseAddress`" $ do
         -- Find the TopLevelFunction (skip stdLibUses added by postProcessRoot)
         let functions = [f | TopLevelFunction f <- topLevels]
         case functions of
-          (resultFunc:_) -> do
+          (resultFunc : _) -> do
             case functionBody resultFunc of
-              Just (Sequence {sequenceUses = (Use {useAddress = resultAddr}):_}) -> 
+              Just (Sequence {sequenceUses = (Use {useAddress = resultAddr}) : _}) ->
                 resultAddr `shouldBe` NumericalAddress (LiteralIntDec 2)
               _ -> fail "Expected sequence with use declaration"
           _ -> fail "Expected to find a TopLevelFunction"
@@ -54,9 +54,9 @@ testLowercaseAddress = describe "Tests the function `lowercaseAddress`" $ do
         let topLevels = moduleTopLevels resultModule
         let functions = [f | TopLevelFunction f <- topLevels]
         case functions of
-          (resultFunc:_) -> do
+          (resultFunc : _) -> do
             case functionBody resultFunc of
-              Just (Sequence {sequenceUses = (Use {useAddress = resultAddr}):_}) ->
+              Just (Sequence {sequenceUses = (Use {useAddress = resultAddr}) : _}) ->
                 resultAddr `shouldBe` NumericalAddress (LiteralIntHex "0xabcdef")
               _ -> fail "Expected sequence with use declaration"
           _ -> fail "Expected to find a TopLevelFunction"
@@ -89,13 +89,28 @@ testNormalizeUse = describe "Tests the function `normalizeUse`" $ do
         let topLevels = moduleTopLevels resultModule
         let functions = [f | TopLevelFunction f <- topLevels]
         case functions of
-          (resultFunc:_) -> do
+          (resultFunc : _) -> do
             case functionBody resultFunc of
-              Just (Sequence {sequenceUses = (Use {useAddress = resultAddr, useIdentifier = resultIdent}):_}) -> do
+              Just (Sequence {sequenceUses = (Use {useAddress = resultAddr, useIdentifier = resultIdent}) : _}) -> do
                 resultAddr `shouldBe` NumericalAddress (LiteralIntDec 2)
                 resultIdent `shouldBe` Identifier "mymod"
               _ -> fail "Expected sequence with use declaration"
           _ -> fail "Expected to find a TopLevelFunction"
+      RScript _ -> fail "Expected RModule"
+
+testRemoveStdSignerUse :: Spec
+testRemoveStdSignerUse = describe "Removes std::signer use declarations" $ do
+  it "Removes top-level std::signer uses" $ do
+    let useDecl = Use {useAddress = NamedAddress (Identifier "std"), useIdentifier = Identifier "signer", useAlias = Nothing, useMembers = []}
+    let topUse = TopLevelUse useDecl
+    let module' = Module {moduleAddress = NamedAddress (Identifier "utils"), moduleIdentifier = Identifier "test_mod", moduleTopLevels = [topUse]}
+    let root = RModule module'
+    let addrMap = Map.fromList [(Identifier "utils", LiteralIntDec 1), (Identifier "std", LiteralIntDec 0)]
+
+    case postProcessRoot root addrMap of
+      RModule resultModule -> do
+        let removedStdSigner = any isStdSignerTopLevel (moduleTopLevels resultModule)
+        removedStdSigner `shouldBe` False
       RScript _ -> fail "Expected RModule"
 
 testPostProcessRoot :: Spec
@@ -123,9 +138,9 @@ testPostProcessRoot = describe "Tests the function `postProcessRoot`" $ do
         let topLevels = moduleTopLevels resultModule
         let functions = [f | TopLevelFunction f <- topLevels]
         case functions of
-          (resultFunc:_) -> do
+          (resultFunc : _) -> do
             case functionBody resultFunc of
-              Just (Sequence {sequenceUses = (Use {useAddress = resultAddr}):_}) ->
+              Just (Sequence {sequenceUses = (Use {useAddress = resultAddr}) : _}) ->
                 resultAddr `shouldBe` NamedAddress (Identifier "utils")
               _ -> fail "Expected sequence with use declaration"
           _ -> fail "Expected to find a TopLevelFunction"
@@ -152,11 +167,35 @@ testPostProcessRoot = describe "Tests the function `postProcessRoot`" $ do
       RScript (Script {scriptTopLevels = topLevels}) -> do
         let functions = [f | TopLevelFunction f <- topLevels]
         case functions of
-          (resultFunc:_) -> do
+          (resultFunc : _) -> do
             functionVisibilityModifier resultFunc `shouldBe` Just VisibilityModifierPublic
             functionHasEntryModifier resultFunc `shouldBe` True
           _ -> fail "Expected to find a TopLevelFunction"
       RModule _ -> fail "Expected RScript"
+
+testRemoveSelfUseMember :: Spec
+testRemoveSelfUseMember = describe "Tests removal of Self use member" $ do
+  it "Removes UseMember named Self from use declarations" $ do
+    let selfMember = UseMember {useMemberIdentifier = Identifier "Self", useMemberUseAlias = Nothing}
+    let otherMember = UseMember {useMemberIdentifier = Identifier "Foo", useMemberUseAlias = Nothing}
+    let useDecl = Use {useAddress = NamedAddress (Identifier "MyAddr"), useIdentifier = Identifier "mod", useAlias = Nothing, useMembers = [selfMember, otherMember]}
+    let function' = Function {functionHasNativeModifier = False, functionVisibilityModifier = Nothing, functionHasEntryModifier = False, functionName = Identifier "test", functionTypeParameters = [], functionParameters = [], functionReturnType = Nothing, functionAcquires = [], functionBody = Just (Sequence {sequenceUses = [useDecl], sequenceItems = [], sequenceEndExpr = Nothing}), functionUUID = Nothing}
+    let module' = Module {moduleAddress = NamedAddress (Identifier "utils"), moduleIdentifier = Identifier "test_mod", moduleTopLevels = [TopLevelFunction function']}
+    let root = RModule module'
+    let addrMap = Map.fromList [(Identifier "MyAddr", LiteralIntDec 2), (Identifier "utils", LiteralIntDec 1)]
+
+    case postProcessRoot root addrMap of
+      RModule resultModule -> do
+        let topLevels = moduleTopLevels resultModule
+        let functions = [f | TopLevelFunction f <- topLevels]
+        case functions of
+          (resultFunc : _) -> do
+            case functionBody resultFunc of
+              Just (Sequence {sequenceUses = (Use {useMembers = members}) : _}) ->
+                members `shouldBe` [otherMember]
+              _ -> fail "Expected sequence with use declaration"
+          _ -> fail "Expected to find a TopLevelFunction"
+      RScript _ -> fail "Expected RModule"
 
 spec :: Spec
 spec = do
@@ -164,26 +203,6 @@ spec = do
   testLowercaseAddress
   testNormalizeModule
   testNormalizeUse
-  describe "Tests removal of Self use member" $ do
-    it "Removes UseMember named Self from use declarations" $ do
-      let selfMember = UseMember {useMemberIdentifier = Identifier "Self", useMemberUseAlias = Nothing}
-      let otherMember = UseMember {useMemberIdentifier = Identifier "Foo", useMemberUseAlias = Nothing}
-      let useDecl = Use {useAddress = NamedAddress (Identifier "MyAddr"), useIdentifier = Identifier "mod", useAlias = Nothing, useMembers = [selfMember, otherMember]}
-      let function' = Function {functionHasNativeModifier = False, functionVisibilityModifier = Nothing, functionHasEntryModifier = False, functionName = Identifier "test", functionTypeParameters = [], functionParameters = [], functionReturnType = Nothing, functionAcquires = [], functionBody = Just (Sequence {sequenceUses = [useDecl], sequenceItems = [], sequenceEndExpr = Nothing}), functionUUID = Nothing}
-      let module' = Module {moduleAddress = NamedAddress (Identifier "utils"), moduleIdentifier = Identifier "test_mod", moduleTopLevels = [TopLevelFunction function']}
-      let root = RModule module'
-      let addrMap = Map.fromList [(Identifier "MyAddr", LiteralIntDec 2), (Identifier "utils", LiteralIntDec 1)]
-
-      case postProcessRoot root addrMap of
-        RModule resultModule -> do
-          let topLevels = moduleTopLevels resultModule
-          let functions = [f | TopLevelFunction f <- topLevels]
-          case functions of
-            (resultFunc:_) -> do
-              case functionBody resultFunc of
-                Just (Sequence {sequenceUses = (Use {useMembers = members}):_}) ->
-                  members `shouldBe` [otherMember]
-                _ -> fail "Expected sequence with use declaration"
-            _ -> fail "Expected to find a TopLevelFunction"
-        RScript _ -> fail "Expected RModule"
+  testRemoveStdSignerUse
+  testRemoveSelfUseMember
   testPostProcessRoot

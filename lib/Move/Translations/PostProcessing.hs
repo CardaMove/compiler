@@ -1,4 +1,4 @@
-module Move.Translations.PostProcessing (postProcessRoot) where
+module Move.Translations.PostProcessing (postProcessRoot, isStdSignerTopLevel) where
 
 import Data.Char (toLower)
 import Data.Generics.Uniplate.Data (transformBi)
@@ -20,13 +20,16 @@ import Move.Translations.Utils (aptosFrameworkLibAddress, stdLibAddress, stdLibU
 -- imposed by the Aiken compiler
 --
 -- It also adds the "public entry" modifiers to the main function of each script, since by default Move does not explicitly require them
+--
+-- It also removes any top level `use` occurrence where the address is `std` and the identifier is `signer`,
+-- since the signer module is handled by a custom Aiken library
 postProcessRoot :: Root -> AddrAssociations -> Root
 postProcessRoot root addrAssociations =
   -- Note that this step does not need to consider other modules that might be imported,
   -- since it just substitutes certain AST nodes
   let root' = case root of
-        (RModule m@Module {moduleTopLevels}) -> RModule $ m {moduleTopLevels = stdLibUses ++ moduleTopLevels}
-        (RScript s@Script {scriptTopLevels}) -> RScript $ s {scriptTopLevels = stdLibUses ++ scriptTopLevels}
+        (RModule m@Module {moduleTopLevels}) -> RModule $ m {moduleTopLevels = stdLibUses ++ filter (not . isStdSignerTopLevel) moduleTopLevels}
+        (RScript s@Script {scriptTopLevels}) -> RScript $ s {scriptTopLevels = stdLibUses ++ filter (not . isStdSignerTopLevel) scriptTopLevels}
 
       root'' = transformBi resolveAddress root'
         where
@@ -89,6 +92,13 @@ normalizeUnaliasedNameAccessChain :: NameAccessChain -> NameAccessChain
 normalizeUnaliasedNameAccessChain (UnaliasedNameAccessChain addr firstIdent secondIdent) =
   UnaliasedNameAccessChain addr (lowercaseIdentifier firstIdent) secondIdent
 normalizeUnaliasedNameAccessChain chain = chain
+
+
+-- |
+-- Checks if a top level is a `use std::signer`
+isStdSignerTopLevel :: TopLevel -> Bool
+isStdSignerTopLevel (TopLevelUse Use {useAddress = NamedAddress (Identifier "std"), useIdentifier = Identifier "signer"}) = True
+isStdSignerTopLevel _ = False
 
 -- | Converts an address to lowercase. Named addresses are lowercased, and hex numerals are lowercased.
 lowercaseAddress :: Address -> Address
