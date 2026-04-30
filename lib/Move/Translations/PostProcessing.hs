@@ -3,6 +3,7 @@ module Move.Translations.PostProcessing (postProcessRoot, isStdSignerTopLevel) w
 import Data.Char (toLower)
 import Data.Generics.Uniplate.Data (transformBi)
 import Data.Map qualified as Map
+import Data.Maybe (fromMaybe)
 import Move.AST
 import Move.Loader.Loader (AddrAssociations)
 import Move.Translations.Utils (aptosFrameworkLibAddress, stdLibAddress, stdLibUses, utilsLibAddress)
@@ -78,13 +79,21 @@ normalizeModule m@Module {moduleAddress, moduleIdentifier} =
     }
 
 -- | Normalizes a use statement by converting both the address and identifier to lowercase.
+--
+-- In addition, the `use aptos_framework::coin as x` is rewritten as the utils module, but keeping the alias: `use utils/coin_utils as x`
+-- if an alias x is not specified, it defaults to the original identifier of the module
 normalizeUse :: Use -> Use
-normalizeUse u@Use {useAddress, useIdentifier} =
-  u
-    { useAddress = lowercaseAddress useAddress,
-      useIdentifier = lowercaseIdentifier useIdentifier,
-      useMembers = filter (\um -> useMemberIdentifier um /= Identifier "Self") (useMembers u)
-    }
+normalizeUse u@Use {useAddress, useIdentifier, useAlias} =
+  let u' =
+        u
+          { useAddress = lowercaseAddress useAddress,
+            useIdentifier = lowercaseIdentifier useIdentifier,
+            useMembers = filter (\um -> useMemberIdentifier um /= Identifier "Self") (useMembers u)
+          }
+   in if useAddress == aptosFrameworkLibAddress
+        then
+          u' {useAddress = utilsLibAddress, useIdentifier = Identifier "coin_utils", useAlias = Just $ fromMaybe useIdentifier useAlias}
+        else u'
 
 -- | Normalizes an unaliased name access chain by converting the first identifier to lowercase.
 -- The second identifier and address are left unchanged.
@@ -92,7 +101,6 @@ normalizeUnaliasedNameAccessChain :: NameAccessChain -> NameAccessChain
 normalizeUnaliasedNameAccessChain (UnaliasedNameAccessChain addr firstIdent secondIdent) =
   UnaliasedNameAccessChain addr (lowercaseIdentifier firstIdent) secondIdent
 normalizeUnaliasedNameAccessChain chain = chain
-
 
 -- |
 -- Checks if a top level is a `use std::signer`
