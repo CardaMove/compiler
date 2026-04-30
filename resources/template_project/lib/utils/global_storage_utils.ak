@@ -42,7 +42,7 @@ pub fn move_to(
   resource_value: Data,
   (scopes, state): CPS,
 ) -> (Void, CPS) {
-  let (signer_addr, (scopes, state)) = signer_utils.signer_address_of(signer, (scopes, state))
+  let (signer_addr, (scopes, state)) = signer_utils.address_of(signer, (scopes, state))
   assert(fn() { !exists(signer_addr, resource_type, (scopes, state)) })
 
   (

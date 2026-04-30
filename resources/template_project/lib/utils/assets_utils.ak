@@ -73,7 +73,7 @@ pub fn deduce_transaction_fees_from_assets(
   fee: Lovelace,
 ) -> Dict<Addr, Value> {
   let signer_address: Addr =
-    signer_utils.internal_signer_address_of_unref(signer)
+    signer_utils.internal_address_of_unref(signer)
 
   assets
     |> dict.map(
