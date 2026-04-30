@@ -300,7 +300,7 @@ pub fn withdraw(
       ],
     )
 
-  let (signer_addr, cps) = signer_utils.signer_address_of(signer, cps)
+  let (signer_addr, cps) = signer_utils.address_of(signer, cps)
 
   let (scopes, ProgramState(state_dict)) = cps
   expect existing_coin: Coin =
@@ -310,26 +310,30 @@ pub fn withdraw(
       |> dict.get(type_addr)
       |> common_utils.expect_some("No Coin to withdraw")
 
-  let updated_coin = Coin { value: existing_coin.value - amount }
-  let new_coin = Coin { value: amount }
+  if existing_coin.value < amount {
+      fail @"Not enought Coin value to withdraw"
+    } else {
+        let updated_coin = Coin { value: existing_coin.value - amount }
+        let new_coin = Coin { value: amount }
 
-  let updated_state =
-    ProgramState(
-      state_dict
-        |> dict.map(
-            fn(addr, sub_dict) {
-              if addr == signer_addr {
-                // Override the existing key for the coin
-                sub_dict
-                  |> dict.insert(type_addr, updated_coin)
-              } else {
-                sub_dict
-              }
-            },
-          ),
-    )
+        let updated_state =
+          ProgramState(
+            state_dict
+              |> dict.map(
+                  fn(addr, sub_dict) {
+                    if addr == signer_addr {
+                      // Override the existing key for the coin
+                      sub_dict
+                        |> dict.insert(type_addr, updated_coin)
+                    } else {
+                      sub_dict
+                    }
+                  },
+                ),
+          )
 
-  (new_coin, (scopes, updated_state))
+        (new_coin, (scopes, updated_state))
+    }
 }
 
 pub fn value(

@@ -8,13 +8,13 @@ pub type Signer {
 }
 
 /// Defined in Move standard library
-pub fn signer_address_of(signer: Reference<Signer>, (scopes, gs): CPS) -> (Addr, CPS) {
+pub fn address_of(signer: Reference<Signer>, (scopes, gs): CPS) -> (Addr, CPS) {
   expect Signer { address } = common_utils.internal_deref_scope(signer, (scopes, gs))
   (address, (scopes, gs))
 }
 
 /// Used internally instead of passing a reference to the signer
-pub fn internal_signer_address_of_unref(signer: Signer) -> Addr {
+pub fn internal_address_of_unref(signer: Signer) -> Addr {
   let Signer { address } = signer
   address
 }
