@@ -7,14 +7,8 @@ use utils/signer_utils.{Signer}
 use utils/reference_utils
 
 // Defined internally in Move
-pub type Coin {
+pub type Coin<tw_coin_type> {
   value: Int,
-}
-
-// FIXME: Unused for now. Frozen forbids deposits and withdrawals
-pub type CoinStore {
-  coin: Coin,
-  frozen: Bool,
 }
 
 const coin_address_prefix: Str = "__COIN__"
@@ -23,8 +17,8 @@ const lovelace_resource_type: TWitness = TypeWithnessC("lovelace", [])
 
 /// Defined internally in Move, creates a coin from two coins of the same type
 /// Does never abort since Move already ensures that the CoinType(s) correspond
-pub fn merge(dst_coin: Reference<Coin>, source_coin: Coin, tw_coin_type: TWitness, cps: CPS) -> (Void, CPS) {
-  expect Coin { value: value1 } = reference_utils.deref(dst_coin, cps)
+pub fn merge(dst_coin: Reference<Coin<Data>>, source_coin: Coin<Data>, tw_coin_type: TWitness, cps: CPS) -> (Void, CPS) {
+  expect Coin { value: value1 }: Coin<Data> = reference_utils.deref(dst_coin, cps)
 
   let cps = reference_utils.put_deref(dst_coin, [], Coin{value: value1 + source_coin.value}, cps)
 
@@ -36,7 +30,7 @@ pub fn merge(dst_coin: Reference<Coin>, source_coin: Coin, tw_coin_type: TWitnes
 // FIXME: Read about policies at https://aiken-lang.github.io/stdlib/cardano/assets.html#ada_asset_name
 pub fn deposit(
   account_addr: Addr,
-  coin: Coin,
+  coin: Coin<Data>,
   coin_type: TWitness,
   cps: CPS,
 ) -> (Void, CPS) {
@@ -69,8 +63,8 @@ pub fn deposit(
               right: new_value,
               // If the address already has some balance, add the coin value to it
               with: fn(_key: Addr, ex_coin_value: Data, new_coin_value: Data) {
-                expect Coin { value: value1 } = ex_coin_value
-                expect Coin { value: value2 } = new_coin_value
+                expect Coin { value: value1 }: Coin<Data> = ex_coin_value
+                expect Coin { value: value2 }: Coin<Data> = new_coin_value
 
                 let sum: Data = Coin{value: value1 + value2}
                 Some(sum)
@@ -144,7 +138,7 @@ pub fn get_assets_from_state(cps: CPS) -> Dict<Addr, Value> {
                 |> dict.foldr(
                     assets.zero,
                     fn(resource_type, val, acc_value) {
-                      if val is Coin {
+                      if val is Coin<Data> {
                         let Coin { value: coin_value } = val
 
                         // The second check is needed because should still be allowed to insert Coin structures in the state without considering them as assets
@@ -242,7 +236,7 @@ pub fn remove_assets_from_state(cps: CPS) -> CPS {
             sub_dict
               |> dict.filter(
                   fn(resource_type: Str, val: Data) {
-                    if val is Coin {
+                    if val is Coin<Data> {
                       // See `get_assets_from_state`
                       if bytearray.starts_with(
                         resource_type,
@@ -266,8 +260,8 @@ pub fn remove_assets_from_state(cps: CPS) -> CPS {
 
 /// Deducts some amount from a coin, returning the new one as first place and the updated one as second place
 /// Aborts if the input coin has not enough value
-pub fn extract(coin: Reference<Coin>, amount: Int, tw_coin_type: TWitness, cps: CPS) -> (Coin, CPS) {
-  expect Coin { value } = reference_utils.deref(coin, cps)
+pub fn extract(coin: Reference<Coin<Data>>, amount: Int, tw_coin_type: TWitness, cps: CPS) -> (Coin<Data>, CPS) {
+  expect Coin { value }: Coin<Data> = reference_utils.deref(coin, cps)
 
   if value < amount {
     fail @"Not enought Coin value to extract"
@@ -289,7 +283,7 @@ pub fn withdraw(
   amount: Int,
   tw_coin_type: TWitness,
   cps: CPS,
-) -> (Coin, CPS) {
+) -> (Coin<Data>, CPS) {
   let type_addr =
     common_utils.internal_concat_str(
       [
@@ -303,7 +297,7 @@ pub fn withdraw(
   let (signer_addr, cps) = signer_utils.address_of(signer, cps)
 
   let (scopes, ProgramState(state_dict)) = cps
-  expect existing_coin: Coin =
+  expect existing_coin: Coin<Data> =
     state_dict
       |> dict.get(signer_addr)
       |> common_utils.expect_some("No address to withdraw from")
@@ -337,7 +331,7 @@ pub fn withdraw(
 }
 
 pub fn value(
-  coin: Coin,
+  coin: Coin<Data>,
   tw_coin_type: TWitness,
   cps: CPS
 ) -> (Int, CPS){
