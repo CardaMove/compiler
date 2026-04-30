@@ -2,9 +2,11 @@ use aiken/collection/dict.{Dict}
 use aiken/collection/list
 use aiken/primitive/bytearray
 use cardano/assets.{AssetName, PolicyId, Value}
-use utils/common_utils.{Addr, ProgramState, Str, TWitness, TypeWithnessC, Reference, CPS}
-use utils/signer_utils.{Signer}
+use utils/common_utils.{
+  Addr, CPS, ProgramState, Reference, Str, TWitness, TypeWithnessC,
+}
 use utils/reference_utils
+use utils/signer_utils.{Signer}
 
 // Defined internally in Move
 pub type Coin<tw_coin_type> {
@@ -17,10 +19,22 @@ const lovelace_resource_type: TWitness = TypeWithnessC("lovelace", [])
 
 /// Defined internally in Move, creates a coin from two coins of the same type
 /// Does never abort since Move already ensures that the CoinType(s) correspond
-pub fn merge(dst_coin: Reference<Coin<Data>>, source_coin: Coin<Data>, tw_coin_type: TWitness, cps: CPS) -> (Void, CPS) {
-  expect Coin { value: value1 }: Coin<Data> = reference_utils.deref(dst_coin, cps)
+pub fn merge(
+  dst_coin: Reference<Coin<Data>>,
+  source_coin: Coin<Data>,
+  tw_coin_type: TWitness,
+  cps: CPS,
+) -> (Void, CPS) {
+  expect Coin { value: value1 }: Coin<Data> =
+    reference_utils.deref(dst_coin, cps)
 
-  let cps = reference_utils.put_deref(dst_coin, [], Coin{value: value1 + source_coin.value}, cps)
+  let cps =
+    reference_utils.put_deref(
+      dst_coin,
+      [],
+      Coin { value: value1 + source_coin.value },
+      cps,
+    )
 
   (Void, cps)
 }
@@ -48,31 +62,32 @@ pub fn deposit(
   let (scopes, ProgramState(state_dict)) = cps
   let coin_data: Data = coin
 
-  let state_dict = state_dict
-    |> dict.insert_with(
-        key: account_addr,
-        value: dict.from_pairs([Pair(type_addr, coin_data)]),
-        with: fn(
-          _key: Addr,
-          existing_value: Dict<Addr, Data>,
-          new_value: Dict<Addr, Data>,
-        ) {
-          Some(
-            dict.union_with(
-              left: existing_value,
-              right: new_value,
-              // If the address already has some balance, add the coin value to it
-              with: fn(_key: Addr, ex_coin_value: Data, new_coin_value: Data) {
-                expect Coin { value: value1 }: Coin<Data> = ex_coin_value
-                expect Coin { value: value2 }: Coin<Data> = new_coin_value
+  let state_dict =
+    state_dict
+      |> dict.insert_with(
+          key: account_addr,
+          value: dict.from_pairs([Pair(type_addr, coin_data)]),
+          with: fn(
+            _key: Addr,
+            existing_value: Dict<Addr, Data>,
+            new_value: Dict<Addr, Data>,
+          ) {
+            Some(
+              dict.union_with(
+                left: existing_value,
+                right: new_value,
+                // If the address already has some balance, add the coin value to it
+                with: fn(_key: Addr, ex_coin_value: Data, new_coin_value: Data) {
+                  expect Coin { value: value1 }: Coin<Data> = ex_coin_value
+                  expect Coin { value: value2 }: Coin<Data> = new_coin_value
 
-                let sum: Data = Coin{value: value1 + value2}
-                Some(sum)
-              },
-            ),
-          )
-        },
-      )
+                  let sum: Data = Coin { value: value1 + value2 }
+                  Some(sum)
+                },
+              ),
+            )
+          },
+        )
 
   (Void, (scopes, ProgramState(state_dict)))
 }
@@ -80,54 +95,58 @@ pub fn deposit(
 /// Updates the program state so to include all assets presents in the outputs
 /// The ouputs parameter should not have zero-valued assets
 pub fn add_assets_to_state(
+  state: ProgramState,
   outputs: Dict<Addr, Value>,
-  (scopes, state): CPS,
-) -> CPS {
-  let state = outputs
-    |> dict.foldr(
-        state,
-        with: fn(addr, value, state) {
-          let assets: List<(PolicyId, AssetName, Int)> =
-            assets.flatten(value)
-              |> list.filter(
-                  fn((_policy_id, _asset_name, qt): (PolicyId, AssetName, Int)) {
-                    qt > 0
-                  },
-                )
+) -> ProgramState {
+  let state =
+    outputs
+      |> dict.foldr(
+          state,
+          with: fn(addr, value, state) {
+            let assets: List<(PolicyId, AssetName, Int)> =
+              assets.flatten(value)
+                |> list.filter(
+                    fn(
+                      (_policy_id, _asset_name, qt): (PolicyId, AssetName, Int),
+                    ) {
+                      qt > 0
+                    },
+                  )
 
-          list.foldr(
-            assets,
-            state,
-            with: fn(
-              (policy_id, asset_name, qt): (PolicyId, AssetName, Int),
-              state: ProgramState,
-            ) -> ProgramState {
-              let is_ada: Bool =
-                policy_id == assets.ada_policy_id && asset_name == assets.ada_asset_name
+            list.foldr(
+              assets,
+              state,
+              with: fn(
+                (policy_id, asset_name, qt): (PolicyId, AssetName, Int),
+                state: ProgramState,
+              ) -> ProgramState {
+                let is_ada: Bool =
+                  policy_id == assets.ada_policy_id && asset_name == assets.ada_asset_name
 
-              // Depending if ADA or not, set the rource type Coin<coin_type>
-              let coin_type: TWitness =
-                if is_ada {
-                  lovelace_resource_type
-                } else {
-                  TypeWithnessC(policy_id, [TypeWithnessC(asset_name, [])])
-                }
+                // Depending if ADA or not, set the rource type Coin<coin_type>
+                let coin_type: TWitness =
+                  if is_ada {
+                    lovelace_resource_type
+                  } else {
+                    TypeWithnessC(policy_id, [TypeWithnessC(asset_name, [])])
+                  }
 
-              let (_, state) = deposit(addr, Coin { value: qt }, coin_type, (scopes, state)).2nd
+                let (_, state) =
+                  deposit(addr, Coin { value: qt }, coin_type, ([], state)).2nd
 
-              state
-            },
-          )
-        },
-      )
+                state
+              },
+            )
+          },
+        )
 
-  (scopes, state)
+  state
 }
 
 /// Given the state, returns all the assets in it grouped by the target address
 /// Similar to `assets_utils.map_outputs_to_assets`
-pub fn get_assets_from_state(cps: CPS) -> Dict<Addr, Value> {
-  let (scopes, ProgramState(state_dict)) = cps
+pub fn get_assets_from_state(state: ProgramState) -> Dict<Addr, Value> {
+  let ProgramState(state_dict) = state
 
   let res_dict: Dict<Addr, Value> =
     state_dict
@@ -226,41 +245,47 @@ pub fn get_assets_from_state(cps: CPS) -> Dict<Addr, Value> {
 }
 
 /// Given the state, removes all assets in it and returns the updated state
-pub fn remove_assets_from_state(cps: CPS) -> CPS {
-  let (scopes, ProgramState(state_dict)) = cps
+pub fn remove_assets_from_state(state: ProgramState) -> ProgramState {
+  let ProgramState(state_dict) = state
 
-  let state = ProgramState(
-    state_dict
-      |> dict.map(
-          fn(_addr: Addr, sub_dict: Dict<Str, Data>) {
-            sub_dict
-              |> dict.filter(
-                  fn(resource_type: Str, val: Data) {
-                    if val is Coin<Data> {
-                      // See `get_assets_from_state`
-                      if bytearray.starts_with(
-                        resource_type,
-                        coin_address_prefix,
-                      ) {
-                        False
+  let state =
+    ProgramState(
+      state_dict
+        |> dict.map(
+            fn(_addr: Addr, sub_dict: Dict<Str, Data>) {
+              sub_dict
+                |> dict.filter(
+                    fn(resource_type: Str, val: Data) {
+                      if val is Coin<Data> {
+                        // See `get_assets_from_state`
+                        if bytearray.starts_with(
+                          resource_type,
+                          coin_address_prefix,
+                        ) {
+                          False
+                        } else {
+                          True
+                        }
                       } else {
                         True
                       }
-                    } else {
-                      True
-                    }
-                  },
-                )
-          },
-        ),
-  )
+                    },
+                  )
+            },
+          ),
+    )
 
-  (scopes, state)
+  state
 }
 
 /// Deducts some amount from a coin, returning the new one as first place and the updated one as second place
 /// Aborts if the input coin has not enough value
-pub fn extract(coin: Reference<Coin<Data>>, amount: Int, tw_coin_type: TWitness, cps: CPS) -> (Coin<Data>, CPS) {
+pub fn extract(
+  coin: Reference<Coin<Data>>,
+  amount: Int,
+  tw_coin_type: TWitness,
+  cps: CPS,
+) -> (Coin<Data>, CPS) {
   expect Coin { value }: Coin<Data> = reference_utils.deref(coin, cps)
 
   if value < amount {
@@ -305,35 +330,31 @@ pub fn withdraw(
       |> common_utils.expect_some("No Coin to withdraw")
 
   if existing_coin.value < amount {
-      fail @"Not enought Coin value to withdraw"
-    } else {
-        let updated_coin = Coin { value: existing_coin.value - amount }
-        let new_coin = Coin { value: amount }
+    fail @"Not enought Coin value to withdraw"
+  } else {
+    let updated_coin = Coin { value: existing_coin.value - amount }
+    let new_coin = Coin { value: amount }
 
-        let updated_state =
-          ProgramState(
-            state_dict
-              |> dict.map(
-                  fn(addr, sub_dict) {
-                    if addr == signer_addr {
-                      // Override the existing key for the coin
-                      sub_dict
-                        |> dict.insert(type_addr, updated_coin)
-                    } else {
-                      sub_dict
-                    }
-                  },
-                ),
-          )
+    let updated_state =
+      ProgramState(
+        state_dict
+          |> dict.map(
+              fn(addr, sub_dict) {
+                if addr == signer_addr {
+                  // Override the existing key for the coin
+                  sub_dict
+                    |> dict.insert(type_addr, updated_coin)
+                } else {
+                  sub_dict
+                }
+              },
+            ),
+      )
 
-        (new_coin, (scopes, updated_state))
-    }
+    (new_coin, (scopes, updated_state))
+  }
 }
 
-pub fn value(
-  coin: Coin<Data>,
-  tw_coin_type: TWitness,
-  cps: CPS
-) -> (Int, CPS){
+pub fn value(coin: Coin<Data>, tw_coin_type: TWitness, cps: CPS) -> (Int, CPS) {
   (coin.value, cps)
 }
