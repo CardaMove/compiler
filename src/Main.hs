@@ -3,25 +3,23 @@
 module Main (main) where
 
 import Aiken.AikenGenerator (generateRoot)
-import Aiken.ValidatorGenerator (ScriptMainMetadata(..), collectScriptMainMetadata, generateValidator)
-import Control.Monad (zipWithM_, when)
-import Control.Monad.State (MonadState (get, put), State, evalState)
+import Aiken.ValidatorGenerator (ScriptMainMetadata (..), collectScriptMainMetadata, generateValidator)
+import Control.Monad (when, zipWithM_)
+import Control.Monad.State (State, evalState)
 import Data.List (find)
 import Data.Text (unpack)
 import Move.AST (Address (NamedAddress, NumericalAddress), Identifier (Identifier), Module (Module, moduleAddress, moduleIdentifier), Numerical (LiteralIntDec, LiteralIntHex), Root (RModule, RScript))
 import Move.Loader.Loader (loadToml)
 import Move.Transpiler (transpiler)
 import System.Directory (copyFile, createDirectoryIfMissing, doesDirectoryExist, doesPathExist, listDirectory, removePathForcibly)
-import System.FilePath (takeDirectory, takeBaseName, (<.>), (</>))
-
+import System.FilePath (takeBaseName, takeDirectory, (<.>), (</>))
 
 main :: IO ()
 main = do
   putStrLn "CardaMove ready"
 
   -- Load files
-  let tomlPath = "test\\Bet\\Move.toml" --"test\\Move\\Loader\\files\\Move.toml"
-
+  let tomlPath = "test\\Bet\\Move.toml" -- "test\\Move\\Loader\\files\\Move.toml"
   (sourceFiles, addrAssoc) <- loadToml tomlPath
 
   let nScripts = length [f | (_, RScript f) <- sourceFiles]
