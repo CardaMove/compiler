@@ -95,9 +95,12 @@ normalizeUse u@Use {useAddress, useIdentifier, useAlias} =
           u' {useAddress = utilsLibAddress, useIdentifier = Identifier "coin_utils", useAlias = Just $ fromMaybe useIdentifier useAlias}
         else u'
 
--- | Normalizes an unaliased name access chain by converting the first identifier to lowercase.
--- The second identifier and address are left unchanged.
+-- | Normalizes a name access chain by converting the module identifier in lowercase.
+-- The eventual module address is not modified.
+-- This is necessary because modules can be imported only in lowercase in Aiken
 normalizeUnaliasedNameAccessChain :: NameAccessChain -> NameAccessChain
+normalizeUnaliasedNameAccessChain (AliasedNameAccessChain firstIdent secondIdent) =
+  AliasedNameAccessChain (lowercaseIdentifier firstIdent) secondIdent
 normalizeUnaliasedNameAccessChain (UnaliasedNameAccessChain addr firstIdent secondIdent) =
   UnaliasedNameAccessChain addr (lowercaseIdentifier firstIdent) secondIdent
 normalizeUnaliasedNameAccessChain chain = chain
