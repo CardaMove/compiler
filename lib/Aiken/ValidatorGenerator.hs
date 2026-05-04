@@ -9,6 +9,7 @@ module Aiken.ValidatorGenerator (
 
 import Aiken.AikenGenerator (generateType, generateTopLevel)
 import Data.Char (isAlphaNum, toLower, toUpper)
+import Data.List (foldl')
 import Data.Text (Text, intercalate, pack)
 import Move.AST
 import NeatInterpolation (trimming)
@@ -24,6 +25,9 @@ data ScriptMainMetadata = ScriptMainMetadata
     scriptMainParametersMeta :: [Parameter]
   }
   deriving (Eq, Show, Read)
+
+data SignerParamKind = SignerValue | SignerRef
+  deriving (Eq, Show)
 
 -- | Given a Script, extracts the only function it contains.
 --
@@ -96,6 +100,10 @@ collectScriptMainMetadata files =
 --
 -- Output includes imports for script modules, the `Redeemer` type,
 -- and a `spend` matcher that dispatches to the corresponding script `main`.
+--
+-- Since signers are inserted automatically by the Move VM, they need to be handled differently,
+-- specifically, they will not result in the Redeemer type but rether will be retrieved from the
+-- function signatories
 generateValidator :: [ScriptMainMetadata] -> Text
 generateValidator scriptsMeta =
   [trimming|
@@ -204,7 +212,7 @@ generateValidator scriptsMeta =
     -- | Generates one `Redeemer` constructor variant.
     mkRedeemerVariant :: ScriptMainMetadata -> Text
     mkRedeemerVariant ScriptMainMetadata {scriptConstructorName = Identifier ctor, scriptMainParametersMeta} =
-      case scriptMainParametersMeta of
+      case filter (not . isSignerParam) scriptMainParametersMeta of
         [] -> pack ctor
         params ->
           [trimming|
@@ -217,7 +225,7 @@ generateValidator scriptsMeta =
     -- | Generates one `spend` pattern-match branch that dispatches to `main`.
     mkSpendBranch :: ScriptMainMetadata -> Text
     mkSpendBranch ScriptMainMetadata {scriptConstructorName = Identifier ctor, scriptModuleName = Identifier moduleName, scriptFunctionName = Identifier functionName, scriptMainParametersMeta} =
-      case zip [0 :: Int ..] scriptMainParametersMeta of
+      case scriptMainParametersMeta of
         [] ->
           [trimming|
             $ctor' -> {
@@ -225,25 +233,115 @@ generateValidator scriptsMeta =
               cps
             }
           |]
-        indexedParams ->
-          [trimming|
-            $ctor'($patternArgs) -> {
-              let (_, cps) = $moduleName'.$functionName'($callArgs, cps)
-              cps
-            }
-          |]
-          where
-            argName i = "arg" ++ show i
-            patternArgs = intercalate (pack ", ") [pack (argName idx) | (idx, _) <- indexedParams]
-            callArgs = intercalate (pack ", ") [pack (argName idx) | (idx, _) <- indexedParams]
+        params ->
+          let signerKinds = collectSignerKinds params
+              signerCount = length signerKinds
+              redeemerCount = length params - signerCount
+              patternArgs = intercalate (pack ", ") $ map (pack . redeemerArgName signerCount) [0 .. redeemerCount - 1]
+              callArgs = intercalate (pack ", ") $ buildCallArgs params signerCount signerKinds
+              signerBindings = joinLines $ map mkSignerBinding (zip [0 ..] signerKinds)
+           in if redeemerCount == 0
+                then
+                  [trimming|
+                    $ctor' -> {
+                      $signerBindings
+                      let (_, cps) = $moduleName'.$functionName'($callArgs, cps)
+                      cps
+                    }
+                  |]
+                else
+                  [trimming|
+                    $ctor'($patternArgs) -> {
+                      $signerBindings
+                      let (_, cps) = $moduleName'.$functionName'($callArgs, cps)
+                      cps
+                    }
+                  |]
       where
         ctor' = pack ctor
         moduleName' = pack moduleName
         functionName' = pack functionName
 
+    -- Generates the code used to extract each i-th signer from the transaction signatories
+    --
+    -- Depending if the signer is a reference or not, it might be needed to push it on the scope and reference it
+    mkSignerBinding :: (Int, SignerParamKind) -> Text
+    mkSignerBinding (idx, kind) =
+      case kind of
+        SignerValue ->
+          [trimming|
+            expect Some($argName') = list.at(self.extra_signatories, $idxText)
+            let $argName' = Signer{address: $argName'}
+          |]
+        SignerRef ->
+          [trimming|
+            expect Some($argName') = list.at(self.extra_signatories, $idxText)
+            let $argName' = Signer{address: $argName'}
+            let cps = scope_utils.post_scope("$argIdent'", $argName', cps)
+          |]
+      where
+        argIdent = signerArgName idx
+        argIdent' = pack argIdent
+        argName' = pack argIdent
+        idxText = pack $ show idx
+
+    signerArgName :: Int -> String
+    signerArgName i = "arg" ++ show i
+
+    redeemerArgName :: Int -> Int -> String
+    redeemerArgName signerCount i = "arg" ++ show (i + signerCount)
+
+    -- Builds a function argument, handling the specific case for signers and references to signers
+    buildCallArgs :: [Parameter] -> Int -> [SignerParamKind] -> [Text]
+    buildCallArgs params signerCount signerKinds =
+      let (args, _, _) = foldl' step ([], 0, 0) params
+       in reverse args
+      where
+        step (acc, signerIdx, redeemerIdx) param
+          | isSignerParam param =
+              let argName = signerArgName signerIdx
+                  argNameText = pack argName
+                  callArg = case signerKinds !! signerIdx of
+                    SignerValue -> argNameText
+                    SignerRef -> [trimming|reference_utils.make_ref("$argNameText", [], cps)|]
+               in (callArg : acc, signerIdx + 1, redeemerIdx)
+          | otherwise = (pack (redeemerArgName signerCount redeemerIdx) : acc, signerIdx, redeemerIdx + 1)
+
     -- | Joins generated lines with a newline separator.
     joinLines :: [Text] -> Text
     joinLines = intercalate (pack "\n")
+
+    -- Used to check if a signer coming from an entry point signature is a reference or not
+    collectSignerKinds :: [Parameter] -> [SignerParamKind]
+    collectSignerKinds = foldr collect []
+      where
+        collect param acc = case signerParamKind param of
+          Just kind -> kind : acc
+          Nothing -> acc
+
+    -- Check if a certain parameter of an entry point function is a signer, either reference or not
+    isSignerParam :: Parameter -> Bool
+    isSignerParam = maybe False (const True) . signerParamKind
+
+    signerParamKind :: Parameter -> Maybe SignerParamKind
+    signerParamKind Parameter {parameterType} = signerTypeKind parameterType
+
+    signerTypeKind :: Type -> Maybe SignerParamKind
+    signerTypeKind (TypeImmutableRef inner) =
+      case signerTypeKind inner of
+        Just _ -> Just SignerRef
+        Nothing -> Nothing
+    signerTypeKind (TypeMutableRef inner) =
+      case signerTypeKind inner of
+        Just _ -> Just SignerRef
+        Nothing -> Nothing
+    signerTypeKind (TypeConstructor nac []) =
+      case nac of
+        LocalNameAccessChain (Identifier "signer") -> Just SignerValue
+        AliasedNameAccessChain _ (Identifier "signer") -> Just SignerValue
+        UnaliasedNameAccessChain _ _ (Identifier "signer") -> Just SignerValue
+        _ -> Nothing
+    signerTypeKind _ = Nothing
 
 -- | Splits a string into contiguous alphanumeric tokens.
 --
