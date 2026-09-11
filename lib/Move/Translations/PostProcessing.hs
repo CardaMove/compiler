@@ -46,8 +46,21 @@ postProcessRoot root addrAssociations =
 
       root''' = transformBi normalizeModule $ transformBi normalizeUse $ transformBi normalizeUnaliasedNameAccessChain root''
 
-      root'''' = forceScriptFunctionsPublicEntry root'''
-   in root''''
+      root'''' = transformBi rewriteAssertBang root'''
+
+      root''''' = forceScriptFunctionsPublicEntry root''''
+   in root'''''
+
+      where
+        rewriteAssertBang :: Expr -> Expr
+        rewriteAssertBang (FunctionBangCallExpr FunctionBangCall {fbcNameAccessChain = LocalNameAccessChain (Identifier "assert"), fbcFields = condition : _}) =
+          PositionalStructExprOrFunctionCallExpr
+            PositionalStructExprOrFunctionCall
+              { pseofcNameAccessChain = UnaliasedNameAccessChain utilsLibAddress (Identifier "common_utils") (Identifier "assert"),
+                pseofcTypeArgs = [],
+                pseofcFields = [IntermediateExprExpr $ IntermediateAnonymousFunction condition]
+              }
+        rewriteAssertBang expr = expr
 
 -- | Scripts in Move expose entry points implicitly; normalize their function modifiers accordingly.
 forceScriptFunctionsPublicEntry :: Root -> Root

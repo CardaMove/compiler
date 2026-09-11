@@ -314,13 +314,13 @@ generateExpression (PositionalStructExprOrFunctionCallExpr PositionalStructExprO
   where
     name = generateNameAccessChain pseofcNameAccessChain
     fields = intercalate (pack ", ") $ map generateExpression pseofcFields
-generateExpression (FunctionBangCallExpr FunctionBangCall {fbcNameAccessChain, fbcFields}) =
+generateExpression expr@(FunctionBangCallExpr _) = error $ "Unexpected function bang call: " ++ show expr
+generateExpression (IntermediateExprExpr (IntermediateAnonymousFunction body)) =
   [trimming|
-    $name!($fields)
+    fn() { $body' }
   |]
   where
-    name = generateNameAccessChain fbcNameAccessChain
-    fields = intercalate (pack ", ") $ map generateExpression fbcFields
+    body' = generateExpression body
 generateExpression (NameAccessChainExpr nac) = generateNameAccessChain nac
 -- Sequence expression
 generateExpression (SequenceExpr sqn) =

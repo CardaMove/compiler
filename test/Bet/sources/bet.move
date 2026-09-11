@@ -29,11 +29,11 @@ module BetAddr::Bet {
 
     public fun join<CoinType>(partecipant: &signer, bookmaker: address): () acquires Round {
         let round = borrow_global_mut<Round<CoinType>>(bookmaker);
-        // assert!(
-        //     address_of(partecipant) == round.player1
-        //         || address_of(partecipant) == round.player2,
-        //     0
-        // );
+        assert!(
+            address_of(partecipant) == round.player1
+                || address_of(partecipant) == round.player2,
+            0
+        );
         let bet = coin::withdraw<CoinType>(partecipant, round.stake);
 
         // assert!(coin::value<CoinType>(&bet) == round.stake, 0);

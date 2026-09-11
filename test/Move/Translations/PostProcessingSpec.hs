@@ -115,6 +115,53 @@ testRemoveStdSignerUse = describe "Removes std::signer use declarations" $ do
 
 testPostProcessRoot :: Spec
 testPostProcessRoot = describe "Tests the function `postProcessRoot`" $ do
+  it "Converts assert! calls to common_utils.assert with an anonymous function" $ do
+    let condition = BinaryOpExprExpr (Eq (NameAccessChainExpr (LocalNameAccessChain (Identifier "left"))) (ValueLiteral (Boolean True)))
+        bangCall =
+          FunctionBangCallExpr
+            FunctionBangCall
+              { fbcNameAccessChain = LocalNameAccessChain (Identifier "assert"),
+                fbcFields = [condition, ValueLiteral (Numerical (LiteralIntDec 0))]
+              }
+        function' =
+          Function
+            { functionHasNativeModifier = False,
+              functionVisibilityModifier = Nothing,
+              functionHasEntryModifier = False,
+              functionName = Identifier "test",
+              functionTypeParameters = [],
+              functionParameters = [],
+              functionReturnType = Nothing,
+              functionAcquires = [],
+              functionBody = Just (Sequence {sequenceUses = [], sequenceItems = [SequenceItemExpr bangCall], sequenceEndExpr = Nothing}),
+              functionUUID = Nothing
+            }
+        root = RModule (Module {moduleAddress = NamedAddress (Identifier "utils"), moduleIdentifier = Identifier "test", moduleTopLevels = [TopLevelFunction function']})
+
+    case postProcessRoot root Map.empty of
+      RModule (Module {moduleTopLevels = topLevels}) ->
+        case [f | TopLevelFunction f <- topLevels] of
+          [resultFunc] ->
+            functionBody resultFunc `shouldBe`
+              Just
+                ( Sequence
+                    { sequenceUses = [],
+                      sequenceItems =
+                        [ SequenceItemExpr
+                            ( PositionalStructExprOrFunctionCallExpr
+                                PositionalStructExprOrFunctionCall
+                                  { pseofcNameAccessChain = UnaliasedNameAccessChain (NamedAddress (Identifier "utils")) (Identifier "common_utils") (Identifier "assert"),
+                                    pseofcTypeArgs = [],
+                                    pseofcFields = [IntermediateExprExpr $ IntermediateAnonymousFunction condition]
+                                  }
+                            )
+                        ],
+                      sequenceEndExpr = Nothing
+                    }
+                )
+          _ -> fail "Expected to find one TopLevelFunction"
+      RScript _ -> fail "Expected RModule"
+
   it "Resolves named addresses and normalizes identifiers" $ do
     let addrMap = Map.fromList [(Identifier "MyAddr", LiteralIntDec 100)]
     let module' = Module {moduleAddress = NamedAddress (Identifier "MyAddr"), moduleIdentifier = Identifier "MyModule", moduleTopLevels = []}

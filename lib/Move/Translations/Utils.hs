@@ -343,6 +343,8 @@ inferExprType (PositionalStructExprOrFunctionCallExpr expr@(PositionalStructExpr
     VariableAnnotations _ structType -> structType
 -- Function bang call has unit type
 inferExprType (FunctionBangCallExpr _) _ = unitType
+-- Anonymous functions created by post-processing have no parameters and return a boolean.
+inferExprType (IntermediateExprExpr (IntermediateAnonymousFunction _)) _ = TypeArrow [] [booleanType]
 -- Name access chain
 inferExprType (NameAccessChainExpr nac) scopes =
   let VariableAnnotations _ identType = getNacFromScopes nac scopes
