@@ -11,15 +11,42 @@ import Data.Text (unpack)
 import Move.AST (Address (NamedAddress, NumericalAddress), Identifier (Identifier), Module (Module, moduleAddress, moduleIdentifier), Numerical (LiteralIntDec, LiteralIntHex), Root (RModule, RScript))
 import Move.Loader.Loader (loadToml)
 import Move.Transpiler (transpiler)
+import Options.Applicative (Parser, ParserInfo, argument, execParser, fullDesc, help, helper, info, metavar, progDesc, str)
 import System.Directory (copyFile, createDirectoryIfMissing, doesDirectoryExist, doesPathExist, listDirectory, removePathForcibly)
-import System.FilePath (takeBaseName, takeDirectory, (<.>), (</>))
+import System.FilePath (normalise, takeBaseName, takeDirectory, (<.>), (</>))
+
+data CommandLineOptions = CommandLineOptions
+  { tomlPathOption :: FilePath
+  }
+
+-- | Parses the required path to the Move.toml file.
+-- The path is normalized so Windows separators and redundant separators work.
+commandLineOptionsParser :: Parser CommandLineOptions
+commandLineOptionsParser =
+  CommandLineOptions . normalise
+    <$> argument
+      str
+      ( metavar "TOML_PATH"
+          <> help "Path to the Move.toml file of the Move project to compile"
+      )
+
+-- | Builds the CLI parser metadata for compiler usage and help output.
+-- The helper parser provides the standard -h and --help options.
+commandLineParserInfo :: ParserInfo CommandLineOptions
+commandLineParserInfo =
+  info
+    (helper <*> commandLineOptionsParser)
+    ( fullDesc
+        <> progDesc "Compile a Move project into Aiken"
+    )
 
 main :: IO ()
 main = do
+  options <- execParser commandLineParserInfo
   putStrLn "CardaMove ready"
 
   -- Load files
-  let tomlPath = "test\\Bet\\Move.toml" -- "test\\Move\\Loader\\files\\Move.toml"
+  let tomlPath = tomlPathOption options
   (sourceFiles, addrAssoc) <- loadToml tomlPath
 
   let nScripts = length [f | (_, RScript f) <- sourceFiles]
@@ -73,7 +100,7 @@ buildOutFilePath _filePath (RModule Module {moduleAddress, moduleIdentifier = Id
         "module_" ++ case moduleAddress of
           NumericalAddress (LiteralIntDec val) -> show val
           NumericalAddress (LiteralIntHex val) -> val
-          NamedAddress (Identifier str) -> str
+          NamedAddress (Identifier addressName) -> addressName
   return $ outDir </> folderName </> identStr <.> ".ak"
 -- Scripts are written using the original Move script's base name
 buildOutFilePath filePath (RScript _) outDir scriptsMeta = do

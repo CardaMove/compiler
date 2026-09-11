@@ -80,6 +80,7 @@ Notes:
 - Follow existing formatting conventions in touched files.
 - Avoid introducing new dependencies unless required by the task.
 - Do not alter unrelated files in the same change.
+- Always add a brief 2-3 line description comment to each function created by the agent.
 
 ## Common Pitfalls
 

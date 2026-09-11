@@ -11,6 +11,20 @@ $ stack run
 
 ```
 
+## Running the compiler
+From the repository root, invoke the CLI with `stack exec` and provide the path to the Move project's `Move.toml` file:
+
+```shell
+$ cd C:\path\to\compiler
+$ stack exec cardamove-cli -- "test\Move\Loader\files\Move.toml"
+```
+
+Use `-h` or `--help` to display the available CLI options:
+
+```shell
+$ stack exec cardamove-cli -- --help
+```
+
 ## Lexer commands
 By default, Stack generates the lexer by itself on the build step. Alex can still be manually invoked with the following:
 
