@@ -36,7 +36,7 @@ module BetAddr::Bet {
         );
         let bet = coin::withdraw<CoinType>(partecipant, round.stake);
 
-        // NOTE: Decommenting this line causes the aiken compilation error
+        // TODO: NOTE: Decommenting this line causes the aiken compilation error
         // "reckless opaque cast" in the next line
         // The probable error is that "bet" is inserted into the state and is retrieved wrongly
         // assert!(coin::value<CoinType>(&bet) == round.stake, 0);
