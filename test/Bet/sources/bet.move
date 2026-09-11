@@ -36,6 +36,9 @@ module BetAddr::Bet {
         );
         let bet = coin::withdraw<CoinType>(partecipant, round.stake);
 
+        // NOTE: Decommenting this line causes the aiken compilation error
+        // "reckless opaque cast" in the next line
+        // The probable error is that "bet" is inserted into the state and is retrieved wrongly
         // assert!(coin::value<CoinType>(&bet) == round.stake, 0);
         let bet = Bet<CoinType> { value: bet };
         move_to<Bet<CoinType>>(partecipant, bet);
@@ -44,11 +47,11 @@ module BetAddr::Bet {
     public fun win<CoinType>(
         oracle: &signer, winner: address, bookmaker: address
     ): () acquires Round, Bet {
-        // assert!(exists<Round<CoinType>>(bookmaker), 0);
+        assert!(exists<Round<CoinType>>(bookmaker), 0);
         let Round { player1, player2, oracle: oracle_address, stake: _, deadline: _ } =
             move_from<Round<CoinType>>(bookmaker);
-        // assert!(address_of(oracle) == oracle_address, 0);
-        // assert!(winner == player1 || winner == player2, 0);
+        assert!(address_of(oracle) == oracle_address, 0);
+        assert!(winner == player1 || winner == player2, 0);
 
         let Bet<CoinType> { value: bet1 } = move_from<Bet<CoinType>>(player1);
         // TODO: Needed since currently it is not supported to POST a variable introduced by a destructuring

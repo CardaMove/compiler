@@ -682,7 +682,7 @@ data IntermediateExpr
   | -- | Represents an invocation of `as_data(expr)` in Aiken
     -- Used to solve problems when performing casting
     IntermediateAsData Expr
-  | -- | Represents an anonymous function with no parameters
+  | -- | Represents an anonymous function with no parameters. Used to handle assert! calls
     IntermediateAnonymousFunction Expr
   deriving (Eq, Show, Read, Data, Typeable, Ord)
 
