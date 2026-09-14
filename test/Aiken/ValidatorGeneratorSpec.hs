@@ -45,6 +45,7 @@ spec = do
       out `shouldSatisfy` isInfixOf "expect Some(arg0) = list.at(self.extra_signatories, 0)"
       out `shouldSatisfy` isInfixOf "let arg0 = Signer{address: arg0}"
       out `shouldSatisfy` isInfixOf "let cps = scope_utils.post_scope(\"arg0\", arg0, cps)"
+      out `shouldSatisfy` isInfixOf "let cps = timestamp_utils.add_timestamp_to_cps(self, cps)"
       out `shouldSatisfy` isInfixOf "script-user.join_round(reference_utils.make_ref(\"arg0\", [], cps), cps)"
 
     it "Skips signer parameters in redeemer and binds extra signatories" $ do

@@ -117,6 +117,7 @@ generateValidator scriptsMeta =
     use utils/state_utils.{SerializedProgramState}
     use utils/assets_utils
     use utils/coin_utils
+    use utils/timestamp_utils
     use utils/common_utils.{ProgramState}
 
     $imports
@@ -148,6 +149,8 @@ generateValidator scriptsMeta =
         let output_state: ProgramState = state_utils.get_tx_output_state(utxo, self)
 
         let cps: CPS = ([], program_state)
+
+        let cps = timestamp_utils.add_timestamp_to_cps(self, cps)
 
         // Pattern matchin the Redeemer
         let (_, program_state): CPS = when redeemer is {
