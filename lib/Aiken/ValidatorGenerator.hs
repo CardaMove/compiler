@@ -150,6 +150,7 @@ generateValidator scriptsMeta =
 
         let cps: CPS = ([], program_state)
 
+        // 3- Calculate the current timestamp from the Tx validity range, if specified
         let cps = timestamp_utils.add_timestamp_to_cps(self, cps)
 
         // Pattern matchin the Redeemer
