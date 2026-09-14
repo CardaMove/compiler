@@ -95,6 +95,7 @@ normalizeModule m@Module {moduleAddress, moduleIdentifier} =
 --
 -- In addition, the `use aptos_framework::coin as x` is rewritten as the utils module, but keeping the alias: `use utils/coin_utils as x`
 -- if an alias x is not specified, it defaults to the original identifier of the module
+-- The `std::timestamp` module is similarly backed by the custom timestamp utility module.
 normalizeUse :: Use -> Use
 normalizeUse u@Use {useAddress, useIdentifier, useAlias} =
   let u' =
@@ -106,7 +107,11 @@ normalizeUse u@Use {useAddress, useIdentifier, useAlias} =
    in if useAddress == aptosFrameworkLibAddress
         then
           u' {useAddress = utilsLibAddress, useIdentifier = Identifier "coin_utils", useAlias = Just $ fromMaybe useIdentifier useAlias}
-        else u'
+        else
+          if useAddress == stdLibAddress && useIdentifier == Identifier "timestamp"
+            then
+              u' {useAddress = utilsLibAddress, useIdentifier = Identifier "timestamp_utils", useAlias = Just $ fromMaybe useIdentifier useAlias}
+            else u'
 
 -- | Normalizes a name access chain by converting the module identifier in lowercase.
 -- The eventual module address is not modified.

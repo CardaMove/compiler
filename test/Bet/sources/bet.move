@@ -1,7 +1,7 @@
 module BetAddr::Bet {
     use aptos_framework::coin::{Coin, Self};
     use std::signer::{address_of};
-    // use std::timestamp;
+    use std::timestamp;
 
     struct Round<phantom CoinType> has key {
         player1: address,
@@ -64,7 +64,7 @@ module BetAddr::Bet {
     public fun timeout<CoinType>(bookmaker: address): () acquires Round, Bet {
         let Round { player1, player2, oracle: _, stake: _, deadline } =
             move_from<Round<CoinType>>(bookmaker);
-        // assert!(deadline < timestamp::now_seconds(), 0);
+        assert!(deadline < timestamp::now_seconds(), 0);
 
         let Bet<CoinType> { value: bet1 } = move_from<Bet<CoinType>>(player1);
         let Bet<CoinType> { value: bet2 } = move_from<Bet<CoinType>>(player2);

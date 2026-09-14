@@ -113,6 +113,26 @@ testRemoveStdSignerUse = describe "Removes std::signer use declarations" $ do
         removedStdSigner `shouldBe` False
       RScript _ -> fail "Expected RModule"
 
+testRewriteStdTimestampUse :: Spec
+testRewriteStdTimestampUse = describe "Rewrites std::timestamp use declarations" $ do
+  it "rewrites timestamp imports to utils/timestamp_utils" $ do
+    let useDecl = Use {useAddress = NamedAddress (Identifier "std"), useIdentifier = Identifier "timestamp", useAlias = Nothing, useMembers = []}
+        topUse = TopLevelUse useDecl
+        module' = Module {moduleAddress = NamedAddress (Identifier "utils"), moduleIdentifier = Identifier "test_mod", moduleTopLevels = [topUse]}
+
+    case postProcessRoot (RModule module') Map.empty of
+      RModule resultModule ->
+        moduleTopLevels resultModule `shouldContain`
+          [ TopLevelUse
+              Use
+                { useAddress = NamedAddress (Identifier "utils"),
+                  useIdentifier = Identifier "timestamp_utils",
+                  useAlias = Just (Identifier "timestamp"),
+                  useMembers = []
+                }
+          ]
+      RScript _ -> fail "Expected RModule"
+
 testPostProcessRoot :: Spec
 testPostProcessRoot = describe "Tests the function `postProcessRoot`" $ do
   it "Converts assert! calls to common_utils.assert with an anonymous function" $ do
@@ -251,5 +271,6 @@ spec = do
   testNormalizeModule
   testNormalizeUse
   testRemoveStdSignerUse
+  testRewriteStdTimestampUse
   testRemoveSelfUseMember
   testPostProcessRoot
