@@ -12,6 +12,7 @@ import Move.Translations.Utils
     aptosFrameworkLibAddress,
     booleanType,
     extractVariablesFromBindings,
+    numericType,
     stdLibAddress,
     unitType,
   )
@@ -203,6 +204,25 @@ moveStdLibModules =
                   functionTypeParameters = [],
                   functionParameters = [Parameter {parameterIdentifier = Identifier "signer", parameterType = TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "signer") [], parameterUUID = Nothing}],
                   functionReturnType = Just $ TypeTuple [TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "address") [], IntermediateTypeScopes],
+                  functionAcquires = [],
+                  functionBody = Nothing,
+                  functionUUID = Nothing
+                }
+          ]
+      },
+    Module
+      { moduleAddress = stdLibAddress,
+        moduleIdentifier = Identifier "timestamp",
+        moduleTopLevels =
+          [ TopLevelFunction $
+              Function
+                { functionHasNativeModifier = False,
+                  functionVisibilityModifier = Just VisibilityModifierPublic,
+                  functionHasEntryModifier = False,
+                  functionName = Identifier "now_seconds",
+                  functionTypeParameters = [],
+                  functionParameters = [Parameter {parameterIdentifier = Identifier "cps", parameterType = IntermediateTypeScopes, parameterUUID = Nothing}],
+                  functionReturnType = Just $ TypeTuple [numericType, IntermediateTypeScopes],
                   functionAcquires = [],
                   functionBody = Nothing,
                   functionUUID = Nothing
