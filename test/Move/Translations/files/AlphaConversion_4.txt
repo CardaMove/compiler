@@ -1,0 +1,33 @@
+RModule
+( Module
+    { moduleAddress = NamedAddress (Identifier "NamedAddr"),
+        moduleIdentifier = Identifier "Module5",
+        moduleTopLevels =
+        [ TopLevelNamedStruct (NamedStruct {namedStructIdentifier = Identifier "S", namedStructTypeParameters = [], namedStructAbilities = [], namedStructFields = [NamedField {fieldIdentifier = Identifier "x", fieldType = TypeConstructor (LocalNameAccessChain (Identifier "u64")) []}]}),
+            TopLevelFunction
+            ( Function
+                { functionHasNativeModifier = False,
+                    functionVisibilityModifier = Nothing,
+                    functionHasEntryModifier = False,
+                    functionName = Identifier "main",
+                    functionTypeParameters = [],
+                    functionParameters = [],
+                    functionReturnType = Nothing,
+                    functionAcquires = [],
+                    functionBody =
+                    Just
+                        ( Sequence
+                            { sequenceUses = [],
+                            sequenceItems =
+                                [ SequenceItemBindExpr (Bindings {bindings = BindedSingle (BindIdentifier (Identifier "x") Nothing), bindingsBindType = Nothing, bindingsBindExpr = Just (ValueLiteral (Numerical (LiteralIntDec 0)))}),
+                                SequenceItemBindExpr (Bindings {bindings = BindedSingle (BindNamedStruct (BindedNamedStruct {bnsNameAccessChain = LocalNameAccessChain (Identifier "S"), bnsTypeArgs = [], bnsFields = BindedFields {hasPartialPattern = False, bindedFields = [BindedField {bindFieldIdentifier = Identifier "x", bindFieldInnerBind = Just (BindIdentifier (Identifier "x_0") Nothing), bindedFieldUUID = Nothing}]}})), bindingsBindType = Nothing, bindingsBindExpr = Just (NamedStructExprExpr (NamedStructExpr {nseNameAccessChain = LocalNameAccessChain (Identifier "S"), nseTypeArgs = [], nseFields = [NamedStructExprField {nsefIdentifier = Identifier "x", nsefExpr = Just (ValueLiteral (Numerical (LiteralIntDec 1)))}]}))})
+                                ],
+                            sequenceEndExpr = Just (NameAccessChainExpr (LocalNameAccessChain (Identifier "x_0")))
+                            }
+                        ),
+                    functionUUID = Nothing
+                }
+            )
+        ]
+    }
+)

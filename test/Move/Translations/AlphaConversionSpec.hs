@@ -24,6 +24,10 @@ testAlphaConvert = describe "Tests the function `alphaConvert`" $ do
     source <- readFile "test/Move/Translations/files/AlphaConversion_3.move"
     expected <- readFile "test/Move/Translations/files/AlphaConversion_3.txt"
     alphaConvert [parse (scan source)] `shouldBe` [read expected]
+  it "renames a variable redeclared by named-struct destructuring" $ do
+    source <- readFile "test/Move/Translations/files/AlphaConversion_4.move"
+    expected <- readFile "test/Move/Translations/files/AlphaConversion_4.txt"
+    alphaConvert [parse (scan source)] `shouldBe` [read expected]
 
 spec :: Spec
 spec = testAlphaConvert
