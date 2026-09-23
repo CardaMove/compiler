@@ -1,6 +1,7 @@
 module Move.Translations.AlphaConversion (alphaConvert) where
 
 import Data.Map qualified as Map
+import Data.Maybe (fromMaybe)
 import Move.AST
 import Move.Translations.TraversalUtils (TraversalMapper, traverseRootPostOrder)
 import Move.Translations.Utils (Scope)
@@ -10,7 +11,17 @@ data AlphaState = AlphaState
     alphaScopes :: [Map.Map Identifier Identifier]
   }
 
--- | Renames colliding local bindings in every root and updates their references.
+-- |
+-- Renames colliding local bindings in every root and updates their references.
+-- Two bindings are colliding if they both reside in the same scope and have the same identifier.
+-- In this case, the second is renamed by appending _i to its name, with i incremental counter (shared across the entire traversal).
+-- All occurrences of that variable in right values are renamed accordingly.
+-- Note that variables with no rebindings/clashes are left unmodified.
+-- If two variables share the name identifier but reside on different scopes, no rename is performed.
+-- Also note that local scope entries are left unmodified, since the CPS already handles them.
+--
+-- This step is performed so to support the lack of Javascript to rebind variables,
+-- but it might also be inserted in the on-chain steps if a closer compilation between onchain and offchain needs to be mantained
 alphaConvert :: [Root] -> [Root]
 alphaConvert = convertRoots []
   where
@@ -40,6 +51,10 @@ alphaConvert = convertRoots []
           (bindings', state'') = renameBindings bindings state'
        in (bindings', state'')
 
+    -- The role of this function is to make sure the associations of original identifiers and renamed identifiers
+    -- still respects the depth of the scope. Meaning that if a new scope is pushed, also the associations should include a new scope.
+    -- This is done to avoid renaming variables with the name identifier but in different scopes
+    -- Of course this function handles exiting from a scope by removing the no more needed associations
     synchronizeScopes :: [Scope] -> AlphaState -> AlphaState
     synchronizeScopes scopes state@AlphaState {alphaScopes} =
       let requiredDepth = length scopes
@@ -115,6 +130,7 @@ alphaConvert = convertRoots []
            in (candidate, state {alphaCounter = nextCounter, alphaScopes = updatedScope : outerScopes})
     declare identifier state = (identifier, state)
 
+    -- Generates a fresh variable identifier by appending _i to it when needed, with i incremental counter
     freshIdentifier :: Identifier -> Int -> Map.Map Identifier Identifier -> (Identifier, Int)
     freshIdentifier (Identifier identifier) counter scope =
       let candidate = Identifier (identifier ++ "_" ++ show counter)
@@ -122,11 +138,10 @@ alphaConvert = convertRoots []
             then freshIdentifier (Identifier identifier) (counter + 1) scope
             else (candidate, counter + 1)
 
+    -- Returns the new name associated with an identifier, or the same name if no rename has happened
     lookupIdentifier :: Identifier -> AlphaState -> Identifier
     lookupIdentifier identifier AlphaState {alphaScopes} =
-      case lookupInScopes alphaScopes of
-        Nothing -> identifier
-        Just renamed -> renamed
+      fromMaybe identifier (lookupInScopes alphaScopes)
       where
         lookupInScopes [] = Nothing
         lookupInScopes (scope : outerScopes) =
