@@ -65,3 +65,17 @@ has type of the function's return type.
 Void expressions are:
 * Let bindings 
 * Normal expression with void type
+
+
+### CLI versions
+As of this commit, the project compioles with the following CLI versions:
+```shell
+$ aptos -V
+aptos 9.6.0
+
+$ aptos move -V
+aptos-move 9.6.0
+
+$ aiken --version
+aiken v1.1.21+42babe5
+```
