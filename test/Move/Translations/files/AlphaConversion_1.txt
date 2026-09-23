@@ -1,0 +1,33 @@
+RModule
+( Module
+    { moduleAddress = NamedAddress (Identifier "NamedAddr"),
+        moduleIdentifier = Identifier "Module5",
+        moduleTopLevels =
+        [ TopLevelFunction
+            ( Function
+                { functionHasNativeModifier = False,
+                    functionVisibilityModifier = Nothing,
+                    functionHasEntryModifier = False,
+                    functionName = Identifier "main",
+                    functionTypeParameters = [],
+                    functionParameters = [],
+                    functionReturnType = Nothing,
+                    functionAcquires = [],
+                    functionBody =
+                    Just
+                        ( Sequence
+                            { sequenceUses = [],
+                            sequenceItems =
+                                [ SequenceItemBindExpr (Bindings {bindings = BindedSingle (BindIdentifier (Identifier "a") Nothing), bindingsBindType = Nothing, bindingsBindExpr = Just (ValueLiteral (Numerical (LiteralIntDec 1)))}),
+                                SequenceItemExpr (SequenceExpr (Sequence {sequenceUses = [], sequenceItems = [SequenceItemBindExpr (Bindings {bindings = BindedSingle (BindIdentifier (Identifier "a") Nothing), bindingsBindType = Nothing, bindingsBindExpr = Just (ValueLiteral (Numerical (LiteralIntDec 2)))})], sequenceEndExpr = Just (NameAccessChainExpr (LocalNameAccessChain (Identifier "a")))})),
+                                SequenceItemBindExpr (Bindings {bindings = BindedSingle (BindIdentifier (Identifier "a_0") Nothing), bindingsBindType = Nothing, bindingsBindExpr = Just (ValueLiteral (Numerical (LiteralIntDec 3)))})
+                                ],
+                            sequenceEndExpr = Just (NameAccessChainExpr (LocalNameAccessChain (Identifier "a_0")))
+                            }
+                        ),
+                    functionUUID = Nothing
+                }
+            )
+        ]
+    }
+)

@@ -1,0 +1,32 @@
+RModule
+( Module
+    { moduleAddress = NamedAddress (Identifier "NamedAddr"),
+        moduleIdentifier = Identifier "Module5",
+        moduleTopLevels =
+        [ TopLevelFunction
+            ( Function
+                { functionHasNativeModifier = False,
+                    functionVisibilityModifier = Nothing,
+                    functionHasEntryModifier = False,
+                    functionName = Identifier "main",
+                    functionTypeParameters = [],
+                    functionParameters = [],
+                    functionReturnType = Nothing,
+                    functionAcquires = [],
+                    functionBody =
+                    Just
+                        ( Sequence
+                            { sequenceUses = [],
+                            sequenceItems =
+                                [ SequenceItemBindExpr (Bindings {bindings = BindedTuple [BindIdentifier (Identifier "a") Nothing, BindIdentifier (Identifier "b") Nothing], bindingsBindType = Nothing, bindingsBindExpr = Just (CommaExpr [ValueLiteral (Numerical (LiteralIntDec 1)), ValueLiteral (Numerical (LiteralIntDec 2))])}),
+                                SequenceItemBindExpr (Bindings {bindings = BindedTuple [BindIdentifier (Identifier "a_0") Nothing, BindIdentifier (Identifier "c") Nothing], bindingsBindType = Nothing, bindingsBindExpr = Just (CommaExpr [ValueLiteral (Numerical (LiteralIntDec 3)), ValueLiteral (Numerical (LiteralIntDec 4))])})
+                                ],
+                            sequenceEndExpr = Just (BinaryOpExprExpr (Add (NameAccessChainExpr (LocalNameAccessChain (Identifier "a_0"))) (NameAccessChainExpr (LocalNameAccessChain (Identifier "c")))))
+                            }
+                        ),
+                    functionUUID = Nothing
+                }
+            )
+        ]
+    }
+)
