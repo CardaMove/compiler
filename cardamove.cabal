@@ -29,6 +29,7 @@ library
       Move.Loader.Loader
       Move.Parser
       Move.Token
+      Move.Translations.AlphaConversion
       Move.Translations.Loops
       Move.Translations.Polymorphism
       Move.Translations.PostProcessing
@@ -98,6 +99,7 @@ test-suite cardamove-test
       Move.LexerSpec
       Move.Loader.LoaderSpec
       Move.ParserSpec
+      Move.Translations.AlphaConversionSpec
       Move.Translations.LoopsSpec
       Move.Translations.PolymorphismSpec
       Move.Translations.PostProcessingSpec
