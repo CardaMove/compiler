@@ -23,6 +23,7 @@ This file gives AI coding agents project-specific instructions for working in th
 
 Inside `lib/Move/Translations/`, the active Haskell modules have the following responsibilities:
 
+- `AlphaConversion.hs`: renames colliding local bindings within the same scope (appending `_i` with a traversal-wide counter) and updates their references; bindings shadowed in nested scopes and local-scope entries are left untouched. Not yet part of the `transpiler` pipeline: it is meant for targets that cannot rebind variables (e.g. off-chain JavaScript).
 - `Loops.hs`: rewrites `loop` into `while(true)` and lifts while loops into recursive helper functions, including break/continue flag handling and free-variable reference threading.
 - `Polymorphism.hs`: removes parametric polymorphism for code generation by inserting upcasts/downcasts and replacing type parameters with an intermediate `Data`-like representation.
 - `PostProcessing.hs`: final AST cleanup before generation; injects required utils imports and resolves named addresses to numerical ones (except the utils address).
@@ -40,7 +41,9 @@ Notes:
 - Primary commands:
   - `stack build`
   - `stack test`
-  - `stack run`
+- Running the compiler: the CLI requires the path to a Move project's `Move.toml`, so use `stack exec` (as in `README.md`) instead of `stack run`:
+  - `stack exec cardamove-cli -- "path\to\Move.toml"`
+  - `stack exec cardamove-cli -- --help`
 - VS Code tasks available:
   - `haskell build`
   - `haskell clean & build`

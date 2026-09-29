@@ -7,7 +7,6 @@ Simple POC for a transpiler from [Move](https://move-language.github.io/move/) t
 ```shell
 $ stack build # Also builds Alex and Happy
 $ stack test
-$ stack run
 
 ```
 
