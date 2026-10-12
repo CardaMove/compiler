@@ -1,9 +1,10 @@
-module Move.Transpiler (transpiler) where
+module Move.Transpiler (transpiler, offchainTranspiler) where
 
 import Control.Exception (evaluate)
 import Control.Monad.State (evalState, runState)
 import Move.AST (Root)
 import Move.Loader.Loader (AddrAssociations)
+import Move.Translations.AlphaConversion (alphaConvert)
 import Move.Translations.Loops (translateWhilesToFunctionsInRoot)
 import Move.Translations.Polymorphism (translatePolymorphismInRoot)
 import Move.Translations.PostProcessing (postProcessRoot)
@@ -32,3 +33,11 @@ transpiler files addrAssoc = do
   let allFileNames = map fst files
 
   tryIO "postProcessing" $ evaluate $ zipWith (\fileName root -> (fileName, postProcessRoot root addrAssoc)) allFileNames step5Polymorphism
+
+-- |
+-- Given the output of `transpiler`, applies the passes needed only by the off-chain (TypeScript) target.
+-- `alphaConvert` must run after `postProcessRoot`, since TypeScript can not rebind a variable in the same scope
+offchainTranspiler :: [(FilePath, Root)] -> IO [(FilePath, Root)]
+offchainTranspiler files = do
+  converted <- tryIO "alphaConvert" $ evaluate $ alphaConvert (map snd files)
+  return $ zip (map fst files) converted

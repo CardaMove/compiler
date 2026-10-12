@@ -1,0 +1,56 @@
+{
+  "source": {
+    "repository": "https://github.com/roveroniandrea/rosetta-redo",
+    "commit": "833e79163466d3e6ce8404932ac8786b4bbeabf5"
+  },
+  "libraries": {
+    "aiken-utils": {
+      "source": "aiken-redo/lib/utils",
+      "destination": "resources/aiken_template/lib/utils",
+      "files": {
+        "assets_utils.ak": "5f4c312c88585d51ae8c9065e5b19928bbfdeda985e974f966153cd4326b6ea5",
+        "coin_utils.ak": "33e609c86fd505b78679e79dc1ded4936b95617edfdc92fc581b818ff4098a0b",
+        "common_utils.ak": "646344b39beab5bd1c5289c9506c7731df97b709355ccb4bfe36202c52960a1a",
+        "global_storage_utils.ak": "df5a8519d13a82380cdd936583f7b3629db6e5a91fe63b1ff93e3e94cddb2438",
+        "reference_utils.ak": "4d59c6078309987d918a2f03fe56f65a574f9cfff3eb36330b08eb5e4b627145",
+        "scope_utils.ak": "17c69012ec4f00f32d7f71b627b5b72744b1ee9f0c7fbfc2b6ce88cda4965ed2",
+        "signer_utils.ak": "6a81cd2c2c94aad576bed250518ff1af2bb102125675535999275ba3eb12110b",
+        "state_utils.ak": "47ab4529c61d5eedddc766d1e2cafe29e5006fc2bbe904ef3dfb2036b0ca89df",
+        "timestamp_utils.ak": "fa4e102968f64835839fb25f5e01b11812073ea533f3446c75912294272faa79"
+      }
+    },
+    "typescript-lib": {
+      "source": "aiken-redo/mesh/src/lib",
+      "destination": "resources/typescript_template/src/lib",
+      "files": {
+        "stdlib/assets.ts": "212f36df9e27c2e698e869c8bb400536ac260f4d5b5c63c107327dfad81decf3",
+        "stdlib/bytearray.ts": "80fb0e1d793e0573567c828f9dbc4fd415ad27eafc99a978cd2a75a9b6475be8",
+        "stdlib/data.ts": "45be23541b8b2611035e31d558bd8692e10c1ae382f8bcf0c0124f88981b8b8a",
+        "stdlib/dict.ts": "a4fcac7b366c50c46dd738749c96f86e0481179d25c48f88922e7d63d374e679",
+        "stdlib/interval.ts": "ede60ac0df315c730e09ef8b5088f9a51860dc27f638d6de68a1659523880516",
+        "stdlib/list.ts": "cb667f6ce83ccb8e820d5299c6a99647597ba97dd6848dcf1e5d730bf0ac6c8d",
+        "stdlib/transaction.ts": "8226070b5686c307073dbbb506b1ad73bc9f0cc1d5fb0e98a81b33d7e4523660",
+        "tests/assets_utils.test.ts": "ff999ab99b4e52e8658e2d8ccda24a057e368437dd469d413128a895eefc93cf",
+        "tests/coin_utils.test.ts": "c2bb66f52d3daf70b230e4ea17ea92291cbf57e00ce9b6cd10a174450109006a",
+        "tests/common_utils.test.ts": "db38f7fa5cdb17e6eff141ec85310ba52d88f5d095b7121c7b53ade155a5624b",
+        "tests/fixtures.json": "1798b5633d23ba2b88a56ab32948c1f30acc77126e2f24860b1d5786aff44214",
+        "tests/fixtures.test.ts": "6339fd1c10e0a7eabf1a592d05b3f125a5156abcb72c07abfe7b816e65ed0049",
+        "tests/global_storage_utils.test.ts": "16afdbbd6eb58d2ecc804b185caf1ad7d3ababe4be71d7b335e917c195d47063",
+        "tests/helpers.ts": "64c3532deae7d78e0d9c6b511071aa31737130fb94a00a69413b3c0a547f0600",
+        "tests/reference_utils.test.ts": "374740ea68097d6ed651f5a577c6e9d261297712ae55fb7d54e127e75c9ec3a8",
+        "tests/state_utils.test.ts": "19989b8b0c15a425b1862a4746cae6886cd8c61b56b7fa80affaf198160ae877",
+        "tests/stdlib.test.ts": "31513a0d74ee47a2ca4b69b185a5a91d0a8885b543724da82ae42280e5a5e0c6",
+        "tests/timestamp_utils.test.ts": "4264fe45ec974d1c38b61aec1e423a1d49666d77f2c42ba7be60de307f08d22f",
+        "utils/assets_utils.ts": "f889743dce706bcb790f8ebe95cbedc94803243ac067f39b4b6db7887f35db0b",
+        "utils/coin_utils.ts": "60daea8cecd0d0e6774188774b9f1bf148237526aab2b7aa8d4fdcab1ca0a4cb",
+        "utils/common_utils.ts": "137c7593783e2b2f7331cdf98f3937454fe5b6fad1a548be5a5a9c0fa0fbe776",
+        "utils/global_storage_utils.ts": "ae26cd2c5cc6d02d0531bccd00fe080618e7a27652c33f7775b88ba86a272389",
+        "utils/reference_utils.ts": "81472753b4e6dbbab7348ea5962dcf5a9bbafd5dd33ddf984cf5cbece90822ec",
+        "utils/scope_utils.ts": "edaaed06f5c3f4fd9b8431215e42cb8e813d54212d1d328588b33115e78edb2f",
+        "utils/signer_utils.ts": "93f300b5fced96b73f457e516e8bee68df5ec8959e21d1a526e311f07c4ed182",
+        "utils/state_utils.ts": "38b12520bbcdd77bb00efb79e9e6cde81bc0d988a981a60cb9b36466397ce23b",
+        "utils/timestamp_utils.ts": "ede5598a418e19a6d41ed5a7740befccad84ed3faf3dcffc97420bb32462a675"
+      }
+    }
+  }
+}

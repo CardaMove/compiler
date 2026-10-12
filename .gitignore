@@ -13,3 +13,10 @@ lib/Move/Parser.info
 
 # Compiled Aiken project
 aiken_out/
+
+# Generated TypeScript (off-chain) project
+ts_out/
+
+# npm artifacts of the TypeScript template (installed to run the library tests)
+resources/typescript_template/node_modules/
+resources/typescript_template/bin/

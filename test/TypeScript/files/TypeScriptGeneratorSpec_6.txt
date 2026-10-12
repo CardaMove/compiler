@@ -1,0 +1,11 @@
+TopLevelUse
+( Use
+    { useAddress = NamedAddress (Identifier "utils"),
+        useIdentifier = Identifier "coin_utils",
+        useAlias = Just (Identifier "coin"),
+        useMembers =
+        [ UseMember {useMemberIdentifier = Identifier "Coin", useMemberUseAlias = Nothing},
+            UseMember {useMemberIdentifier = Identifier "value", useMemberUseAlias = Just (Identifier "coin_value")}
+        ]
+    }
+)

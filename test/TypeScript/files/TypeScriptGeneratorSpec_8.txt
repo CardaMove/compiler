@@ -1,0 +1,8 @@
+TopLevelUse
+( Use
+    { useAddress = NumericalAddress (LiteralIntHex "0xbe7"),
+        useIdentifier = Identifier "bet",
+        useAlias = Nothing,
+        useMembers = []
+    }
+)

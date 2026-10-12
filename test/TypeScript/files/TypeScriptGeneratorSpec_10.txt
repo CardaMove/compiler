@@ -1,0 +1,8 @@
+TopLevelConstant
+( Constant
+    { constantIdentifier = Identifier "MAX_STAKE",
+        constantType = TypeConstructor (LocalNameAccessChain (Identifier "u64")) [],
+        constantExpression = ValueLiteral (Numerical (LiteralIntDec 42)),
+        constantUUID = Nothing
+    }
+)

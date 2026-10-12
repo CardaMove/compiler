@@ -1,4 +1,4 @@
-.PHONY: clean
+.PHONY: clean sync-libs check-libs
 
 all: build
 
@@ -21,3 +21,10 @@ test:
 clean:
 	stack clean
 
+# Vendor the runtime libraries (Aiken utils + TypeScript port) from rosetta-redo, see doc/offchain.md
+# The rosetta-redo checkout defaults to ../rosetta-redo and can be overridden with ROSETTA_REDO
+sync-libs:
+	node scripts/sync-runtime-libs.js
+
+check-libs:
+	node scripts/sync-runtime-libs.js --check

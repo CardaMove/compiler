@@ -2,6 +2,8 @@
 
 Simple POC for a transpiler from [Move](https://move-language.github.io/move/) to [Aiken](https://aiken-lang.org/).
 
+Off-chain code generation to TypeScript + [MeshJS](https://meshjs.dev) is in progress (currently a skeleton: imports, structs and function signatures). See [doc/offchain.md](doc/offchain.md).
+
 ## Stack commands
 
 ```shell
@@ -18,10 +20,33 @@ $ cd C:\path\to\compiler
 $ stack exec cardamove-cli -- "test\Move\Loader\files\Move.toml"
 ```
 
-Use `-h` or `--help` to display the available CLI options:
+By default the compiler writes two projects in the current directory:
+
+- `aiken_out/`: the on-chain Aiken project (template from `resources/aiken_template/`);
+- `ts_out/`: the off-chain TypeScript project (template from `resources/typescript_template/`).
+
+Use `--onchain-only` or `--offchain-only` to generate only one of them. Use `-h` or `--help` to display the available CLI options:
 
 ```shell
 $ stack exec cardamove-cli -- --help
+```
+
+## Off-chain TypeScript project
+Requires Node.js and npm. The generated project and its template share the same commands:
+
+```shell
+$ cd ts_out                # or resources/typescript_template
+$ npm install
+$ npm run typecheck        # type-check the runtime library, its tests and the generated code
+$ npm test                 # runtime library tests, including the Aiken parity fixtures
+```
+
+## Runtime libraries
+The Aiken runtime library (`resources/aiken_template/lib/utils/`) and its TypeScript port (`resources/typescript_template/src/lib/`) are vendored from the [rosetta-redo](https://github.com/roveroniandrea/rosetta-redo) repository, which is their source of truth. Do not edit them here: change them in rosetta-redo, then re-vendor them:
+
+```shell
+$ make sync-libs           # copies from ../rosetta-redo (override with ROSETTA_REDO) and updates resources/runtime-libs.lock.json
+$ make check-libs          # fails if the vendored files differ from the lock or from rosetta-redo
 ```
 
 ## Lexer commands

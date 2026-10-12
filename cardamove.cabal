@@ -38,6 +38,8 @@ library
       Move.Translations.TypeWitness
       Move.Translations.Utils
       Move.Transpiler
+      TypeScript.EntryPointGenerator
+      TypeScript.TypeScriptGenerator
   other-modules:
       Paths_cardamove
   hs-source-dirs:
@@ -107,6 +109,8 @@ test-suite cardamove-test
       Move.Translations.TraversalUtilsSpec
       Move.Translations.TypeWitnessSpec
       Move.Translations.UtilsSpec
+      Move.TranspilerSpec
+      TypeScript.TypeScriptGeneratorSpec
       Paths_cardamove
   hs-source-dirs:
       test

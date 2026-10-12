@@ -4,8 +4,9 @@ This file gives AI coding agents project-specific instructions for working in th
 
 ## Project Purpose
 
-- CardaMove is a Haskell proof-of-concept transpiler from Move to Aiken.
-- The core flow is: parse Move source -> apply AST translations -> generate Aiken output.
+- CardaMove is a Haskell proof-of-concept transpiler from Move to Aiken (on-chain) and, work in progress, to TypeScript + MeshJS (off-chain).
+- The core flow is: parse Move source -> apply AST translations -> generate Aiken output (and, off-chain, apply `alphaConvert` -> generate TypeScript output).
+- The off-chain design, layout and progress live in `doc/offchain.md`.
 
 ## Repository Map
 
@@ -13,17 +14,22 @@ This file gives AI coding agents project-specific instructions for working in th
 - `lib/Move/Lexer.x`: Alex lexer source.
 - `lib/Move/Parser.y`: Happy parser grammar source.
 - `lib/Move/Lexer.hs` and `lib/Move/Parser.hs`: generated files.
-- `lib/Move/Transpiler.hs`: ordered translation pipeline.
+- `lib/Move/Transpiler.hs`: ordered translation pipeline: the shared `transpiler` and the off-chain-only tail `offchainTranspiler` (`alphaConvert`).
 - `lib/Move/Translations/`: AST-to-AST transformation passes and shared traversal/type helpers.
-- `lib/Aiken/AikenGenerator.hs`: Aiken code generation.
-- `src/Main.hs`: CLI entrypoint.
+- `lib/Aiken/`: on-chain code generation (`AikenGenerator.hs`, `ValidatorGenerator.hs`).
+- `lib/TypeScript/`: off-chain code generation (`TypeScriptGenerator.hs`, `EntryPointGenerator.hs`), currently a skeleton (see `doc/offchain.md`).
+- `resources/aiken_template/`: Aiken project template copied into `aiken_out/`; `lib/utils/` is the vendored Aiken runtime library.
+- `resources/typescript_template/`: npm project template copied into `ts_out/`; `src/lib/` is the vendored TypeScript port of the runtime library (with its Vitest tests and parity fixtures).
+- `resources/runtime-libs.lock.json` and `scripts/sync-runtime-libs.js`: provenance and sync/drift check of the vendored libraries (source of truth: the rosetta-redo repository).
+- `src/Main.hs`: CLI entrypoint (`--onchain-only` / `--offchain-only`, default both).
 - `test/`: Hspec test suite and fixture files.
+- `doc/offchain.md`: off-chain design, layout and progress.
 
 ## Translation Modules Purpose
 
 Inside `lib/Move/Translations/`, the active Haskell modules have the following responsibilities:
 
-- `AlphaConversion.hs`: renames colliding local bindings within the same scope (appending `_i` with a traversal-wide counter) and updates their references; bindings shadowed in nested scopes and local-scope entries are left untouched. Not yet part of the `transpiler` pipeline: it is meant for targets that cannot rebind variables (e.g. off-chain JavaScript).
+- `AlphaConversion.hs`: renames colliding local bindings within the same scope (appending `_i` with a traversal-wide counter) and updates their references; bindings shadowed in nested scopes and local-scope entries are left untouched. Not part of the shared `transpiler` pipeline: it is the off-chain-only final pass (TypeScript cannot rebind variables in the same scope) and must run after `postProcessRoot`.
 - `Loops.hs`: rewrites `loop` into `while(true)` and lifts while loops into recursive helper functions, including break/continue flag handling and free-variable reference threading.
 - `Polymorphism.hs`: removes parametric polymorphism for code generation by inserting upcasts/downcasts and replacing type parameters with an intermediate `Data`-like representation.
 - `PostProcessing.hs`: final AST cleanup before generation; injects required utils imports and resolves named addresses to numerical ones (except the utils address).
@@ -49,6 +55,8 @@ Notes:
   - `haskell clean & build`
   - `haskell test`
   - `haskell watch`
+- Off-chain (needs Node.js + npm), from `resources/typescript_template/` or a generated `ts_out/`: `npm install`, `npm test`, `npm run typecheck`.
+- Vendored runtime libraries: `make check-libs` (drift check), `make sync-libs` (re-vendor from `../rosetta-redo` or `$ROSETTA_REDO`).
 - CI expectation: repository should pass both `stack build` and `stack test`.
 
 ## Parser/Lexer Workflow
@@ -67,7 +75,7 @@ Notes:
 
 - Preserve semantic ordering in `lib/Move/Transpiler.hs` unless a task explicitly requires reordering.
 - The UUID/state threading across translation passes is intentional; avoid resetting or skipping state values.
-- Keep post-processing (`postProcessRoot`) at the end of the pipeline.
+- ~~Keep post-processing (`postProcessRoot`) at the end of the pipeline.~~ **Deprecated.** `postProcessRoot` ends the *shared* pipeline (`transpiler`); target-specific passes run after it. In particular, the off-chain `alphaConvert` must run after `postProcessRoot` for transpilation to be correct.
 
 ## Test Conventions
 
@@ -84,8 +92,11 @@ Notes:
 - Avoid introducing new dependencies unless required by the task.
 - Do not alter unrelated files in the same change.
 - Always add a brief 2-3 line description comment to each function created by the agent.
+- Keep documentation in sync: every change to code, commands, layout or behaviour must update the affected docs in the same change (`CLAUDE.md`, `AGENTS.md`, `README.md` when user-facing, `doc/offchain.md` including its Progress table, and doc comments in code). When finishing, state which docs were updated, or that none needed changes.
 
 ## Common Pitfalls
+
+- Never edit the vendored runtime libraries (`resources/aiken_template/lib/utils/`, `resources/typescript_template/src/lib/`): change them in rosetta-redo, then run `make sync-libs`.
 
 - `lib/Move/Parser.hs` is generated and very large; edit `Parser.y` instead.
 - Whitespace-sensitive `<` token behavior is intentional (`TokenOperatorWhiteLt`).

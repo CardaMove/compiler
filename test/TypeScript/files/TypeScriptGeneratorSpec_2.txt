@@ -1,0 +1,28 @@
+TopLevelPositionalStruct
+( PositionalStruct
+    { positionalStructIdentifier = Identifier "MyStruct1",
+        positionalStructTypeParameters =
+        [ TypeParameter
+            { typeParameterIsPhantom = True,
+                typeIdentifier = Identifier "a",
+                typeConstraints = []
+            },
+            TypeParameter
+            { typeParameterIsPhantom = False,
+                typeIdentifier = Identifier "b",
+                typeConstraints = [Copy, Drop]
+            }
+        ],
+        positionalStructAbilities = [Copy, Drop],
+        positionalStructFields =
+        [ PositionalField (TypeConstructor (LocalNameAccessChain (Identifier "u64")) []),
+            PositionalField
+            ( TypeConstructor
+                (LocalNameAccessChain (Identifier "MyStruct2"))
+                [ TypeConstructor (LocalNameAccessChain (Identifier "bool")) [],
+                    TypeConstructor (LocalNameAccessChain (Identifier "b")) []
+                ]
+            )
+        ]
+    }
+)
