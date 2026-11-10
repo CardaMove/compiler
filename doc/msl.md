@@ -1,0 +1,114 @@
+# Compiling MSL specs into the validator
+
+Status: **in progress (planning).** No code has been changed yet. See [Progress](#progress).
+
+## Goal
+
+Until now the compiler translates Move **code** into an Aiken validator. The validator re-executes the selected entry function on the input state (CPS emulation of Move, via `resources/aiken_template/lib/utils/`) and compares the result with the transaction outputs.
+
+The new goal is to compile the **Move Specification Language (MSL)** specs of the entry functions into the validator instead. In this mode the validator is a boolean predicate over the encodings of the environment and of the initial and final states, `(enc ρ, enc S_i, enc S_f)`, and its correctness is the subject of a formal proof (see [Authority](#authority-the-phd-folder)).
+
+There will be two on-chain compilation modes:
+
+| Mode | What is compiled | Status |
+|---|---|---|
+| **MSL** (new default) | the `spec` blocks of the script entry functions | to be implemented, gradually |
+| **Move runtime** (legacy) | the Move code, as today | implemented; must keep working |
+
+A CLI flag will select the mode (planned: `--onchain-mode msl|move`, default `msl`; the name is not final). The off-chain target is not affected by it.
+
+**What stays the same:** the validator prelude (input/output assets, input/output state, timestamp), the `Redeemer` type built from the script entry functions' parameters, and the `when redeemer is` pattern match (`lib/Aiken/ValidatorGenerator.hs`). **What changes** is what each branch does after the match: in MSL mode it evaluates the compiled spec instead of running the transpiled function and comparing states.
+
+MSL support is added **gradually**: first a very small subset (the user will specify it in a dedicated step), then more constructs. Work is centred on the Bet example, but the compiler must stay agnostic of the contract.
+
+## Authority: the PhD folder
+
+`C:\Users\rover\Documents\Universita\PhD` holds the reasoning about the formal proof and the compilation choices. Read its `CLAUDE.md` first; it points to `suggestions.md` (the assessment) and `proof_variant_2.md` (**the proof**; `proof_variant_1.md` is outdated).
+
+- **It is the authority.** This repository follows the semantics and compilation choices decided there.
+- **Implementation details may deviate slightly, but every deviation must be shown to the user and approved** before it is implemented. Approved deviations are recorded in [Deviations](#deviations-approved).
+- **It is read-only.** Never modify anything in the PhD folder unless the user explicitly allows it.
+- What the PhD notes mark as open or "under analysis" is open here too. Do not decide it in this repository. At the time of writing that includes: the MSL fragment, the semantics of each predicate kind and how clauses combine (`assemble`), `Bool` vs `Prop`, the target types, and how generics / type witnesses enter the proof.
+
+Main points decided there that the implementation must respect (summary; the PhD notes are authoritative):
+
+- Theorem (TH_1): `∀Γ φ ρ S_i S_f. Γ ⊢ φ : pred ∧ ρ ⊨ Γ ⇒ (⟦φ⟧_S(ρ,S_i,S_f) ⇔ ⟦compile φ⟧_T(enc ρ, enc S_i, enc S_f))`, with the lemma (L_exp) for expressions. Predicates (`ensures`, `aborts_if`, ...) are distinct from expressions.
+- `compile` keeps variable names; ρ is the source environment (here: the redeemer arguments), the target environment is `enc ρ`.
+- `⟦old(e)⟧_S(ρ,S_i,S_f) := ⟦e⟧_S(ρ,S_i,S_i)`.
+- Junk: the validator is guarded by `wf(T_i) ∧ wf(T_f)`, where `wf` is exactly the image of `enc`.
+- Frames: **only `modifies` is used.** The compiler keeps `perm(T)` (permitted addresses per resource type, initially ∅ for every type, address expressions evaluated in the pre-state) and checks `∀T ∀a ∉ perm(T). S_f[T][a] = S_i[T][a]` (a missing resource counts as a value). This is a compiler rule, stricter than MSL.
+- Generics are handled with **type witnesses** (an extra Redeemer parameter), as the compiler already does.
+- Partial expressions (`x / 0`, out-of-range index) are ignored for now.
+
+## The Bet example: source of truth
+
+`../rosetta-redo/move/` (`C:\Users\rover\Documents\Universita\move-project\rosetta-redo\move\`) holds the **full spec-annotated Bet contract**:
+
+- `sources/bet/bet.move` (`BetAddr::Bet`, with `spec` blocks holding the `modifies` frames);
+- `scripts/init_round.move`, `join_round.move`, `win_round.move`, `timeout_round.move` (the specs of the entry points);
+- `sources/coin_proxy/coin_proxy.move` (`CoinProxy`, with the `WithdrawSchema` / `DepositSchema` schemas);
+- `docs/move-spec-constructs.md`: the MSL constructs used and their behaviour as verified on the Move Prover (frames, `include`, undefined expressions). Read it before relying on a construct's semantics.
+
+`test/Bet/` in this repository **may diverge slightly** from that version for implementation needs. Every divergence is listed here.
+
+Current divergences:
+
+- `test/Bet/` has **no spec blocks** yet.
+- `test/Bet/sources/bet.move` calls `aptos_framework::coin` directly instead of going through `CoinProxy`, and there is no `coin_proxy.move`.
+  This divergence is meant to go away: the planned design routes all coin operations through an extended `CoinProxy` (see [Validator](#validator)).
+- `test/Bet/Move.toml` declares only `BetAddr = "0xBE7"` (rosetta-redo uses `BetAddr = 0x2`, `CoinProxyAddr = 0x4`, ...).
+
+## Initial analysis
+
+These are first considerations, **not decisions**. Each point will be discussed in a dedicated step.
+
+### Parser and AST
+
+- No MSL construct is parsed today (`lib/Move/Lexer.x`, `Parser.y`, `Token.hs` have no `spec` token), so spec-annotated sources such as rosetta-redo's Bet do not load.
+- To add, within the agreed subset: `spec <function> { ... }` blocks in scripts and modules, `spec schema` blocks, predicates (`ensures`, `aborts_if`, `requires`, `modifies`, later `include`), and spec expressions (`old(..)`, `global<T>(a)`, `exists<T>(a)`, `publish` / `remove`, `==>`, `let` / `let post`, struct literals in specs, quantifiers later).
+- The AST (`lib/Move/AST.hs`) should keep predicates distinct from expressions, as `proof_variant_2.md` does, and support typing `Γ ⊢ φ : pred`.
+- The Move runtime mode must keep working on spec-annotated sources: there, spec blocks are ignored.
+
+### Transpilation passes
+
+- MSL bindings are immutable and MSL has no references, so the CPS / local-scope passes (`Scopes`, probably `Loops`) are likely unnecessary in MSL mode.
+- But specs reason about an initial and a final state (`S_i`, `S_f`, `old`) and an environment ρ, which needs its own representation. To be analysed.
+- Likely approach: a **dedicated MSL pass chain** (e.g. `mslTranspiler` in `lib/Move/Transpiler.hs`), keeping the current one as the Move runtime chain. Candidates for reuse: `TypeWitness` (generics via witnesses), the address resolution of `PostProcessing`, `TraversalUtils`, the helpers in `Translations/Utils.hs`.
+- Type inference (`inferExprType`) will need extending to the spec constructs.
+
+### Validator
+
+- Unchanged: prelude, `Redeemer`, dispatch on the redeemer, signer extraction.
+- In MSL mode each branch would evaluate something like `wf(S_i) ∧ wf(S_f) ∧ compiled spec ∧ frame(perm)` instead of running the function and calling `compare_tx_states` / `compare_assets`. How the clauses combine is open in the PhD notes.
+- **State decoding (user, 2026-11-10):** the encoded states are what the current validator prelude already builds. `S_i` comes from the input UTxOs (`state_utils.get_tx_input_state(datum)`, plus the input assets via `coin_utils.add_assets_to_state`), and `S_f` from the output UTxOs (`state_utils.get_tx_output_state`). To check when implementing: today the output assets are compared separately (`compare_assets`) rather than merged into the output state, so `S_f` may need the same asset mirroring as `S_i`.
+- **Coins (user, 2026-11-10):** contracts reach `aptos_framework::coin` only through the `CoinProxy` module from rosetta-redo, extended there so that it completely hides `CoinStore`. The compiler then **intercepts `CoinProxy`** (its functions and schemas) and applies its own rules. Coin balances stay in the library's existing mirror (the `__COIN__Coin<...>` keys of the state, from the real tx assets), hidden behind the `CoinProxy` translation. Fee handling follows the current prelude (`deduce_transaction_fees_from_assets`) unless decided otherwise. Since this shapes `enc`, check it against the PhD notes (e.g. the (Vis) side condition on projections) before implementing.
+- **`aborts_if` and clause combination:** to be decided in the PhD folder, not here.
+- New runtime helpers (e.g. the frame check over the key-value pairs of two states) go **into rosetta-redo first**, then `make sync-libs`; the vendored libraries are never edited here.
+
+### Off-chain
+
+In MSL mode a transaction builder still has to compute `S_f`. This is out of scope for now. The off-chain work ([offchain.md](offchain.md)) is **suspended**; the two tracks may proceed independently.
+
+## Deviations (approved)
+
+Deviations of this implementation from the PhD notes, each approved by the user.
+
+| Date | Deviation | Reason |
+|---|---|---|
+| — | none yet | — |
+
+## Progress
+
+Each step is discussed with the user before coding.
+
+| Step | Description | State |
+|---|---|---|
+| 0 | Notes: this file, `CLAUDE.md` / `AGENTS.md` pointers, off-chain marked suspended | Done (2026-11-10) |
+| 1 | Agree the first MSL subset with the user, checked against the PhD notes | To do |
+| 2 | Lexer / Token / Parser + AST for spec blocks, schemas, predicates and spec expressions (subset only); Move runtime mode ignores spec blocks | To do |
+| 3 | CLI flag for the on-chain mode (default MSL), dispatch in `src/Main.hs` / `lib/Move/Transpiler.hs` | To do |
+| 4 | Design the MSL pipeline: AST and typing changes, reused passes, representation of `S_i` / `S_f` / `old` / ρ | To do |
+| 5 | MSL passes (`mslTranspiler`) with tests | To do |
+| 6 | Validator generation for MSL mode: new branch bodies, `wf` guard, `perm`-based frame check (helpers via rosetta-redo) | To do |
+| 7 | Bet end-to-end: specs from rosetta-redo into `test/Bet/` (divergences recorded), golden `.ak` fixtures, `aiken check` of `aiken_out/` | To do |
+| 8 | Extend the subset gradually (schemas / `include`, quantifiers, ...) | To do |

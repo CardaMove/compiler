@@ -8,7 +8,16 @@ The agent rules shared with other AI tools live in AGENTS.md and apply here as w
 
 User-facing usage notes (CLI invocation, Happy flags, debugger setup, tested aptos/aiken versions) are in [README.md](README.md).
 
-Off-chain generation (TypeScript + MeshJS) is **in progress**. Its design, layout, vendoring procedure and progress table are in [doc/offchain.md](doc/offchain.md). Read it before touching anything off-chain.
+Off-chain generation (TypeScript + MeshJS) is **suspended** (it may resume independently of the MSL work below). Its design, layout, vendoring procedure and progress table are in [doc/offchain.md](doc/offchain.md). Read it before touching anything off-chain.
+
+## MSL compilation (in progress)
+
+The on-chain target is gaining a new **default mode** that compiles the Move Specification Language (MSL) specs of the entry functions into the validator, instead of the Move code. The current translation stays as the **Move runtime mode**, selected by a CLI flag (planned, not implemented yet). The `Redeemer` and its pattern match stay the same; only the branch bodies change. Design, initial analysis, deviations and progress table: [doc/msl.md](doc/msl.md). Read it before any MSL work.
+
+- **The PhD folder is the authority.** `C:\Users\rover\Documents\Universita\PhD` (read its `CLAUDE.md`, then `suggestions.md` and `proof_variant_2.md`) holds the formal-proof reasoning and the compilation choices; this repo follows them. Implementation details may deviate slightly, but **every deviation must be shown to the user and approved**, then recorded in `doc/msl.md`. What is open there stays open here.
+- **Never modify the PhD folder** unless the user explicitly allows it.
+- **Bet:** `../rosetta-redo/move/` holds the full spec-annotated Bet contract (`sources/bet/bet.move`, `scripts/*_round.move`, `sources/coin_proxy/coin_proxy.move`) and `docs/move-spec-constructs.md`. `test/Bet/` here may diverge slightly for implementation needs; divergences are listed in `doc/msl.md`.
+- Support grows gradually from a small MSL subset; the compiler must stay contract-agnostic.
 
 ## Keeping documentation up to date (required)
 
@@ -18,6 +27,7 @@ The docs are read by people and by future Claude sessions as the source of truth
 - `AGENTS.md`: repository map, translation module purposes, pipeline rules.
 - `README.md`: anything user-facing (CLI usage and flags, requirements, commands).
 - `doc/offchain.md`: off-chain design and layout, plus its **Progress** table.
+- `doc/msl.md`: MSL compilation design, Bet divergences, approved deviations, plus its **Progress** table.
 - Doc comments in the code itself (Haddock `-- |` comments, JSDoc in `.ts` files).
 
 If a change needs no doc updates, that's fine, but decide it deliberately rather than skipping the check. When finishing, say which docs you updated, or that none needed changes.

@@ -1,6 +1,6 @@
 # Off-chain code generation (TypeScript + Mesh)
 
-Status: **in progress.** See [Progress](#progress).
+Status: **suspended** (since 2026-11-10, while the MSL compilation in [msl.md](msl.md) starts; it may resume independently of it). See [Progress](#progress).
 
 ## Why off-chain code is needed
 

@@ -6,7 +6,8 @@ This file gives AI coding agents project-specific instructions for working in th
 
 - CardaMove is a Haskell proof-of-concept transpiler from Move to Aiken (on-chain) and, work in progress, to TypeScript + MeshJS (off-chain).
 - The core flow is: parse Move source -> apply AST translations -> generate Aiken output (and, off-chain, apply `alphaConvert` -> generate TypeScript output).
-- The off-chain design, layout and progress live in `doc/offchain.md`.
+- The off-chain design, layout and progress live in `doc/offchain.md`. Off-chain work is currently suspended.
+- In progress: a new default on-chain mode that compiles MSL (Move Specification Language) specs into the validator; the current code translation stays as the "Move runtime" mode behind a flag. Design and progress live in `doc/msl.md`. The semantics and compilation choices are decided in the PhD folder (`C:\Users\rover\Documents\Universita\PhD`), which is the authority; deviations need the user's approval.
 
 ## Repository Map
 
@@ -24,6 +25,7 @@ This file gives AI coding agents project-specific instructions for working in th
 - `src/Main.hs`: CLI entrypoint (`--onchain-only` / `--offchain-only`, default both).
 - `test/`: Hspec test suite and fixture files.
 - `doc/offchain.md`: off-chain design, layout and progress.
+- `doc/msl.md`: MSL compilation design, Bet divergences from rosetta-redo, approved deviations from the PhD notes, and progress.
 
 ## Translation Modules Purpose
 
@@ -92,11 +94,13 @@ Notes:
 - Avoid introducing new dependencies unless required by the task.
 - Do not alter unrelated files in the same change.
 - Always add a brief 2-3 line description comment to each function created by the agent.
-- Keep documentation in sync: every change to code, commands, layout or behaviour must update the affected docs in the same change (`CLAUDE.md`, `AGENTS.md`, `README.md` when user-facing, `doc/offchain.md` including its Progress table, and doc comments in code). When finishing, state which docs were updated, or that none needed changes.
+- Keep documentation in sync: every change to code, commands, layout or behaviour must update the affected docs in the same change (`CLAUDE.md`, `AGENTS.md`, `README.md` when user-facing, `doc/offchain.md` and `doc/msl.md` including their Progress tables, and doc comments in code). When finishing, state which docs were updated, or that none needed changes.
 
 ## Common Pitfalls
 
 - Never edit the vendored runtime libraries (`resources/aiken_template/lib/utils/`, `resources/typescript_template/src/lib/`): change them in rosetta-redo, then run `make sync-libs`.
+- Never modify the PhD folder (`C:\Users\rover\Documents\Universita\PhD`) unless the user explicitly allows it. Its decisions bind the MSL compilation; any deviation must be shown to the user, approved, and recorded in `doc/msl.md`.
+- The full spec-annotated Bet contract lives in `../rosetta-redo/move/`; `test/Bet/` may diverge slightly, and divergences are listed in `doc/msl.md`.
 
 - `lib/Move/Parser.hs` is generated and very large; edit `Parser.y` instead.
 - Whitespace-sensitive `<` token behavior is intentional (`TokenOperatorWhiteLt`).
