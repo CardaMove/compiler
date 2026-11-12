@@ -1,6 +1,6 @@
 # Compiling MSL specs into the validator
 
-Status: **in progress (planning).** The spec-annotated Bet contract is in `test/Bet/`; no compiler code has been changed yet. See [Progress](#progress).
+Status: **in progress.** The spec-annotated Bet contract is in `test/Bet/` and the parser reads the MSL subset; the Move runtime mode does not ignore spec blocks yet. See [Progress](#progress).
 
 ## Goal
 
@@ -60,7 +60,7 @@ Current divergences:
 
 `test/Bet/` compiles (`aptos move compile`) and proves (`aptos move prove`: 8 verification roots, about a minute). The warnings that the opaque `CoinProxy` calls have an incomplete `modifies` frame are expected: rosetta-redo prints them too. Run both commands from `test/Bet/`.
 
-**Temporary `test/BetNoSpec/`.** The compiler cannot parse `test/Bet/` yet (no `spec` token, see [Parser and AST](#parser-and-ast)). Until step 2, `test/BetNoSpec/` holds the same contract with the `spec` blocks removed, together with the comments about them and the `use` declarations only the specs needed (`aptos_framework::timestamp`, `CoinStore`, and `CoinProxy` / `address_of` in the scripts). It compiles with `aptos move compile`, transpiles in the Move runtime mode, and the generated `aiken_out/` passes `aiken check`. `test/Move/TranspilerSpec.hs` and the manual CLI runs use it; the test on `test/Bet/` is marked pending. When step 2 lands, point them back to `test/Bet/` and delete `test/BetNoSpec/`.
+**Temporary `test/BetNoSpec/`.** `test/Bet/` parses, but the Move runtime pipeline does not ignore spec blocks yet: the generators reject them, and before that `markVariablesForLocalScope` fails on the imports only the specs use (`aptos_framework::timestamp`). Until step 2 is finished, `test/BetNoSpec/` holds the same contract with the `spec` blocks removed, together with the comments about them and the `use` declarations only the specs needed (`aptos_framework::timestamp`, `CoinStore`, and `CoinProxy` / `address_of` in the scripts). It compiles with `aptos move compile`, transpiles in the Move runtime mode, and the generated `aiken_out/` passes `aiken check`. `test/Move/TranspilerSpec.hs` and the manual CLI runs use it; the test on `test/Bet/` is marked pending. When step 2 lands, point them back to `test/Bet/` and delete `test/BetNoSpec/`.
 
 ## Initial analysis
 
@@ -68,10 +68,21 @@ These are first considerations, **not decisions**. Each point will be discussed 
 
 ### Parser and AST
 
-- No MSL construct is parsed today (`lib/Move/Lexer.x`, `Parser.y`, `Token.hs` have no `spec` token), so spec-annotated sources such as rosetta-redo's Bet do not load.
-- To add, within the agreed subset: `spec <function> { ... }` blocks in scripts and modules, `spec schema` blocks, predicates (`ensures`, `aborts_if`, `requires`, `modifies`, later `include`), and spec expressions (`old(..)`, `global<T>(a)`, `exists<T>(a)`, `publish` / `remove`, `==>`, `let` / `let post`, struct literals in specs, quantifiers later).
-- The AST (`lib/Move/AST.hs`) should keep predicates distinct from expressions, as `proof_variant_2.md` does, and support typing `Γ ⊢ φ : pred`.
-- The Move runtime mode must keep working on spec-annotated sources: there, spec blocks are ignored.
+**Parsed subset (done, 2026-11-12).** The user defined it as a grammar comment in `lib/Move/AST.hs` (section "Below is the grammar for the MSL"); that comment is the reference. In short:
+
+- `spec <function> { ... }` and `spec schema <Name><T..> { ... }` blocks, as top levels of scripts and modules (`TopLevelSpecBlock`).
+- Members: conditions `ensures` / `aborts_if` / `modifies <Exp>;`, schema variables `<Identifier> <TypeParams>? : <Type>;`, `include <Exp>;`, `let [post] <Identifier> = <Exp>;`, and `pragma ...;`, which is parsed and **dropped** (no AST node).
+- Spec expressions are ordinary expressions: `old(..)`, `global<T>(a)`, `exists<T>(a)`, `publish` / `remove` are parsed as function calls, and schemas in `include` as named struct literals. The only new operator is `==>` (`Implies` in `BinaryOpExpr`), with the lowest binary precedence and left-associative like every binary operator of the Move compiler (`a ==> b ==> c` is `(a ==> b) ==> c`).
+- Conditions (`SpecCondition`) are kept distinct from expressions, as `proof_variant_2.md` does.
+
+Decisions taken with the user while implementing it:
+
+- `modifies` was not in the first draft of the subset but every rosetta script uses it; added as a fourth condition kind (approved 2026-11-12).
+- Schema variables (`SpecVariable`) were added to the grammar comment by the user (2026-11-12), since every schema declares its parameters.
+- The MSL words are **reserved keywords** of the lexer (in the Move compiler only `spec` is; the others are contextual). Simpler, and no Move code in this repository or in rosetta-redo uses them as identifiers.
+- Not parsed: `assume` (dropped from the subset by the user, 2026-11-12), `requires`, quantifiers, `invariant`, spec blocks inside function bodies or loops, condition properties (`aborts_if [abort_code] ...`), `aborts_with`, `emits`, `apply`.
+
+Still to do (rest of step 2): the Move runtime mode must keep working on spec-annotated sources, ignoring the spec blocks. Until then the Aiken and TypeScript generators fail with an explicit error on a spec block or a `==>`.
 
 ### Transpilation passes
 
@@ -109,8 +120,8 @@ Each step is discussed with the user before coding. A major change caused by a p
 |---|---|---|
 | 0 | Notes: this file, `CLAUDE.md` / `AGENTS.md` pointers, off-chain marked suspended | Done (2026-11-10) |
 | 0.1 | Copy the spec-annotated Bet from rosetta-redo into `test/Bet/` (compiles and proves); temporary spec-less `test/BetNoSpec/` for the tests and the CLI | Done (2026-11-12) |
-| 1 | Agree the first MSL subset with the user, checked against the PhD notes | To do |
-| 2 | Lexer / Token / Parser + AST for spec blocks, schemas, predicates and spec expressions (subset only); Move runtime mode ignores spec blocks; `TranspilerSpec` back on `test/Bet/`, delete `test/BetNoSpec/` | To do |
+| 1 | Agree the first MSL subset with the user, checked against the PhD notes | Partly done: the parsed subset is fixed (grammar comment in `lib/Move/AST.hs`, 2026-11-12); its semantics are still open in the PhD notes |
+| 2 | Lexer / Token / Parser + AST for spec blocks, schemas, predicates and spec expressions (subset only); Move runtime mode ignores spec blocks; `TranspilerSpec` back on `test/Bet/`, delete `test/BetNoSpec/` | Partly done (2026-11-12): lexer, parser and AST, tested on the 7 rosetta scripts and `coin_proxy.move` (`LexerSpec`, `ParserSpec`). To do: the Move runtime mode ignores spec blocks, `TranspilerSpec` back on `test/Bet/`, delete `test/BetNoSpec/` |
 | 3 | CLI flag for the on-chain mode (default MSL), dispatch in `src/Main.hs` / `lib/Move/Transpiler.hs` | To do |
 | 4 | Design the MSL pipeline: AST and typing changes, reused passes, representation of `S_i` / `S_f` / `old` / ρ | To do |
 | 5 | MSL passes (`mslTranspiler`) with tests | To do |

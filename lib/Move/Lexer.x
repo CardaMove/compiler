@@ -75,6 +75,17 @@ tokens :-
   phantom                       { \_ _ -> TokenKeywordPhantom               }
   as                            { \_ _ -> TokenKeywordAs                    }
   move                          { \_ _ -> TokenKeywordMove                  }
+  -- Keywords: Move Specification Language (MSL)
+  -- Note: in the Move compiler only `spec` is reserved, the others are contextual identifiers.
+  -- Here they are all reserved, so they cannot be used as identifiers
+  spec                          { \_ _ -> TokenKeywordSpec                  }
+  schema                        { \_ _ -> TokenKeywordSchema                }
+  include                       { \_ _ -> TokenKeywordInclude               }
+  pragma                        { \_ _ -> TokenKeywordPragma                }
+  ensures                       { \_ _ -> TokenKeywordEnsures               }
+  aborts_if                     { \_ _ -> TokenKeywordAbortsIf              }
+  modifies                      { \_ _ -> TokenKeywordModifies              }
+  post                          { \_ _ -> TokenKeywordPost                  }
   -- in                            { \_ _ -> TokenKeywordIn                    }
   -- Operators
   \+                            { \_ _ -> TokenOperatorPlus                 }
@@ -83,6 +94,7 @@ tokens :-
   \/                            { \_ _ -> TokenOperatorDiv                  }
   \%                            { \_ _ -> TokenOperatorMod                  }
   \=\=                          { \_ _ -> TokenOperatorEq                   }
+  \=\=\>                        { \_ _ -> TokenOperatorImplies              } -- spec only
   \!\=                          { \_ _ -> TokenOperatorNeq                  }
   \<                            { \_ _ -> TokenOperatorLt                   }
   \<\=                          { \_ _ -> TokenOperatorLeq                  }

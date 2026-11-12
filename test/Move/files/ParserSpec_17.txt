@@ -1,0 +1,699 @@
+RModule (
+  Module {
+    moduleAddress = NamedAddress (Identifier "CoinProxyAddr"),
+    moduleIdentifier = Identifier "CoinProxy",
+    moduleTopLevels = [
+      TopLevelUse (
+        Use {
+          useAddress = NamedAddress (Identifier "aptos_framework"),
+          useIdentifier = Identifier "coin",
+          useAlias = Nothing,
+          useMembers = [
+            UseMember {useMemberIdentifier = Identifier "Coin", useMemberUseAlias = Nothing},
+            UseMember {useMemberIdentifier = Identifier "Self", useMemberUseAlias = Nothing}
+          ]
+        }
+      ),
+      TopLevelUse (
+        Use {
+          useAddress = NamedAddress (Identifier "std"),
+          useIdentifier = Identifier "signer",
+          useAlias = Nothing,
+          useMembers = [UseMember {useMemberIdentifier = Identifier "address_of", useMemberUseAlias = Nothing}]
+        }
+      ),
+      TopLevelFunction (
+        Function {
+          functionHasNativeModifier = False,
+          functionVisibilityModifier = Just VisibilityModifierPublic,
+          functionHasEntryModifier = False,
+          functionName = Identifier "withdraw",
+          functionTypeParameters = [
+            TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "CoinType", typeConstraints = []}
+          ],
+          functionParameters = [
+            Parameter {
+              parameterIdentifier = Identifier "s",
+              parameterType = TypeImmutableRef (TypeConstructor (LocalNameAccessChain (Identifier "signer")) []),
+              parameterUUID = Nothing
+            },
+            Parameter {
+              parameterIdentifier = Identifier "amount",
+              parameterType = TypeConstructor (LocalNameAccessChain (Identifier "u64")) [],
+              parameterUUID = Nothing
+            }
+          ],
+          functionReturnType = Just (
+            TypeConstructor (LocalNameAccessChain (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []]
+          ),
+          functionAcquires = [],
+          functionBody = Just (
+            Sequence {
+              sequenceUses = [],
+              sequenceItems = [],
+              sequenceEndExpr = Just (
+                PositionalStructExprOrFunctionCallExpr (
+                  PositionalStructExprOrFunctionCall {
+                    pseofcNameAccessChain = AliasedNameAccessChain (Identifier "coin") (Identifier "withdraw"),
+                    pseofcTypeArgs = [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []],
+                    pseofcFields = [
+                      NameAccessChainExpr (LocalNameAccessChain (Identifier "s")),
+                      NameAccessChainExpr (LocalNameAccessChain (Identifier "amount"))
+                    ]
+                  }
+                )
+              )
+            }
+          ),
+          functionUUID = Nothing
+        }
+      ),
+      TopLevelSpecBlock (
+        SpecBlock {
+          specBlockTarget = SpecBlockTargetFunction (Identifier "withdraw"),
+          specBlockMembers = [
+            SpecBlockMemberCondition (
+              SpecCondition {
+                specConditionKind = SpecConditionModifies,
+                specConditionExpr = PositionalStructExprOrFunctionCallExpr (
+                  PositionalStructExprOrFunctionCall {
+                    pseofcNameAccessChain = LocalNameAccessChain (Identifier "global"),
+                    pseofcTypeArgs = [
+                      TypeConstructor (AliasedNameAccessChain (Identifier "coin") (Identifier "CoinStore")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []]
+                    ],
+                    pseofcFields = [
+                      PositionalStructExprOrFunctionCallExpr (
+                        PositionalStructExprOrFunctionCall {
+                          pseofcNameAccessChain = LocalNameAccessChain (Identifier "address_of"),
+                          pseofcTypeArgs = [],
+                          pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "s"))]
+                        }
+                      )
+                    ]
+                  }
+                )
+              }
+            ),
+            SpecBlockMemberLet (
+              SpecLet {
+                specLetIsPost = False,
+                specLetIdentifier = Identifier "addr",
+                specLetExpr = PositionalStructExprOrFunctionCallExpr (
+                  PositionalStructExprOrFunctionCall {
+                    pseofcNameAccessChain = LocalNameAccessChain (Identifier "address_of"),
+                    pseofcTypeArgs = [],
+                    pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "s"))]
+                  }
+                )
+              }
+            ),
+            SpecBlockMemberLet (
+              SpecLet {
+                specLetIsPost = False,
+                specLetIdentifier = Identifier "pre_bal",
+                specLetExpr = DotOrIndexChainExpr (
+                  DotAccess {
+                    dotAccessLeft = DotOrIndexChainExpr (
+                      DotAccess {
+                        dotAccessLeft = PositionalStructExprOrFunctionCallExpr (
+                          PositionalStructExprOrFunctionCall {
+                            pseofcNameAccessChain = LocalNameAccessChain (Identifier "global"),
+                            pseofcTypeArgs = [
+                              TypeConstructor (AliasedNameAccessChain (Identifier "coin") (Identifier "CoinStore")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []]
+                            ],
+                            pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "addr"))]
+                          }
+                        ),
+                        dotAccessRight = Identifier "coin"
+                      }
+                    ),
+                    dotAccessRight = Identifier "value"
+                  }
+                )
+              }
+            ),
+            SpecBlockMemberLet (
+              SpecLet {
+                specLetIsPost = True,
+                specLetIdentifier = Identifier "post_bal",
+                specLetExpr = DotOrIndexChainExpr (
+                  DotAccess {
+                    dotAccessLeft = DotOrIndexChainExpr (
+                      DotAccess {
+                        dotAccessLeft = PositionalStructExprOrFunctionCallExpr (
+                          PositionalStructExprOrFunctionCall {
+                            pseofcNameAccessChain = LocalNameAccessChain (Identifier "global"),
+                            pseofcTypeArgs = [
+                              TypeConstructor (AliasedNameAccessChain (Identifier "coin") (Identifier "CoinStore")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []]
+                            ],
+                            pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "addr"))]
+                          }
+                        ),
+                        dotAccessRight = Identifier "coin"
+                      }
+                    ),
+                    dotAccessRight = Identifier "value"
+                  }
+                )
+              }
+            ),
+            SpecBlockMemberCondition (
+              SpecCondition {
+                specConditionKind = SpecConditionAbortsIf,
+                specConditionExpr = BinaryOpExprExpr (
+                  Lt (NameAccessChainExpr (LocalNameAccessChain (Identifier "pre_bal"))) (NameAccessChainExpr (LocalNameAccessChain (Identifier "amount")))
+                )
+              }
+            ),
+            SpecBlockMemberCondition (
+              SpecCondition {
+                specConditionKind = SpecConditionEnsures,
+                specConditionExpr = BinaryOpExprExpr (
+                  Eq (NameAccessChainExpr (LocalNameAccessChain (Identifier "post_bal"))) (
+                    BinaryOpExprExpr (
+                      Sub (NameAccessChainExpr (LocalNameAccessChain (Identifier "pre_bal"))) (NameAccessChainExpr (LocalNameAccessChain (Identifier "amount")))
+                    )
+                  )
+                )
+              }
+            ),
+            SpecBlockMemberCondition (
+              SpecCondition {
+                specConditionKind = SpecConditionEnsures,
+                specConditionExpr = BinaryOpExprExpr (
+                  Eq (
+                    DotOrIndexChainExpr (
+                      DotAccess {
+                        dotAccessLeft = NameAccessChainExpr (LocalNameAccessChain (Identifier "result")),
+                        dotAccessRight = Identifier "value"
+                      }
+                    )
+                  ) (NameAccessChainExpr (LocalNameAccessChain (Identifier "amount")))
+                )
+              }
+            )
+          ]
+        }
+      ),
+      TopLevelSpecBlock (
+        SpecBlock {
+          specBlockTarget = SpecBlockTargetSchema (Identifier "WithdrawSchema") [
+            TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "CoinType", typeConstraints = []}
+          ],
+          specBlockMembers = [
+            SpecBlockMemberVariable (
+              SpecVariable {
+                specVariableIdentifier = Identifier "s",
+                specVariableTypeParameters = [],
+                specVariableType = TypeImmutableRef (TypeConstructor (LocalNameAccessChain (Identifier "signer")) [])
+              }
+            ),
+            SpecBlockMemberVariable (
+              SpecVariable {
+                specVariableIdentifier = Identifier "amount",
+                specVariableTypeParameters = [],
+                specVariableType = TypeConstructor (LocalNameAccessChain (Identifier "u64")) []
+              }
+            ),
+            SpecBlockMemberLet (
+              SpecLet {
+                specLetIsPost = False,
+                specLetIdentifier = Identifier "addr",
+                specLetExpr = PositionalStructExprOrFunctionCallExpr (
+                  PositionalStructExprOrFunctionCall {
+                    pseofcNameAccessChain = LocalNameAccessChain (Identifier "address_of"),
+                    pseofcTypeArgs = [],
+                    pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "s"))]
+                  }
+                )
+              }
+            ),
+            SpecBlockMemberLet (
+              SpecLet {
+                specLetIsPost = False,
+                specLetIdentifier = Identifier "pre_bal",
+                specLetExpr = DotOrIndexChainExpr (
+                  DotAccess {
+                    dotAccessLeft = DotOrIndexChainExpr (
+                      DotAccess {
+                        dotAccessLeft = PositionalStructExprOrFunctionCallExpr (
+                          PositionalStructExprOrFunctionCall {
+                            pseofcNameAccessChain = LocalNameAccessChain (Identifier "global"),
+                            pseofcTypeArgs = [
+                              TypeConstructor (AliasedNameAccessChain (Identifier "coin") (Identifier "CoinStore")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []]
+                            ],
+                            pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "addr"))]
+                          }
+                        ),
+                        dotAccessRight = Identifier "coin"
+                      }
+                    ),
+                    dotAccessRight = Identifier "value"
+                  }
+                )
+              }
+            ),
+            SpecBlockMemberLet (
+              SpecLet {
+                specLetIsPost = True,
+                specLetIdentifier = Identifier "post_bal",
+                specLetExpr = DotOrIndexChainExpr (
+                  DotAccess {
+                    dotAccessLeft = DotOrIndexChainExpr (
+                      DotAccess {
+                        dotAccessLeft = PositionalStructExprOrFunctionCallExpr (
+                          PositionalStructExprOrFunctionCall {
+                            pseofcNameAccessChain = LocalNameAccessChain (Identifier "global"),
+                            pseofcTypeArgs = [
+                              TypeConstructor (AliasedNameAccessChain (Identifier "coin") (Identifier "CoinStore")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []]
+                            ],
+                            pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "addr"))]
+                          }
+                        ),
+                        dotAccessRight = Identifier "coin"
+                      }
+                    ),
+                    dotAccessRight = Identifier "value"
+                  }
+                )
+              }
+            ),
+            SpecBlockMemberCondition (
+              SpecCondition {
+                specConditionKind = SpecConditionAbortsIf,
+                specConditionExpr = BinaryOpExprExpr (
+                  Lt (NameAccessChainExpr (LocalNameAccessChain (Identifier "pre_bal"))) (NameAccessChainExpr (LocalNameAccessChain (Identifier "amount")))
+                )
+              }
+            ),
+            SpecBlockMemberCondition (
+              SpecCondition {
+                specConditionKind = SpecConditionEnsures,
+                specConditionExpr = BinaryOpExprExpr (
+                  Eq (NameAccessChainExpr (LocalNameAccessChain (Identifier "post_bal"))) (
+                    BinaryOpExprExpr (
+                      Sub (NameAccessChainExpr (LocalNameAccessChain (Identifier "pre_bal"))) (NameAccessChainExpr (LocalNameAccessChain (Identifier "amount")))
+                    )
+                  )
+                )
+              }
+            )
+          ]
+        }
+      ),
+      TopLevelFunction (
+        Function {
+          functionHasNativeModifier = False,
+          functionVisibilityModifier = Just VisibilityModifierPublic,
+          functionHasEntryModifier = False,
+          functionName = Identifier "merge",
+          functionTypeParameters = [
+            TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "CoinType", typeConstraints = []}
+          ],
+          functionParameters = [
+            Parameter {
+              parameterIdentifier = Identifier "dst_coin",
+              parameterType = TypeMutableRef (
+                TypeConstructor (LocalNameAccessChain (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []]
+              ),
+              parameterUUID = Nothing
+            },
+            Parameter {
+              parameterIdentifier = Identifier "source_coin",
+              parameterType = TypeConstructor (LocalNameAccessChain (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []],
+              parameterUUID = Nothing
+            }
+          ],
+          functionReturnType = Just (TypeTuple []),
+          functionAcquires = [],
+          functionBody = Just (
+            Sequence {
+              sequenceUses = [],
+              sequenceItems = [
+                SequenceItemExpr (
+                  PositionalStructExprOrFunctionCallExpr (
+                    PositionalStructExprOrFunctionCall {
+                      pseofcNameAccessChain = AliasedNameAccessChain (Identifier "coin") (Identifier "merge"),
+                      pseofcTypeArgs = [],
+                      pseofcFields = [
+                        NameAccessChainExpr (LocalNameAccessChain (Identifier "dst_coin")),
+                        NameAccessChainExpr (LocalNameAccessChain (Identifier "source_coin"))
+                      ]
+                    }
+                  )
+                )
+              ],
+              sequenceEndExpr = Nothing
+            }
+          ),
+          functionUUID = Nothing
+        }
+      ),
+      TopLevelSpecBlock (
+        SpecBlock {
+          specBlockTarget = SpecBlockTargetFunction (Identifier "merge"),
+          specBlockMembers = [
+            SpecBlockMemberCondition (
+              SpecCondition {specConditionKind = SpecConditionAbortsIf, specConditionExpr = ValueLiteral (Boolean False)}
+            ),
+            SpecBlockMemberCondition (
+              SpecCondition {
+                specConditionKind = SpecConditionEnsures,
+                specConditionExpr = BinaryOpExprExpr (
+                  Eq (
+                    DotOrIndexChainExpr (
+                      DotAccess {
+                        dotAccessLeft = NameAccessChainExpr (LocalNameAccessChain (Identifier "dst_coin")),
+                        dotAccessRight = Identifier "value"
+                      }
+                    )
+                  ) (
+                    BinaryOpExprExpr (
+                      Add (
+                        PositionalStructExprOrFunctionCallExpr (
+                          PositionalStructExprOrFunctionCall {
+                            pseofcNameAccessChain = LocalNameAccessChain (Identifier "old"),
+                            pseofcTypeArgs = [],
+                            pseofcFields = [
+                              DotOrIndexChainExpr (
+                                DotAccess {
+                                  dotAccessLeft = NameAccessChainExpr (LocalNameAccessChain (Identifier "dst_coin")),
+                                  dotAccessRight = Identifier "value"
+                                }
+                              )
+                            ]
+                          }
+                        )
+                      ) (
+                        DotOrIndexChainExpr (
+                          DotAccess {
+                            dotAccessLeft = NameAccessChainExpr (LocalNameAccessChain (Identifier "source_coin")),
+                            dotAccessRight = Identifier "value"
+                          }
+                        )
+                      )
+                    )
+                  )
+                )
+              }
+            )
+          ]
+        }
+      ),
+      TopLevelFunction (
+        Function {
+          functionHasNativeModifier = False,
+          functionVisibilityModifier = Just VisibilityModifierPublic,
+          functionHasEntryModifier = False,
+          functionName = Identifier "deposit",
+          functionTypeParameters = [
+            TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "CoinType", typeConstraints = []}
+          ],
+          functionParameters = [
+            Parameter {
+              parameterIdentifier = Identifier "account_addr",
+              parameterType = TypeConstructor (LocalNameAccessChain (Identifier "address")) [],
+              parameterUUID = Nothing
+            },
+            Parameter {
+              parameterIdentifier = Identifier "coin",
+              parameterType = TypeConstructor (LocalNameAccessChain (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []],
+              parameterUUID = Nothing
+            }
+          ],
+          functionReturnType = Just (TypeTuple []),
+          functionAcquires = [],
+          functionBody = Just (
+            Sequence {
+              sequenceUses = [],
+              sequenceItems = [
+                SequenceItemExpr (
+                  PositionalStructExprOrFunctionCallExpr (
+                    PositionalStructExprOrFunctionCall {
+                      pseofcNameAccessChain = AliasedNameAccessChain (Identifier "coin") (Identifier "deposit"),
+                      pseofcTypeArgs = [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []],
+                      pseofcFields = [
+                        NameAccessChainExpr (LocalNameAccessChain (Identifier "account_addr")),
+                        NameAccessChainExpr (LocalNameAccessChain (Identifier "coin"))
+                      ]
+                    }
+                  )
+                )
+              ],
+              sequenceEndExpr = Nothing
+            }
+          ),
+          functionUUID = Nothing
+        }
+      ),
+      TopLevelSpecBlock (
+        SpecBlock {
+          specBlockTarget = SpecBlockTargetFunction (Identifier "deposit"),
+          specBlockMembers = [
+            SpecBlockMemberCondition (
+              SpecCondition {
+                specConditionKind = SpecConditionModifies,
+                specConditionExpr = PositionalStructExprOrFunctionCallExpr (
+                  PositionalStructExprOrFunctionCall {
+                    pseofcNameAccessChain = LocalNameAccessChain (Identifier "global"),
+                    pseofcTypeArgs = [
+                      TypeConstructor (AliasedNameAccessChain (Identifier "coin") (Identifier "CoinStore")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []]
+                    ],
+                    pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "account_addr"))]
+                  }
+                )
+              }
+            ),
+            SpecBlockMemberLet (
+              SpecLet {
+                specLetIsPost = False,
+                specLetIdentifier = Identifier "pre_bal",
+                specLetExpr = DotOrIndexChainExpr (
+                  DotAccess {
+                    dotAccessLeft = DotOrIndexChainExpr (
+                      DotAccess {
+                        dotAccessLeft = PositionalStructExprOrFunctionCallExpr (
+                          PositionalStructExprOrFunctionCall {
+                            pseofcNameAccessChain = LocalNameAccessChain (Identifier "global"),
+                            pseofcTypeArgs = [
+                              TypeConstructor (AliasedNameAccessChain (Identifier "coin") (Identifier "CoinStore")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []]
+                            ],
+                            pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "account_addr"))]
+                          }
+                        ),
+                        dotAccessRight = Identifier "coin"
+                      }
+                    ),
+                    dotAccessRight = Identifier "value"
+                  }
+                )
+              }
+            ),
+            SpecBlockMemberLet (
+              SpecLet {
+                specLetIsPost = True,
+                specLetIdentifier = Identifier "post_bal",
+                specLetExpr = DotOrIndexChainExpr (
+                  DotAccess {
+                    dotAccessLeft = DotOrIndexChainExpr (
+                      DotAccess {
+                        dotAccessLeft = PositionalStructExprOrFunctionCallExpr (
+                          PositionalStructExprOrFunctionCall {
+                            pseofcNameAccessChain = LocalNameAccessChain (Identifier "global"),
+                            pseofcTypeArgs = [
+                              TypeConstructor (AliasedNameAccessChain (Identifier "coin") (Identifier "CoinStore")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []]
+                            ],
+                            pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "account_addr"))]
+                          }
+                        ),
+                        dotAccessRight = Identifier "coin"
+                      }
+                    ),
+                    dotAccessRight = Identifier "value"
+                  }
+                )
+              }
+            ),
+            SpecBlockMemberCondition (
+              SpecCondition {specConditionKind = SpecConditionAbortsIf, specConditionExpr = ValueLiteral (Boolean False)}
+            ),
+            SpecBlockMemberCondition (
+              SpecCondition {
+                specConditionKind = SpecConditionEnsures,
+                specConditionExpr = BinaryOpExprExpr (
+                  Eq (NameAccessChainExpr (LocalNameAccessChain (Identifier "post_bal"))) (
+                    BinaryOpExprExpr (
+                      Add (NameAccessChainExpr (LocalNameAccessChain (Identifier "pre_bal"))) (
+                        DotOrIndexChainExpr (
+                          DotAccess {
+                            dotAccessLeft = NameAccessChainExpr (LocalNameAccessChain (Identifier "coin")),
+                            dotAccessRight = Identifier "value"
+                          }
+                        )
+                      )
+                    )
+                  )
+                )
+              }
+            )
+          ]
+        }
+      ),
+      TopLevelSpecBlock (
+        SpecBlock {
+          specBlockTarget = SpecBlockTargetSchema (Identifier "DepositSchema") [
+            TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "CoinType", typeConstraints = []}
+          ],
+          specBlockMembers = [
+            SpecBlockMemberVariable (
+              SpecVariable {
+                specVariableIdentifier = Identifier "account_addr",
+                specVariableTypeParameters = [],
+                specVariableType = TypeConstructor (LocalNameAccessChain (Identifier "address")) []
+              }
+            ),
+            SpecBlockMemberVariable (
+              SpecVariable {
+                specVariableIdentifier = Identifier "coin",
+                specVariableTypeParameters = [],
+                specVariableType = TypeConstructor (LocalNameAccessChain (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []]
+              }
+            ),
+            SpecBlockMemberLet (
+              SpecLet {
+                specLetIsPost = False,
+                specLetIdentifier = Identifier "pre_bal",
+                specLetExpr = DotOrIndexChainExpr (
+                  DotAccess {
+                    dotAccessLeft = DotOrIndexChainExpr (
+                      DotAccess {
+                        dotAccessLeft = PositionalStructExprOrFunctionCallExpr (
+                          PositionalStructExprOrFunctionCall {
+                            pseofcNameAccessChain = LocalNameAccessChain (Identifier "global"),
+                            pseofcTypeArgs = [
+                              TypeConstructor (AliasedNameAccessChain (Identifier "coin") (Identifier "CoinStore")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []]
+                            ],
+                            pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "account_addr"))]
+                          }
+                        ),
+                        dotAccessRight = Identifier "coin"
+                      }
+                    ),
+                    dotAccessRight = Identifier "value"
+                  }
+                )
+              }
+            ),
+            SpecBlockMemberLet (
+              SpecLet {
+                specLetIsPost = True,
+                specLetIdentifier = Identifier "post_bal",
+                specLetExpr = DotOrIndexChainExpr (
+                  DotAccess {
+                    dotAccessLeft = DotOrIndexChainExpr (
+                      DotAccess {
+                        dotAccessLeft = PositionalStructExprOrFunctionCallExpr (
+                          PositionalStructExprOrFunctionCall {
+                            pseofcNameAccessChain = LocalNameAccessChain (Identifier "global"),
+                            pseofcTypeArgs = [
+                              TypeConstructor (AliasedNameAccessChain (Identifier "coin") (Identifier "CoinStore")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []]
+                            ],
+                            pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "account_addr"))]
+                          }
+                        ),
+                        dotAccessRight = Identifier "coin"
+                      }
+                    ),
+                    dotAccessRight = Identifier "value"
+                  }
+                )
+              }
+            ),
+            SpecBlockMemberCondition (
+              SpecCondition {
+                specConditionKind = SpecConditionEnsures,
+                specConditionExpr = BinaryOpExprExpr (
+                  Eq (NameAccessChainExpr (LocalNameAccessChain (Identifier "post_bal"))) (
+                    BinaryOpExprExpr (
+                      Add (NameAccessChainExpr (LocalNameAccessChain (Identifier "pre_bal"))) (
+                        DotOrIndexChainExpr (
+                          DotAccess {
+                            dotAccessLeft = NameAccessChainExpr (LocalNameAccessChain (Identifier "coin")),
+                            dotAccessRight = Identifier "value"
+                          }
+                        )
+                      )
+                    )
+                  )
+                )
+              }
+            )
+          ]
+        }
+      ),
+      TopLevelFunction (
+        Function {
+          functionHasNativeModifier = False,
+          functionVisibilityModifier = Just VisibilityModifierPublic,
+          functionHasEntryModifier = False,
+          functionName = Identifier "value",
+          functionTypeParameters = [
+            TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "CoinType", typeConstraints = []}
+          ],
+          functionParameters = [
+            Parameter {
+              parameterIdentifier = Identifier "coin",
+              parameterType = TypeImmutableRef (
+                TypeConstructor (LocalNameAccessChain (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []]
+              ),
+              parameterUUID = Nothing
+            }
+          ],
+          functionReturnType = Just (TypeConstructor (LocalNameAccessChain (Identifier "u64")) []),
+          functionAcquires = [],
+          functionBody = Just (
+            Sequence {
+              sequenceUses = [],
+              sequenceItems = [],
+              sequenceEndExpr = Just (
+                PositionalStructExprOrFunctionCallExpr (
+                  PositionalStructExprOrFunctionCall {
+                    pseofcNameAccessChain = AliasedNameAccessChain (Identifier "coin") (Identifier "value"),
+                    pseofcTypeArgs = [],
+                    pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "coin"))]
+                  }
+                )
+              )
+            }
+          ),
+          functionUUID = Nothing
+        }
+      ),
+      TopLevelSpecBlock (
+        SpecBlock {
+          specBlockTarget = SpecBlockTargetFunction (Identifier "value"),
+          specBlockMembers = [
+            SpecBlockMemberCondition (
+              SpecCondition {specConditionKind = SpecConditionAbortsIf, specConditionExpr = ValueLiteral (Boolean False)}
+            ),
+            SpecBlockMemberCondition (
+              SpecCondition {
+                specConditionKind = SpecConditionEnsures,
+                specConditionExpr = BinaryOpExprExpr (
+                  Eq (NameAccessChainExpr (LocalNameAccessChain (Identifier "result"))) (
+                    DotOrIndexChainExpr (
+                      DotAccess {
+                        dotAccessLeft = NameAccessChainExpr (LocalNameAccessChain (Identifier "coin")),
+                        dotAccessRight = Identifier "value"
+                      }
+                    )
+                  )
+                )
+              }
+            )
+          ]
+        }
+      )
+    ]
+  }
+)

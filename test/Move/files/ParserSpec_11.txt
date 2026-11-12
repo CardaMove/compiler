@@ -1,0 +1,270 @@
+RScript (
+  Script {
+    scriptTopLevels = [
+      TopLevelUse (
+        Use {
+          useAddress = NamedAddress (Identifier "rosetta_smart_contracts"),
+          useIdentifier = Identifier "auction",
+          useAlias = Nothing,
+          useMembers = [
+            UseMember {useMemberIdentifier = Identifier "Self", useMemberUseAlias = Nothing},
+            UseMember {useMemberIdentifier = Identifier "Auction", useMemberUseAlias = Nothing},
+            UseMember {useMemberIdentifier = Identifier "Bid", useMemberUseAlias = Nothing}
+          ]
+        }
+      ),
+      TopLevelUse (
+        Use {
+          useAddress = NamedAddress (Identifier "aptos_framework"),
+          useIdentifier = Identifier "coin",
+          useAlias = Nothing,
+          useMembers = [
+            UseMember {useMemberIdentifier = Identifier "Coin", useMemberUseAlias = Nothing},
+            UseMember {useMemberIdentifier = Identifier "CoinStore", useMemberUseAlias = Nothing}
+          ]
+        }
+      ),
+      TopLevelUse (
+        Use {
+          useAddress = NamedAddress (Identifier "CoinProxyAddr"),
+          useIdentifier = Identifier "CoinProxy",
+          useAlias = Nothing,
+          useMembers = []
+        }
+      ),
+      TopLevelUse (
+        Use {
+          useAddress = NamedAddress (Identifier "std"),
+          useIdentifier = Identifier "signer",
+          useAlias = Nothing,
+          useMembers = [UseMember {useMemberIdentifier = Identifier "address_of", useMemberUseAlias = Nothing}]
+        }
+      ),
+      TopLevelFunction (
+        Function {
+          functionHasNativeModifier = False,
+          functionVisibilityModifier = Nothing,
+          functionHasEntryModifier = False,
+          functionName = Identifier "auction_start",
+          functionTypeParameters = [
+            TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "CoinType", typeConstraints = []}
+          ],
+          functionParameters = [
+            Parameter {
+              parameterIdentifier = Identifier "auctioneer",
+              parameterType = TypeImmutableRef (TypeConstructor (LocalNameAccessChain (Identifier "signer")) []),
+              parameterUUID = Nothing
+            },
+            Parameter {
+              parameterIdentifier = Identifier "base_amount",
+              parameterType = TypeConstructor (LocalNameAccessChain (Identifier "u64")) [],
+              parameterUUID = Nothing
+            }
+          ],
+          functionReturnType = Nothing,
+          functionAcquires = [],
+          functionBody = Just (
+            Sequence {
+              sequenceUses = [],
+              sequenceItems = [],
+              sequenceEndExpr = Just (
+                PositionalStructExprOrFunctionCallExpr (
+                  PositionalStructExprOrFunctionCall {
+                    pseofcNameAccessChain = AliasedNameAccessChain (Identifier "auction") (Identifier "start"),
+                    pseofcTypeArgs = [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []],
+                    pseofcFields = [
+                      NameAccessChainExpr (LocalNameAccessChain (Identifier "auctioneer")),
+                      NameAccessChainExpr (LocalNameAccessChain (Identifier "base_amount"))
+                    ]
+                  }
+                )
+              )
+            }
+          ),
+          functionUUID = Nothing
+        }
+      ),
+      TopLevelSpecBlock (
+        SpecBlock {
+          specBlockTarget = SpecBlockTargetFunction (Identifier "auction_start"),
+          specBlockMembers = [
+            SpecBlockMemberLet (
+              SpecLet {
+                specLetIsPost = False,
+                specLetIdentifier = Identifier "auctioneer_addr",
+                specLetExpr = PositionalStructExprOrFunctionCallExpr (
+                  PositionalStructExprOrFunctionCall {
+                    pseofcNameAccessChain = LocalNameAccessChain (Identifier "address_of"),
+                    pseofcTypeArgs = [],
+                    pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "auctioneer"))]
+                  }
+                )
+              }
+            ),
+            SpecBlockMemberInclude (
+              NamedStructExprExpr (
+                NamedStructExpr {
+                  nseNameAccessChain = AliasedNameAccessChain (Identifier "CoinProxy") (Identifier "WithdrawSchema"),
+                  nseTypeArgs = [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []],
+                  nseFields = [
+                    NamedStructExprField {
+                      nsefIdentifier = Identifier "s",
+                      nsefExpr = Just (NameAccessChainExpr (LocalNameAccessChain (Identifier "auctioneer")))
+                    },
+                    NamedStructExprField {
+                      nsefIdentifier = Identifier "amount",
+                      nsefExpr = Just (NameAccessChainExpr (LocalNameAccessChain (Identifier "base_amount")))
+                    }
+                  ]
+                }
+              )
+            ),
+            SpecBlockMemberCondition (
+              SpecCondition {
+                specConditionKind = SpecConditionAbortsIf,
+                specConditionExpr = PositionalStructExprOrFunctionCallExpr (
+                  PositionalStructExprOrFunctionCall {
+                    pseofcNameAccessChain = LocalNameAccessChain (Identifier "exists"),
+                    pseofcTypeArgs = [TypeConstructor (LocalNameAccessChain (Identifier "Auction")) []],
+                    pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "auctioneer_addr"))]
+                  }
+                )
+              }
+            ),
+            SpecBlockMemberCondition (
+              SpecCondition {
+                specConditionKind = SpecConditionAbortsIf,
+                specConditionExpr = PositionalStructExprOrFunctionCallExpr (
+                  PositionalStructExprOrFunctionCall {
+                    pseofcNameAccessChain = LocalNameAccessChain (Identifier "exists"),
+                    pseofcTypeArgs = [
+                      TypeConstructor (LocalNameAccessChain (Identifier "Bid")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []]
+                    ],
+                    pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "auctioneer_addr"))]
+                  }
+                )
+              }
+            ),
+            SpecBlockMemberCondition (
+              SpecCondition {
+                specConditionKind = SpecConditionEnsures,
+                specConditionExpr = PositionalStructExprOrFunctionCallExpr (
+                  PositionalStructExprOrFunctionCall {
+                    pseofcNameAccessChain = LocalNameAccessChain (Identifier "publish"),
+                    pseofcTypeArgs = [TypeConstructor (LocalNameAccessChain (Identifier "Auction")) []],
+                    pseofcFields = [
+                      NameAccessChainExpr (LocalNameAccessChain (Identifier "auctioneer_addr")),
+                      NamedStructExprExpr (
+                        NamedStructExpr {
+                          nseNameAccessChain = LocalNameAccessChain (Identifier "Auction"),
+                          nseTypeArgs = [],
+                          nseFields = [
+                            NamedStructExprField {
+                              nsefIdentifier = Identifier "auctioneer",
+                              nsefExpr = Just (NameAccessChainExpr (LocalNameAccessChain (Identifier "auctioneer_addr")))
+                            },
+                            NamedStructExprField {
+                              nsefIdentifier = Identifier "top_bidder",
+                              nsefExpr = Just (NameAccessChainExpr (LocalNameAccessChain (Identifier "auctioneer_addr")))
+                            },
+                            NamedStructExprField {
+                              nsefIdentifier = Identifier "expired",
+                              nsefExpr = Just (ValueLiteral (Boolean False))
+                            }
+                          ]
+                        }
+                      )
+                    ]
+                  }
+                )
+              }
+            ),
+            SpecBlockMemberCondition (
+              SpecCondition {
+                specConditionKind = SpecConditionEnsures,
+                specConditionExpr = PositionalStructExprOrFunctionCallExpr (
+                  PositionalStructExprOrFunctionCall {
+                    pseofcNameAccessChain = LocalNameAccessChain (Identifier "publish"),
+                    pseofcTypeArgs = [
+                      TypeConstructor (LocalNameAccessChain (Identifier "Bid")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []]
+                    ],
+                    pseofcFields = [
+                      NameAccessChainExpr (LocalNameAccessChain (Identifier "auctioneer_addr")),
+                      NamedStructExprExpr (
+                        NamedStructExpr {
+                          nseNameAccessChain = LocalNameAccessChain (Identifier "Bid"),
+                          nseTypeArgs = [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []],
+                          nseFields = [
+                            NamedStructExprField {
+                              nsefIdentifier = Identifier "coins",
+                              nsefExpr = Just (
+                                NamedStructExprExpr (
+                                  NamedStructExpr {
+                                    nseNameAccessChain = LocalNameAccessChain (Identifier "Coin"),
+                                    nseTypeArgs = [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []],
+                                    nseFields = [
+                                      NamedStructExprField {
+                                        nsefIdentifier = Identifier "value",
+                                        nsefExpr = Just (
+                                          NameAccessChainExpr (LocalNameAccessChain (Identifier "base_amount"))
+                                        )
+                                      }
+                                    ]
+                                  }
+                                )
+                              )
+                            }
+                          ]
+                        }
+                      )
+                    ]
+                  }
+                )
+              }
+            ),
+            SpecBlockMemberCondition (
+              SpecCondition {
+                specConditionKind = SpecConditionModifies,
+                specConditionExpr = PositionalStructExprOrFunctionCallExpr (
+                  PositionalStructExprOrFunctionCall {
+                    pseofcNameAccessChain = LocalNameAccessChain (Identifier "global"),
+                    pseofcTypeArgs = [TypeConstructor (LocalNameAccessChain (Identifier "Auction")) []],
+                    pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "auctioneer_addr"))]
+                  }
+                )
+              }
+            ),
+            SpecBlockMemberCondition (
+              SpecCondition {
+                specConditionKind = SpecConditionModifies,
+                specConditionExpr = PositionalStructExprOrFunctionCallExpr (
+                  PositionalStructExprOrFunctionCall {
+                    pseofcNameAccessChain = LocalNameAccessChain (Identifier "global"),
+                    pseofcTypeArgs = [
+                      TypeConstructor (LocalNameAccessChain (Identifier "Bid")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []]
+                    ],
+                    pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "auctioneer_addr"))]
+                  }
+                )
+              }
+            ),
+            SpecBlockMemberCondition (
+              SpecCondition {
+                specConditionKind = SpecConditionModifies,
+                specConditionExpr = PositionalStructExprOrFunctionCallExpr (
+                  PositionalStructExprOrFunctionCall {
+                    pseofcNameAccessChain = LocalNameAccessChain (Identifier "global"),
+                    pseofcTypeArgs = [
+                      TypeConstructor (LocalNameAccessChain (Identifier "CoinStore")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []]
+                    ],
+                    pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "auctioneer_addr"))]
+                  }
+                )
+              }
+            )
+          ]
+        }
+      )
+    ]
+  }
+)

@@ -1,0 +1,492 @@
+RScript (
+  Script {
+    scriptTopLevels = [
+      TopLevelUse (
+        Use {
+          useAddress = NamedAddress (Identifier "BetAddr"),
+          useIdentifier = Identifier "Bet",
+          useAlias = Nothing,
+          useMembers = [
+            UseMember {useMemberIdentifier = Identifier "Round", useMemberUseAlias = Nothing},
+            UseMember {useMemberIdentifier = Identifier "Self", useMemberUseAlias = Nothing}
+          ]
+        }
+      ),
+      TopLevelUse (
+        Use {
+          useAddress = NamedAddress (Identifier "std"),
+          useIdentifier = Identifier "signer",
+          useAlias = Nothing,
+          useMembers = [UseMember {useMemberIdentifier = Identifier "address_of", useMemberUseAlias = Nothing}]
+        }
+      ),
+      TopLevelUse (
+        Use {
+          useAddress = NamedAddress (Identifier "CoinProxyAddr"),
+          useIdentifier = Identifier "CoinProxy",
+          useAlias = Nothing,
+          useMembers = []
+        }
+      ),
+      TopLevelUse (
+        Use {
+          useAddress = NamedAddress (Identifier "aptos_framework"),
+          useIdentifier = Identifier "coin",
+          useAlias = Nothing,
+          useMembers = [
+            UseMember {useMemberIdentifier = Identifier "Coin", useMemberUseAlias = Nothing},
+            UseMember {useMemberIdentifier = Identifier "CoinStore", useMemberUseAlias = Nothing}
+          ]
+        }
+      ),
+      TopLevelFunction (
+        Function {
+          functionHasNativeModifier = False,
+          functionVisibilityModifier = Nothing,
+          functionHasEntryModifier = False,
+          functionName = Identifier "win_round",
+          functionTypeParameters = [
+            TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "CoinType", typeConstraints = []}
+          ],
+          functionParameters = [
+            Parameter {
+              parameterIdentifier = Identifier "oracle",
+              parameterType = TypeImmutableRef (TypeConstructor (LocalNameAccessChain (Identifier "signer")) []),
+              parameterUUID = Nothing
+            },
+            Parameter {
+              parameterIdentifier = Identifier "winner",
+              parameterType = TypeConstructor (LocalNameAccessChain (Identifier "address")) [],
+              parameterUUID = Nothing
+            },
+            Parameter {
+              parameterIdentifier = Identifier "bookmaker",
+              parameterType = TypeConstructor (LocalNameAccessChain (Identifier "address")) [],
+              parameterUUID = Nothing
+            }
+          ],
+          functionReturnType = Nothing,
+          functionAcquires = [],
+          functionBody = Just (
+            Sequence {
+              sequenceUses = [],
+              sequenceItems = [],
+              sequenceEndExpr = Just (
+                PositionalStructExprOrFunctionCallExpr (
+                  PositionalStructExprOrFunctionCall {
+                    pseofcNameAccessChain = AliasedNameAccessChain (Identifier "Bet") (Identifier "win"),
+                    pseofcTypeArgs = [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []],
+                    pseofcFields = [
+                      NameAccessChainExpr (LocalNameAccessChain (Identifier "oracle")),
+                      NameAccessChainExpr (LocalNameAccessChain (Identifier "winner")),
+                      NameAccessChainExpr (LocalNameAccessChain (Identifier "bookmaker"))
+                    ]
+                  }
+                )
+              )
+            }
+          ),
+          functionUUID = Nothing
+        }
+      ),
+      TopLevelSpecBlock (
+        SpecBlock {
+          specBlockTarget = SpecBlockTargetFunction (Identifier "win_round"),
+          specBlockMembers = [
+            SpecBlockMemberCondition (
+              SpecCondition {
+                specConditionKind = SpecConditionAbortsIf,
+                specConditionExpr = UnaryOpExpr (
+                  Negation (
+                    PositionalStructExprOrFunctionCallExpr (
+                      PositionalStructExprOrFunctionCall {
+                        pseofcNameAccessChain = LocalNameAccessChain (Identifier "exists"),
+                        pseofcTypeArgs = [
+                          TypeConstructor (LocalNameAccessChain (Identifier "Round")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []]
+                        ],
+                        pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "bookmaker"))]
+                      }
+                    )
+                  )
+                )
+              }
+            ),
+            SpecBlockMemberLet (
+              SpecLet {
+                specLetIsPost = False,
+                specLetIdentifier = Identifier "round",
+                specLetExpr = PositionalStructExprOrFunctionCallExpr (
+                  PositionalStructExprOrFunctionCall {
+                    pseofcNameAccessChain = LocalNameAccessChain (Identifier "global"),
+                    pseofcTypeArgs = [
+                      TypeConstructor (LocalNameAccessChain (Identifier "Round")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []]
+                    ],
+                    pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "bookmaker"))]
+                  }
+                )
+              }
+            ),
+            SpecBlockMemberCondition (
+              SpecCondition {
+                specConditionKind = SpecConditionEnsures,
+                specConditionExpr = PositionalStructExprOrFunctionCallExpr (
+                  PositionalStructExprOrFunctionCall {
+                    pseofcNameAccessChain = LocalNameAccessChain (Identifier "remove"),
+                    pseofcTypeArgs = [
+                      TypeConstructor (LocalNameAccessChain (Identifier "Round")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []]
+                    ],
+                    pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "bookmaker"))]
+                  }
+                )
+              }
+            ),
+            SpecBlockMemberCondition (
+              SpecCondition {
+                specConditionKind = SpecConditionAbortsIf,
+                specConditionExpr = BinaryOpExprExpr (
+                  Neq (
+                    PositionalStructExprOrFunctionCallExpr (
+                      PositionalStructExprOrFunctionCall {
+                        pseofcNameAccessChain = LocalNameAccessChain (Identifier "address_of"),
+                        pseofcTypeArgs = [],
+                        pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "oracle"))]
+                      }
+                    )
+                  ) (
+                    DotOrIndexChainExpr (
+                      DotAccess {
+                        dotAccessLeft = NameAccessChainExpr (LocalNameAccessChain (Identifier "round")),
+                        dotAccessRight = Identifier "oracle"
+                      }
+                    )
+                  )
+                )
+              }
+            ),
+            SpecBlockMemberCondition (
+              SpecCondition {
+                specConditionKind = SpecConditionAbortsIf,
+                specConditionExpr = BinaryOpExprExpr (
+                  And (
+                    BinaryOpExprExpr (
+                      Neq (NameAccessChainExpr (LocalNameAccessChain (Identifier "winner"))) (
+                        DotOrIndexChainExpr (
+                          DotAccess {
+                            dotAccessLeft = NameAccessChainExpr (LocalNameAccessChain (Identifier "round")),
+                            dotAccessRight = Identifier "player1"
+                          }
+                        )
+                      )
+                    )
+                  ) (
+                    BinaryOpExprExpr (
+                      Neq (NameAccessChainExpr (LocalNameAccessChain (Identifier "winner"))) (
+                        DotOrIndexChainExpr (
+                          DotAccess {
+                            dotAccessLeft = NameAccessChainExpr (LocalNameAccessChain (Identifier "round")),
+                            dotAccessRight = Identifier "player2"
+                          }
+                        )
+                      )
+                    )
+                  )
+                )
+              }
+            ),
+            SpecBlockMemberCondition (
+              SpecCondition {
+                specConditionKind = SpecConditionAbortsIf,
+                specConditionExpr = UnaryOpExpr (
+                  Negation (
+                    PositionalStructExprOrFunctionCallExpr (
+                      PositionalStructExprOrFunctionCall {
+                        pseofcNameAccessChain = LocalNameAccessChain (Identifier "exists"),
+                        pseofcTypeArgs = [
+                          TypeConstructor (AliasedNameAccessChain (Identifier "Bet") (Identifier "Bet")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []]
+                        ],
+                        pseofcFields = [
+                          DotOrIndexChainExpr (
+                            DotAccess {
+                              dotAccessLeft = NameAccessChainExpr (LocalNameAccessChain (Identifier "round")),
+                              dotAccessRight = Identifier "player1"
+                            }
+                          )
+                        ]
+                      }
+                    )
+                  )
+                )
+              }
+            ),
+            SpecBlockMemberCondition (
+              SpecCondition {
+                specConditionKind = SpecConditionEnsures,
+                specConditionExpr = UnaryOpExpr (
+                  Negation (
+                    PositionalStructExprOrFunctionCallExpr (
+                      PositionalStructExprOrFunctionCall {
+                        pseofcNameAccessChain = LocalNameAccessChain (Identifier "exists"),
+                        pseofcTypeArgs = [
+                          TypeConstructor (AliasedNameAccessChain (Identifier "Bet") (Identifier "Bet")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []]
+                        ],
+                        pseofcFields = [
+                          DotOrIndexChainExpr (
+                            DotAccess {
+                              dotAccessLeft = NameAccessChainExpr (LocalNameAccessChain (Identifier "round")),
+                              dotAccessRight = Identifier "player1"
+                            }
+                          )
+                        ]
+                      }
+                    )
+                  )
+                )
+              }
+            ),
+            SpecBlockMemberCondition (
+              SpecCondition {
+                specConditionKind = SpecConditionAbortsIf,
+                specConditionExpr = UnaryOpExpr (
+                  Negation (
+                    PositionalStructExprOrFunctionCallExpr (
+                      PositionalStructExprOrFunctionCall {
+                        pseofcNameAccessChain = LocalNameAccessChain (Identifier "exists"),
+                        pseofcTypeArgs = [
+                          TypeConstructor (AliasedNameAccessChain (Identifier "Bet") (Identifier "Bet")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []]
+                        ],
+                        pseofcFields = [
+                          DotOrIndexChainExpr (
+                            DotAccess {
+                              dotAccessLeft = NameAccessChainExpr (LocalNameAccessChain (Identifier "round")),
+                              dotAccessRight = Identifier "player2"
+                            }
+                          )
+                        ]
+                      }
+                    )
+                  )
+                )
+              }
+            ),
+            SpecBlockMemberCondition (
+              SpecCondition {
+                specConditionKind = SpecConditionEnsures,
+                specConditionExpr = UnaryOpExpr (
+                  Negation (
+                    PositionalStructExprOrFunctionCallExpr (
+                      PositionalStructExprOrFunctionCall {
+                        pseofcNameAccessChain = LocalNameAccessChain (Identifier "exists"),
+                        pseofcTypeArgs = [
+                          TypeConstructor (AliasedNameAccessChain (Identifier "Bet") (Identifier "Bet")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []]
+                        ],
+                        pseofcFields = [
+                          DotOrIndexChainExpr (
+                            DotAccess {
+                              dotAccessLeft = NameAccessChainExpr (LocalNameAccessChain (Identifier "round")),
+                              dotAccessRight = Identifier "player2"
+                            }
+                          )
+                        ]
+                      }
+                    )
+                  )
+                )
+              }
+            ),
+            SpecBlockMemberCondition (
+              SpecCondition {
+                specConditionKind = SpecConditionAbortsIf,
+                specConditionExpr = BinaryOpExprExpr (
+                  Eq (
+                    DotOrIndexChainExpr (
+                      DotAccess {
+                        dotAccessLeft = NameAccessChainExpr (LocalNameAccessChain (Identifier "round")),
+                        dotAccessRight = Identifier "player1"
+                      }
+                    )
+                  ) (
+                    DotOrIndexChainExpr (
+                      DotAccess {
+                        dotAccessLeft = NameAccessChainExpr (LocalNameAccessChain (Identifier "round")),
+                        dotAccessRight = Identifier "player2"
+                      }
+                    )
+                  )
+                )
+              }
+            ),
+            SpecBlockMemberLet (
+              SpecLet {
+                specLetIsPost = False,
+                specLetIdentifier = Identifier "bet1_value",
+                specLetExpr = DotOrIndexChainExpr (
+                  DotAccess {
+                    dotAccessLeft = DotOrIndexChainExpr (
+                      DotAccess {
+                        dotAccessLeft = PositionalStructExprOrFunctionCallExpr (
+                          PositionalStructExprOrFunctionCall {
+                            pseofcNameAccessChain = LocalNameAccessChain (Identifier "global"),
+                            pseofcTypeArgs = [
+                              TypeConstructor (AliasedNameAccessChain (Identifier "Bet") (Identifier "Bet")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []]
+                            ],
+                            pseofcFields = [
+                              DotOrIndexChainExpr (
+                                DotAccess {
+                                  dotAccessLeft = NameAccessChainExpr (LocalNameAccessChain (Identifier "round")),
+                                  dotAccessRight = Identifier "player1"
+                                }
+                              )
+                            ]
+                          }
+                        ),
+                        dotAccessRight = Identifier "value"
+                      }
+                    ),
+                    dotAccessRight = Identifier "value"
+                  }
+                )
+              }
+            ),
+            SpecBlockMemberLet (
+              SpecLet {
+                specLetIsPost = False,
+                specLetIdentifier = Identifier "bet2_value",
+                specLetExpr = DotOrIndexChainExpr (
+                  DotAccess {
+                    dotAccessLeft = DotOrIndexChainExpr (
+                      DotAccess {
+                        dotAccessLeft = PositionalStructExprOrFunctionCallExpr (
+                          PositionalStructExprOrFunctionCall {
+                            pseofcNameAccessChain = LocalNameAccessChain (Identifier "global"),
+                            pseofcTypeArgs = [
+                              TypeConstructor (AliasedNameAccessChain (Identifier "Bet") (Identifier "Bet")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []]
+                            ],
+                            pseofcFields = [
+                              DotOrIndexChainExpr (
+                                DotAccess {
+                                  dotAccessLeft = NameAccessChainExpr (LocalNameAccessChain (Identifier "round")),
+                                  dotAccessRight = Identifier "player2"
+                                }
+                              )
+                            ]
+                          }
+                        ),
+                        dotAccessRight = Identifier "value"
+                      }
+                    ),
+                    dotAccessRight = Identifier "value"
+                  }
+                )
+              }
+            ),
+            SpecBlockMemberInclude (
+              NamedStructExprExpr (
+                NamedStructExpr {
+                  nseNameAccessChain = AliasedNameAccessChain (Identifier "CoinProxy") (Identifier "DepositSchema"),
+                  nseTypeArgs = [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []],
+                  nseFields = [
+                    NamedStructExprField {
+                      nsefIdentifier = Identifier "account_addr",
+                      nsefExpr = Just (NameAccessChainExpr (LocalNameAccessChain (Identifier "winner")))
+                    },
+                    NamedStructExprField {
+                      nsefIdentifier = Identifier "coin",
+                      nsefExpr = Just (
+                        NamedStructExprExpr (
+                          NamedStructExpr {
+                            nseNameAccessChain = LocalNameAccessChain (Identifier "Coin"),
+                            nseTypeArgs = [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []],
+                            nseFields = [
+                              NamedStructExprField {
+                                nsefIdentifier = Identifier "value",
+                                nsefExpr = Just (
+                                  BinaryOpExprExpr (
+                                    Add (NameAccessChainExpr (LocalNameAccessChain (Identifier "bet1_value"))) (NameAccessChainExpr (LocalNameAccessChain (Identifier "bet2_value")))
+                                  )
+                                )
+                              }
+                            ]
+                          }
+                        )
+                      )
+                    }
+                  ]
+                }
+              )
+            ),
+            SpecBlockMemberCondition (
+              SpecCondition {
+                specConditionKind = SpecConditionModifies,
+                specConditionExpr = PositionalStructExprOrFunctionCallExpr (
+                  PositionalStructExprOrFunctionCall {
+                    pseofcNameAccessChain = LocalNameAccessChain (Identifier "global"),
+                    pseofcTypeArgs = [
+                      TypeConstructor (LocalNameAccessChain (Identifier "Round")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []]
+                    ],
+                    pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "bookmaker"))]
+                  }
+                )
+              }
+            ),
+            SpecBlockMemberCondition (
+              SpecCondition {
+                specConditionKind = SpecConditionModifies,
+                specConditionExpr = PositionalStructExprOrFunctionCallExpr (
+                  PositionalStructExprOrFunctionCall {
+                    pseofcNameAccessChain = LocalNameAccessChain (Identifier "global"),
+                    pseofcTypeArgs = [
+                      TypeConstructor (AliasedNameAccessChain (Identifier "Bet") (Identifier "Bet")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []]
+                    ],
+                    pseofcFields = [
+                      DotOrIndexChainExpr (
+                        DotAccess {
+                          dotAccessLeft = NameAccessChainExpr (LocalNameAccessChain (Identifier "round")),
+                          dotAccessRight = Identifier "player1"
+                        }
+                      )
+                    ]
+                  }
+                )
+              }
+            ),
+            SpecBlockMemberCondition (
+              SpecCondition {
+                specConditionKind = SpecConditionModifies,
+                specConditionExpr = PositionalStructExprOrFunctionCallExpr (
+                  PositionalStructExprOrFunctionCall {
+                    pseofcNameAccessChain = LocalNameAccessChain (Identifier "global"),
+                    pseofcTypeArgs = [
+                      TypeConstructor (AliasedNameAccessChain (Identifier "Bet") (Identifier "Bet")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []]
+                    ],
+                    pseofcFields = [
+                      DotOrIndexChainExpr (
+                        DotAccess {
+                          dotAccessLeft = NameAccessChainExpr (LocalNameAccessChain (Identifier "round")),
+                          dotAccessRight = Identifier "player2"
+                        }
+                      )
+                    ]
+                  }
+                )
+              }
+            ),
+            SpecBlockMemberCondition (
+              SpecCondition {
+                specConditionKind = SpecConditionModifies,
+                specConditionExpr = PositionalStructExprOrFunctionCallExpr (
+                  PositionalStructExprOrFunctionCall {
+                    pseofcNameAccessChain = LocalNameAccessChain (Identifier "global"),
+                    pseofcTypeArgs = [
+                      TypeConstructor (LocalNameAccessChain (Identifier "CoinStore")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []]
+                    ],
+                    pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "winner"))]
+                  }
+                )
+              }
+            )
+          ]
+        }
+      )
+    ]
+  }
+)

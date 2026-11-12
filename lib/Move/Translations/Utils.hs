@@ -246,6 +246,7 @@ annotateBindingsWithUUID root = do
 -- Given any expression and the accumulated scopes, tries to infer the type of the expression
 inferExprType :: Expr -> [Scope] -> Type
 -- Binary expressions
+inferExprType (BinaryOpExprExpr (Implies _ _)) _ = booleanType
 inferExprType (BinaryOpExprExpr (Or _ _)) _ = booleanType
 inferExprType (BinaryOpExprExpr (And _ _)) _ = booleanType
 inferExprType (BinaryOpExprExpr (Eq _ _)) _ = booleanType

@@ -77,6 +77,21 @@ testScanOperators = describe "Scan operators" $ do
   -- See Parser.y about '>>' operator
   testScan ">>" [TokenOperatorGt,TokenOperatorGt]
 
+-- | Scans the `.move` fixture `test/Move/files/LexerSpec_<n>.move` and compares the result with
+-- the expected tokens in `test/Move/files/LexerSpec_<n + 1>.txt` (printed with `show`, loaded with `read`)
+testScanFile :: String -> Int -> SpecWith ()
+testScanFile description n = it description $ do
+  fromStr <- readFile $ "test/Move/files/LexerSpec_" ++ show n ++ ".move"
+  toStr <- readFile $ "test/Move/files/LexerSpec_" ++ show (n + 1) ++ ".txt"
+  scan fromStr `shouldBe` (read toStr :: [Token])
+
+-- Keywords and operators of the Move Specification Language (MSL).
+-- Fixtures are copied from rosetta-redo: `move/scripts/auction_bid.move` and `move/sources/coin_proxy/coin_proxy.move`
+testScanSpecBlocks :: Spec
+testScanSpecBlocks = describe "Scan MSL spec blocks" $ do
+  testScanFile "Auction auction_bid: spec, let, aborts_if, include, ensures, modifies, ==>" 0
+  testScanFile "CoinProxy module: doc comments, pragma, let post, spec schema" 2
+
 spec :: Spec
 spec = do
   testScanBraces
@@ -88,3 +103,4 @@ spec = do
   testScanBinding
   testScanIdentifier
   testScanOperators
+  testScanSpecBlocks

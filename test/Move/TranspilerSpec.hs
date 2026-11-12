@@ -8,8 +8,9 @@ import Test.Hspec
 import TypeScript.TypeScriptGenerator qualified as TypeScript
 
 -- | The Bet sample project without its spec blocks (`test/BetNoSpec/`).
--- `test/Bet/` holds the spec-annotated contract, which the parser cannot load until spec blocks are
--- parsed (doc/msl.md, step 2); switch back to `test/Bet/Move.toml` then and delete `test/BetNoSpec/`
+-- `test/Bet/` holds the spec-annotated contract: it parses, but the Move runtime pipeline does not ignore
+-- spec blocks (and the imports only they use) yet (doc/msl.md, step 2); switch back to `test/Bet/Move.toml`
+-- then and delete `test/BetNoSpec/`
 betNoSpecToml :: String
 betNoSpecToml = "test/BetNoSpec/Move.toml"
 
@@ -18,7 +19,7 @@ betNoSpecToml = "test/BetNoSpec/Move.toml"
 testOffchainTranspiler :: Spec
 testOffchainTranspiler = describe "Tests the function `offchainTranspiler`" $ do
   it "Transpiles the spec-annotated Bet project" $
-    pendingWith "spec blocks are not parsed yet (doc/msl.md, step 2): test/Bet/ does not load"
+    pendingWith "the Move runtime mode does not ignore spec blocks yet (doc/msl.md, step 2)"
 
   it "Transpiles the Bet project and generates TypeScript for every file" $ do
     (sourceFiles, addrAssoc) <- loadToml betNoSpecToml

@@ -55,6 +55,17 @@ data Token
   | TokenKeywordPhantom
   | TokenKeywordAs
   | TokenKeywordMove
+  | -- Keywords: Move Specification Language (MSL)
+    -- Note: in the Move compiler only `spec` is reserved, the others are contextual identifiers.
+    -- Here they are all reserved, so they cannot be used as identifiers
+    TokenKeywordSpec
+  | TokenKeywordSchema
+  | TokenKeywordInclude
+  | TokenKeywordPragma
+  | TokenKeywordEnsures
+  | TokenKeywordAbortsIf
+  | TokenKeywordModifies
+  | TokenKeywordPost
   | -- Operators
 
     -- | TokenKeywordIn
@@ -84,8 +95,10 @@ data Token
   | TokenOperatorDoubleDot
   | TokenOperatorAt
   | TokenOperatorShiftLeft
+  -- Logical implication `==>`, only allowed in specs
+  | TokenOperatorImplies
   -- See Parser.y about '>>' operator
   -- TokenOperatorShiftRight
   | -- Identifiers
     TokenIdentifier String
-  deriving (Eq, Show)
+  deriving (Eq, Show, Read)

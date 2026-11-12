@@ -57,6 +57,8 @@ generateTopLevel (TopLevelUse Use {useAddress, useIdentifier, useAlias, useMembe
           members' = intercalate (pack ", ") $ map (packIdent . useMemberIdentifier) useMembers
 -- Friends have no translations
 generateTopLevel (TopLevelFriend _) = empty
+-- Spec blocks are not handled yet by the Move runtime mode (doc/msl.md, step 2)
+generateTopLevel (TopLevelSpecBlock _) = error "Spec blocks are not supported yet in the Move runtime mode"
 generateTopLevel (TopLevelNamedStruct NamedStruct {namedStructIdentifier, namedStructTypeParameters, namedStructFields}) =
   [trimming|
     pub type $name$tParams {
@@ -224,6 +226,7 @@ packTypeParams tParams =
 -- Given any Move expression, generates its corresponding Aiken expression
 generateExpression :: Expr -> Text
 -- Binary operations
+generateExpression (BinaryOpExprExpr (Implies _ _)) = error "The implication operator `==>` is only allowed in specs"
 generateExpression (BinaryOpExprExpr (Or left right)) = binaryOpHelper left "||" right
 generateExpression (BinaryOpExprExpr (And left right)) = binaryOpHelper left "&&" right
 generateExpression (BinaryOpExprExpr (Eq left right)) = binaryOpHelper left "==" right

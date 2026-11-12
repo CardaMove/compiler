@@ -20,7 +20,7 @@ import Data.Data (Data, Typeable)
 --          <BinOpExp> <BinOp> <BinOpExp>
 --          | <UnaryExp>
 --      BinOp = (listed from lowest to highest precedence)
---          "==>"                                       spec only
+--          "==>"                                       spec only, supported by this compiler
 --          | "||"
 --          | "&&"
 --          | "==" | "!=" | '<' | ">" | "<=" | ">="
@@ -124,6 +124,38 @@ import Data.Data (Data, Typeable)
 --
 --
 
+-- Below is the grammar for the MSL extracted from the same repository linked above
+--
+-- Note: Here it is annotated only the subset of the MSL grammar relevant for this project
+
+--      SpecBlock =
+--          "spec" <SpecBlockTarget> "{" SpecBlockMember* "}"
+
+--      SpecBlockTarget =
+--          <Identifier>
+--          | "schema" <Identifier> <OptionalTypeParameters>            -- OptionalTypeParameters are defined in the Parser.y
+
+--      SpecBlockMember = 
+--          <SpecCondition>
+--          | <SpecVariable>
+--          | <SpecInclude>
+--          | <SpecPragma>
+--          | <SpecLet>
+
+--      SpecInclude = "include" <Exp> ";"                               -- Note: any expression is allowed here
+
+--      SpecPragma = "pragma" Comma<SpecPragmaProperty> ";"             -- Note: the pragma properties are not relevant for this compiler and can just be skipped
+
+--      SpecPragmaProperty = <Identifier> ( "=" ( <Value> | <NameAccessChain> ) )?
+
+--      SpecLet =  "let" [ "post" ] <Identifier> "=" <Exp> ";"
+
+--      SpecCondition =
+--          ("ensures" | "aborts_if" | "modifies") <Exp> ";"
+
+--      SpecVariable =
+--          <Identifier> <OptionalTypeParameters> ":" <Type> ";"
+
 -- | Root of the AST. Can either be a module or a script
 data Root
   = RModule Module
@@ -160,6 +192,75 @@ data TopLevel
   | TopLevelPositionalStruct PositionalStruct
   | TopLevelFunction Function
   | TopLevelConstant Constant
+  | TopLevelSpecBlock SpecBlock
+  deriving (Eq, Show, Read, Data, Typeable)
+
+-- | A spec block of the Move Specification Language (MSL)
+--
+-- Example: `spec my_func { let x = 1; ensures result == x; }`
+data SpecBlock
+  = SpecBlock
+  { specBlockTarget :: SpecBlockTarget,
+    -- Members are ordered from top to bottom. Pragmas are not kept
+    specBlockMembers :: [SpecBlockMember]
+  }
+  deriving (Eq, Show, Read, Data, Typeable)
+
+-- | What a spec block refers to: a function (by name) or a new schema declaration
+--
+-- Examples: `spec my_func {...}`, `spec schema MySchema<T> {...}`
+data SpecBlockTarget
+  = SpecBlockTargetFunction Identifier
+  | SpecBlockTargetSchema Identifier [TypeParameter]
+  deriving (Eq, Show, Read, Data, Typeable)
+
+-- | A member of a spec block. Pragmas are skipped by the parser, so they have no constructor
+data SpecBlockMember
+  = SpecBlockMemberCondition SpecCondition
+  | SpecBlockMemberVariable SpecVariable
+  | -- | `include <Exp>;`, where the expression is usually a schema (named struct syntax),
+    -- possibly behind an implication: `include p ==> MySchema { a: 1 };`
+    SpecBlockMemberInclude Expr
+  | SpecBlockMemberLet SpecLet
+  deriving (Eq, Show, Read, Data, Typeable)
+
+-- | A condition (predicate) of a spec block. Kept distinct from expressions
+--
+-- Example: `aborts_if !exists<R>(addr);`
+data SpecCondition
+  = SpecCondition
+  { specConditionKind :: SpecConditionKind,
+    specConditionExpr :: Expr
+  }
+  deriving (Eq, Show, Read, Data, Typeable)
+
+-- | The kinds of spec conditions supported
+data SpecConditionKind
+  = SpecConditionEnsures
+  | SpecConditionAbortsIf
+  | SpecConditionModifies
+  deriving (Eq, Show, Read, Data, Typeable)
+
+-- | A `let` in a spec block. A `let post` is evaluated in the post-state
+--
+-- Examples: `let a = global<R>(addr);`, `let post b = global<R>(addr);`
+data SpecLet
+  = SpecLet
+  { specLetIsPost :: Bool,
+    specLetIdentifier :: Identifier,
+    specLetExpr :: Expr
+  }
+  deriving (Eq, Show, Read, Data, Typeable)
+
+-- | A variable declaration in a spec block, used by schemas to declare their parameters
+--
+-- Example: `amount: u64;`
+data SpecVariable
+  = SpecVariable
+  { specVariableIdentifier :: Identifier,
+    specVariableTypeParameters :: [TypeParameter],
+    specVariableType :: Type
+  }
   deriving (Eq, Show, Read, Data, Typeable)
 
 -- | Using another module
@@ -359,7 +460,8 @@ data Expr
 
 -- | Binary operators involve two expressions
 data BinaryOpExpr
-  = Or Expr Expr
+  = Implies Expr Expr -- e1 ==> e2, spec only
+  | Or Expr Expr
   | And Expr Expr
   | Eq Expr Expr
   | Neq Expr Expr

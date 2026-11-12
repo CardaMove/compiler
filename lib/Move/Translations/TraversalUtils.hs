@@ -425,6 +425,8 @@ getRootIdentifiers root =
     -- Uses are ignored in this function since they do not contribute the the local scope of the module
     topLevelMap (TopLevelUse _) = []
     topLevelMap (TopLevelFriend _) = []
+    -- Spec blocks declare no names usable by the Move code
+    topLevelMap (TopLevelSpecBlock _) = []
     topLevelMap (TopLevelNamedStruct (NamedStruct {namedStructIdentifier, namedStructTypeParameters, namedStructFields})) = [(namedStructIdentifier, VariableAnnotations Nothing $ IntermediateTypeNamedStructDeclaration (map typeIdentifier namedStructTypeParameters) namedStructFields)]
     topLevelMap (TopLevelPositionalStruct (PositionalStruct {positionalStructIdentifier})) = [(positionalStructIdentifier, VariableAnnotations Nothing $ TypeConstructor (LocalNameAccessChain positionalStructIdentifier) [])]
     -- Functions have a type, which is the arrow type of all its parameter types and return type (or unit if not specified)

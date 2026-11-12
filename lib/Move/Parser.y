@@ -1,6 +1,7 @@
 {
 module Move.Parser (parse) where
 
+import Data.Maybe (catMaybes)
 import Move.AST
 import Move.Lexer
 import Move.Token
@@ -64,6 +65,15 @@ import Move.Token
   phantom   { TokenKeywordPhantom       }
   as        { TokenKeywordAs            }
   move      { TokenKeywordMove          }
+  -- Keywords: Move Specification Language (MSL)
+  spec      { TokenKeywordSpec          }
+  schema    { TokenKeywordSchema        }
+  include   { TokenKeywordInclude       }
+  pragma    { TokenKeywordPragma        }
+  ensures   { TokenKeywordEnsures       }
+  aborts_if { TokenKeywordAbortsIf      }
+  modifies  { TokenKeywordModifies      }
+  post      { TokenKeywordPost          }
   -- Operators
   '+'       { TokenOperatorPlus         }
   '-'       { TokenOperatorMinus        }
@@ -90,6 +100,7 @@ import Move.Token
   '..'      { TokenOperatorDoubleDot    }
   '@'       { TokenOperatorAt           }
   '<<'      { TokenOperatorShiftLeft    }
+  '==>'     { TokenOperatorImplies      }
   -- NOTE: The '>>' operator has been replaced by two '>' '>'
   -- This is to solve the problem in the case of nested type arguments such as `move_to<A<u64>>` that would otherwise fail
   -- This error has been encountered also in the Move compiler and has been solved similarly but at parsing time
@@ -134,6 +145,10 @@ import Move.Token
 -- Must occur prior of '*' and '&' (for some reasons, not working with custom precedence terms)
 %right return
 
+-- Implication (spec only) has the lowest precedence among binary operators.
+-- It is left-associative like every other binary operator of the Move compiler (precedence climbing):
+-- `a ==> b ==> c` is `(a ==> b) ==> c`
+%left '==>'
 %left '||'
 %left '&&'
 -- Note that is also present the ' <' token along with '<'.
@@ -203,6 +218,7 @@ TopLevel :: { TopLevel }
   | PositionalStruct         { TopLevelPositionalStruct $1 }
   | Function                 { TopLevelFunction $1 }
   | Constant                 { TopLevelConstant $1 }
+  | SpecBlock                { TopLevelSpecBlock $1 }
 
 
 -- Use
@@ -483,7 +499,8 @@ Expr :: { Expr }
 
 -- Binary operations (listed from lowest to highest precedence)
 BinaryOpExpr :: { Expr }
-  : BinaryOpExpr '||' BinaryOpExpr                       { BinaryOpExprExpr $ Or $1 $3 }
+  : BinaryOpExpr '==>' BinaryOpExpr                      { BinaryOpExprExpr $ Implies $1 $3 }  -- spec only
+  | BinaryOpExpr '||' BinaryOpExpr                       { BinaryOpExprExpr $ Or $1 $3 }
   | BinaryOpExpr '&&' BinaryOpExpr                       { BinaryOpExprExpr $ And $1 $3 }
   | BinaryOpExpr '==' BinaryOpExpr                       { BinaryOpExprExpr $ Eq $1 $3 }
   | BinaryOpExpr '!=' BinaryOpExpr                       { BinaryOpExprExpr $ Neq $1 $3 }
@@ -788,6 +805,54 @@ BindedField ::  { Maybe BindedField }
   : '..'                                              { Nothing }
   | Identifier                                        { Just $ BindedField { bindFieldIdentifier = $1, bindFieldInnerBind = Nothing, bindedFieldUUID = Nothing } }
   | Identifier ':' Bind                               { Just $ BindedField { bindFieldIdentifier = $1, bindFieldInnerBind = Just $3, bindedFieldUUID = Nothing } }
+
+
+-- Spec block of the Move Specification Language (MSL). See the MSL grammar comment on `AST.hs`
+SpecBlock :: { SpecBlock }
+  : spec SpecBlockTarget '{' SpecBlockMembers '}'      { SpecBlock { specBlockTarget = $2, specBlockMembers = $4 } }
+
+
+SpecBlockTarget :: { SpecBlockTarget }
+  : Identifier                                         { SpecBlockTargetFunction $1 }
+  | schema Identifier OptionalTypeParameters           { SpecBlockTargetSchema $2 $3 }
+
+
+-- Pragmas are parsed but not kept, so a member is optional
+SpecBlockMembers :: { [SpecBlockMember] }
+  : SpecBlockMembers_                                  { catMaybes $ reverse $1 } -- Reverse the left-recursive rule
+
+
+SpecBlockMembers_ :: { [Maybe SpecBlockMember] }
+  : {- empty -}                                        { [] }
+  | SpecBlockMembers_ SpecBlockMember                  { $2 : $1 }
+
+
+SpecBlockMember :: { Maybe SpecBlockMember }
+  : SpecConditionKind Expr ';'                         { Just $ SpecBlockMemberCondition $ SpecCondition { specConditionKind = $1, specConditionExpr = $2 } }
+  | Identifier OptionalTypeParameters ':' Type ';'     { Just $ SpecBlockMemberVariable $ SpecVariable { specVariableIdentifier = $1, specVariableTypeParameters = $2, specVariableType = $4 } }
+  | include Expr ';'                                   { Just $ SpecBlockMemberInclude $2 }
+  | let Identifier '=' Expr ';'                        { Just $ SpecBlockMemberLet $ SpecLet { specLetIsPost = False, specLetIdentifier = $2, specLetExpr = $4 } }
+  | let post Identifier '=' Expr ';'                   { Just $ SpecBlockMemberLet $ SpecLet { specLetIsPost = True, specLetIdentifier = $3, specLetExpr = $5 } }
+  -- Pragma properties are not relevant for this compiler, so the whole pragma is skipped
+  | pragma CommaSpecPragmaProperty ';'                 { Nothing }
+
+
+SpecConditionKind :: { SpecConditionKind }
+  : ensures                                            { SpecConditionEnsures }
+  | aborts_if                                          { SpecConditionAbortsIf }
+  | modifies                                           { SpecConditionModifies }
+
+
+-- Pragma properties are only checked syntactically, so they produce no value
+CommaSpecPragmaProperty :: { () }
+  : SpecPragmaProperty                                 { () }
+  | CommaSpecPragmaProperty ',' SpecPragmaProperty     { () }
+
+
+SpecPragmaProperty :: { () }
+  : Identifier                                         { () }
+  | Identifier '=' Value                               { () }
+  | Identifier '=' NameAccessChain                     { () }
 
 
 {

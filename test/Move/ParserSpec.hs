@@ -850,6 +850,27 @@ testParseTypeArguments = describe "Parse function with type arguments" $ do
     let tokens = scan fromModuleStr
     parse tokens `shouldBe` toModule
 
+-- | Parses the `.move` fixture `test/Move/files/ParserSpec_<n>.move` and compares the result with
+-- the expected AST in `test/Move/files/ParserSpec_<n + 1>.txt` (printed with `show`, loaded with `read`)
+testParseFile :: String -> Int -> SpecWith ()
+testParseFile description n = it description $ do
+  fromStr <- readFile $ "test/Move/files/ParserSpec_" ++ show n ++ ".move"
+  toStr <- readFile $ "test/Move/files/ParserSpec_" ++ show (n + 1) ++ ".txt"
+  parse (scan fromStr) `shouldBe` (read toStr :: Root)
+
+-- Spec blocks of the Move Specification Language (MSL).
+-- Fixtures are copied from rosetta-redo: `move/scripts/*.move` and `move/sources/coin_proxy/coin_proxy.move`
+testParseSpecBlocks :: Spec
+testParseSpecBlocks = describe "Parse MSL spec blocks" $ do
+  testParseFile "Bet init_round: ensures publish<..>, modifies" 2
+  testParseFile "Bet join_round: let, aborts_if, include of a schema, struct literals in specs" 4
+  testParseFile "Bet win_round: remove<..>, aborts_if after let, include with a computed coin" 6
+  testParseFile "Bet timeout_round: @address, old(..), spec functions of other modules" 8
+  testParseFile "Auction auction_start: include, publish of nested struct literals" 10
+  testParseFile "Auction auction_bid: implication ==> in include and ensures, whitespace before <" 12
+  testParseFile "Auction auction_end: field punning in a struct literal" 14
+  testParseFile "CoinProxy module: pragmas (skipped), let post, spec schema with variables" 16
+
 
 spec :: Spec
 spec = do
@@ -864,3 +885,4 @@ spec = do
   testParseFunctionWithBody
   testParseStructExpr
   testParseTypeArguments
+  testParseSpecBlocks

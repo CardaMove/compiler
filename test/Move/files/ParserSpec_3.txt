@@ -1,0 +1,154 @@
+RScript (
+  Script {
+    scriptTopLevels = [
+      TopLevelUse (
+        Use {
+          useAddress = NamedAddress (Identifier "std"),
+          useIdentifier = Identifier "signer",
+          useAlias = Nothing,
+          useMembers = [UseMember {useMemberIdentifier = Identifier "address_of", useMemberUseAlias = Nothing}]
+        }
+      ),
+      TopLevelUse (
+        Use {
+          useAddress = NamedAddress (Identifier "BetAddr"),
+          useIdentifier = Identifier "Bet",
+          useAlias = Nothing,
+          useMembers = []
+        }
+      ),
+      TopLevelFunction (
+        Function {
+          functionHasNativeModifier = False,
+          functionVisibilityModifier = Nothing,
+          functionHasEntryModifier = False,
+          functionName = Identifier "init_round",
+          functionTypeParameters = [
+            TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "CoinType", typeConstraints = []}
+          ],
+          functionParameters = [
+            Parameter {
+              parameterIdentifier = Identifier "bookmaker",
+              parameterType = TypeImmutableRef (TypeConstructor (LocalNameAccessChain (Identifier "signer")) []),
+              parameterUUID = Nothing
+            },
+            Parameter {
+              parameterIdentifier = Identifier "player1",
+              parameterType = TypeConstructor (LocalNameAccessChain (Identifier "address")) [],
+              parameterUUID = Nothing
+            },
+            Parameter {
+              parameterIdentifier = Identifier "player2",
+              parameterType = TypeConstructor (LocalNameAccessChain (Identifier "address")) [],
+              parameterUUID = Nothing
+            },
+            Parameter {
+              parameterIdentifier = Identifier "oracle",
+              parameterType = TypeConstructor (LocalNameAccessChain (Identifier "address")) [],
+              parameterUUID = Nothing
+            },
+            Parameter {
+              parameterIdentifier = Identifier "stake",
+              parameterType = TypeConstructor (LocalNameAccessChain (Identifier "u64")) [],
+              parameterUUID = Nothing
+            },
+            Parameter {
+              parameterIdentifier = Identifier "deadline",
+              parameterType = TypeConstructor (LocalNameAccessChain (Identifier "u64")) [],
+              parameterUUID = Nothing
+            }
+          ],
+          functionReturnType = Nothing,
+          functionAcquires = [],
+          functionBody = Just (
+            Sequence {
+              sequenceUses = [],
+              sequenceItems = [],
+              sequenceEndExpr = Just (
+                PositionalStructExprOrFunctionCallExpr (
+                  PositionalStructExprOrFunctionCall {
+                    pseofcNameAccessChain = AliasedNameAccessChain (Identifier "Bet") (Identifier "init"),
+                    pseofcTypeArgs = [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []],
+                    pseofcFields = [
+                      NameAccessChainExpr (LocalNameAccessChain (Identifier "bookmaker")),
+                      NameAccessChainExpr (LocalNameAccessChain (Identifier "player1")),
+                      NameAccessChainExpr (LocalNameAccessChain (Identifier "player2")),
+                      NameAccessChainExpr (LocalNameAccessChain (Identifier "oracle")),
+                      NameAccessChainExpr (LocalNameAccessChain (Identifier "stake")),
+                      NameAccessChainExpr (LocalNameAccessChain (Identifier "deadline"))
+                    ]
+                  }
+                )
+              )
+            }
+          ),
+          functionUUID = Nothing
+        }
+      ),
+      TopLevelSpecBlock (
+        SpecBlock {
+          specBlockTarget = SpecBlockTargetFunction (Identifier "init_round"),
+          specBlockMembers = [
+            SpecBlockMemberCondition (
+              SpecCondition {
+                specConditionKind = SpecConditionEnsures,
+                specConditionExpr = PositionalStructExprOrFunctionCallExpr (
+                  PositionalStructExprOrFunctionCall {
+                    pseofcNameAccessChain = LocalNameAccessChain (Identifier "publish"),
+                    pseofcTypeArgs = [
+                      TypeConstructor (AliasedNameAccessChain (Identifier "Bet") (Identifier "Round")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []]
+                    ],
+                    pseofcFields = [
+                      PositionalStructExprOrFunctionCallExpr (
+                        PositionalStructExprOrFunctionCall {
+                          pseofcNameAccessChain = LocalNameAccessChain (Identifier "address_of"),
+                          pseofcTypeArgs = [],
+                          pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "bookmaker"))]
+                        }
+                      ),
+                      NamedStructExprExpr (
+                        NamedStructExpr {
+                          nseNameAccessChain = AliasedNameAccessChain (Identifier "Bet") (Identifier "Round"),
+                          nseTypeArgs = [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []],
+                          nseFields = [
+                            NamedStructExprField {nsefIdentifier = Identifier "player1", nsefExpr = Nothing},
+                            NamedStructExprField {nsefIdentifier = Identifier "player2", nsefExpr = Nothing},
+                            NamedStructExprField {nsefIdentifier = Identifier "oracle", nsefExpr = Nothing},
+                            NamedStructExprField {nsefIdentifier = Identifier "stake", nsefExpr = Nothing},
+                            NamedStructExprField {nsefIdentifier = Identifier "deadline", nsefExpr = Nothing}
+                          ]
+                        }
+                      )
+                    ]
+                  }
+                )
+              }
+            ),
+            SpecBlockMemberCondition (
+              SpecCondition {
+                specConditionKind = SpecConditionModifies,
+                specConditionExpr = PositionalStructExprOrFunctionCallExpr (
+                  PositionalStructExprOrFunctionCall {
+                    pseofcNameAccessChain = LocalNameAccessChain (Identifier "global"),
+                    pseofcTypeArgs = [
+                      TypeConstructor (AliasedNameAccessChain (Identifier "Bet") (Identifier "Round")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []]
+                    ],
+                    pseofcFields = [
+                      PositionalStructExprOrFunctionCallExpr (
+                        PositionalStructExprOrFunctionCall {
+                          pseofcNameAccessChain = LocalNameAccessChain (Identifier "address_of"),
+                          pseofcTypeArgs = [],
+                          pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "bookmaker"))]
+                        }
+                      )
+                    ]
+                  }
+                )
+              }
+            )
+          ]
+        }
+      )
+    ]
+  }
+)
