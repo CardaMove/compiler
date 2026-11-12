@@ -16,8 +16,10 @@ The on-chain target is gaining a new **default mode** that compiles the Move Spe
 
 - **The PhD folder is the authority.** `C:\Users\rover\Documents\Universita\PhD` (read its `CLAUDE.md`, then `suggestions.md` and `proof_variant_2.md`) holds the formal-proof reasoning and the compilation choices; this repo follows them. Implementation details may deviate slightly, but **every deviation must be shown to the user and approved**, then recorded in `doc/msl.md`. What is open there stays open here.
 - **Never modify the PhD folder** unless the user explicitly allows it.
-- **Bet:** `../rosetta-redo/move/` holds the full spec-annotated Bet contract (`sources/bet/bet.move`, `scripts/*_round.move`, `sources/coin_proxy/coin_proxy.move`) and `docs/move-spec-constructs.md`. `test/Bet/` here may diverge slightly for implementation needs; divergences are listed in `doc/msl.md`.
+- **Bet:** `../rosetta-redo/move/` holds the full spec-annotated Bet contract (`sources/bet/bet.move`, `scripts/*_round.move`, `sources/coin_proxy/coin_proxy.move`); `../rosetta-redo/docs/move-spec-constructs.md` describes the MSL constructs. `test/Bet/` here is a hand-made copy of it (it compiles and proves: `aptos move compile` / `aptos move prove`, run from `test/Bet/`), which may diverge slightly for implementation needs; divergences are listed in `doc/msl.md`.
+- **`test/BetNoSpec/` is temporary:** the parser cannot load `test/Bet/` until spec blocks are parsed (step 2 of `doc/msl.md`), so the tests and the CLI examples use this spec-less copy. Keep it equal to `test/Bet/` minus the specs, and delete it when step 2 lands.
 - Support grows gradually from a small MSL subset; the compiler must stay contract-agnostic.
+- **Unexpected problems need approval.** If a problem the user has not anticipated (judge by whether the user wrote about it in the request, the docs or the PhD notes) calls for a major change (a workaround, a duplicated fixture, a change to the plan or to the scope of a step), stop, report the problem and the proposed change, and wait for the user's explicit approval before making it. Example: the parser could not load the spec-annotated `test/Bet/`, and the spec-less copy `test/BetNoSpec/` was created without asking first; it should have been proposed.
 
 ## Keeping documentation up to date (required)
 
@@ -42,8 +44,8 @@ Never add a `Co-Authored-By: Claude ...` trailer (or any other Claude attributio
 stack build                                   # also runs alex/happy on Lexer.x / Parser.y
 stack test                                    # full Hspec suite (hspec-discover via test/Spec.hs)
 stack test --ta '--match "alphaConvert"'      # run only tests whose description matches
-stack exec cardamove-cli -- "test\Bet\Move.toml"   # transpile a Move project into aiken_out/ and ts_out/
-stack exec cardamove-cli -- "test\Bet\Move.toml" --onchain-only    # or --offchain-only
+stack exec cardamove-cli -- "test\BetNoSpec\Move.toml"   # transpile a Move project into aiken_out/ and ts_out/
+stack exec cardamove-cli -- "test\BetNoSpec\Move.toml" --onchain-only    # or --offchain-only
 make check-libs                               # vendored runtime libs match resources/runtime-libs.lock.json
 make sync-libs                                # re-vendor them from ../rosetta-redo (or $ROSETTA_REDO)
 ```
@@ -90,6 +92,6 @@ The generated Aiken code relies on the helper libraries in [resources/aiken_temp
 - Specs mirror the library layout under [test/](test/); `hspec-discover` picks up any `*Spec.hs` exporting `spec`.
 - Translation tests usually parse a `.move` fixture, run the pass, and compare against a `.txt` fixture containing the expected AST printed with `show` (loaded via `read`). To create or update an expected fixture, `show` the new result and review the diff carefully rather than accepting it blindly.
 - Aiken generator tests compare against `.ak` fixtures in [test/Aiken/files/](test/Aiken/files/); TypeScript generator tests compare against `.ts` fixtures in [test/TypeScript/files/](test/TypeScript/files/) (top levels generated as if in a module, so imports start with `../../`).
-- [test/Move/TranspilerSpec.hs](test/Move/TranspilerSpec.hs) runs the whole shared + off-chain pipeline on [test/Bet/](test/Bet/), and checks that `alphaConvert` changed something and is idempotent on its output.
+- [test/Move/TranspilerSpec.hs](test/Move/TranspilerSpec.hs) runs the whole shared + off-chain pipeline on [test/BetNoSpec/](test/BetNoSpec/), and checks that `alphaConvert` changed something and is idempotent on its output. Its test on the spec-annotated [test/Bet/](test/Bet/) is pending until spec blocks are parsed.
 - The vendored TS library is tested with Vitest, outside `stack test` (see Commands).
-- [test/Bet/](test/Bet/) is a full sample Move project (modules + scripts) useful for manual end-to-end runs of the CLI.
+- [test/Bet/](test/Bet/) is the full spec-annotated Bet project (modules `Bet` and `CoinProxy` + scripts), copied from rosetta-redo; [test/BetNoSpec/](test/BetNoSpec/) is the same without specs, for manual end-to-end runs of the CLI until the parser handles specs.

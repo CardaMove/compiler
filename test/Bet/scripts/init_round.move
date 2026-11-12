@@ -1,4 +1,5 @@
 script {
+    use std::signer::{address_of};
     use BetAddr::Bet;
 
     // Initalizes a round
@@ -18,5 +19,16 @@ script {
             stake,
             deadline
         )
+    }
+
+    spec init_round {
+        ensures publish<Bet::Round<CoinType>>(
+            address_of(bookmaker),
+            Bet::Round<CoinType> { player1, player2, oracle, stake, deadline }
+        );
+
+        // Frame: only the new Round is written (`publish` already frames the other addresses).
+        //     Bet::init declares the same target.
+        modifies global<Bet::Round<CoinType>>(address_of(bookmaker));
     }
 }

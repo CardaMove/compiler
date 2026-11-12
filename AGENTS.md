@@ -100,7 +100,8 @@ Notes:
 
 - Never edit the vendored runtime libraries (`resources/aiken_template/lib/utils/`, `resources/typescript_template/src/lib/`): change them in rosetta-redo, then run `make sync-libs`.
 - Never modify the PhD folder (`C:\Users\rover\Documents\Universita\PhD`) unless the user explicitly allows it. Its decisions bind the MSL compilation; any deviation must be shown to the user, approved, and recorded in `doc/msl.md`.
-- The full spec-annotated Bet contract lives in `../rosetta-redo/move/`; `test/Bet/` may diverge slightly, and divergences are listed in `doc/msl.md`.
+- **MSL work: unexpected problems need approval.** If a problem the user has not anticipated (judge by whether the user wrote about it in the request, the docs or the PhD notes) calls for a major change (a workaround, a duplicated fixture, a change to the plan or to the scope of a step), stop, report the problem and the proposed change, and wait for the user's explicit approval before making it. Example: the parser could not load the spec-annotated `test/Bet/`, and the spec-less copy `test/BetNoSpec/` was created without asking first; it should have been proposed.
+- The full spec-annotated Bet contract lives in `../rosetta-redo/move/`; `test/Bet/` is a copy that may diverge slightly, and divergences are listed in `doc/msl.md`. The parser cannot load `test/Bet/` yet, so the tests use the temporary spec-less copy `test/BetNoSpec/` (delete it once spec blocks are parsed).
 
 - `lib/Move/Parser.hs` is generated and very large; edit `Parser.y` instead.
 - Whitespace-sensitive `<` token behavior is intentional (`TokenOperatorWhiteLt`).

@@ -139,6 +139,6 @@ These notes are inherited from rosetta-redo:
 | 1 | Docs and instructions (this file, doc-sync rule, pipeline rule update) | Done |
 | 2 | Layout: rename the Aiken template, vendor the TS library, sync/check script | Done. Vendored from rosetta-redo `833e791`. The only change to the Aiken utils is that `coin_utils.ak` is now `aiken fmt`-formatted, so `aiken_out/` is otherwise byte-identical. |
 | 3 | `offchainTranspiler`, `TypeScriptGenerator` / `EntryPointGenerator` skeletons, CLI flags, `ts_out/` writer | Done (skeleton, see [What the skeleton generates today](#what-the-skeleton-generates-today)) |
-| 4 | Tests: generator golden files, Bet end-to-end through `alphaConvert`, TS library tests | Done: `test/TypeScript/TypeScriptGeneratorSpec.hs` (6 cases), `test/Move/TranspilerSpec.hs` (2 cases, Bet). The TS library passes 136/136 in `resources/typescript_template/`. The `ts_out/` generated from Bet type-checks. |
+| 4 | Tests: generator golden files, Bet end-to-end through `alphaConvert`, TS library tests | Done: `test/TypeScript/TypeScriptGeneratorSpec.hs` (6 cases), `test/Move/TranspilerSpec.hs` (2 cases, Bet without specs: `test/BetNoSpec/`). The TS library passes 136/136 in `resources/typescript_template/`. The `ts_out/` generated from Bet type-checks. |
 | 5 | Full AST → TypeScript mapping, plus Aiken ↔ TS parity tests on generated code | To be designed |
 | 6 | Mesh transaction building: entry points, datum/redeemer, Yaci runner | To be designed |

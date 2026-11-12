@@ -5,6 +5,7 @@ authors = []
 
 [addresses]
 BetAddr = "0xBE7"
+CoinProxyAddr = "0xC0"
 
 [dev-addresses]
 

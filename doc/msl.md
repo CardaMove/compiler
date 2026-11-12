@@ -1,6 +1,6 @@
 # Compiling MSL specs into the validator
 
-Status: **in progress (planning).** No code has been changed yet. See [Progress](#progress).
+Status: **in progress (planning).** The spec-annotated Bet contract is in `test/Bet/`; no compiler code has been changed yet. See [Progress](#progress).
 
 ## Goal
 
@@ -46,17 +46,21 @@ Main points decided there that the implementation must respect (summary; the PhD
 
 - `sources/bet/bet.move` (`BetAddr::Bet`, with `spec` blocks holding the `modifies` frames);
 - `scripts/init_round.move`, `join_round.move`, `win_round.move`, `timeout_round.move` (the specs of the entry points);
-- `sources/coin_proxy/coin_proxy.move` (`CoinProxy`, with the `WithdrawSchema` / `DepositSchema` schemas);
-- `docs/move-spec-constructs.md`: the MSL constructs used and their behaviour as verified on the Move Prover (frames, `include`, undefined expressions). Read it before relying on a construct's semantics.
+- `sources/coin_proxy/coin_proxy.move` (`CoinProxy`, with the `WithdrawSchema` / `DepositSchema` schemas).
 
-`test/Bet/` in this repository **may diverge slightly** from that version for implementation needs. Every divergence is listed here.
+`../rosetta-redo/docs/move-spec-constructs.md` describes the MSL constructs used and their behaviour as verified on the Move Prover (frames, `include`, undefined expressions). Read it before relying on a construct's semantics.
+
+`test/Bet/` in this repository is a **copy** of that contract (copied 2026-11-12 from rosetta-redo commit `54f4968`; no automation, re-copy by hand if it changes there). It **may diverge slightly** for implementation needs. Every divergence is listed here.
 
 Current divergences:
 
-- `test/Bet/` has **no spec blocks** yet.
-- `test/Bet/sources/bet.move` calls `aptos_framework::coin` directly instead of going through `CoinProxy`, and there is no `coin_proxy.move`.
-  This divergence is meant to go away: the planned design routes all coin operations through an extended `CoinProxy` (see [Validator](#validator)).
-- `test/Bet/Move.toml` declares only `BetAddr = "0xBE7"` (rosetta-redo uses `BetAddr = 0x2`, `CoinProxyAddr = 0x4`, ...).
+- **Flat layout:** `sources/bet.move` and `sources/coin_proxy.move` instead of `sources/bet/bet.move` and `sources/coin_proxy/coin_proxy.move`, because the loader (`lib/Move/Loader/Loader.hs`) reads only the files directly inside `sources/` and `scripts/`. The four scripts are identical.
+- **Explicit type arguments:** `CoinProxy::withdraw<CoinType>(..)` in `Bet::join`, and `coin::merge<CoinType>(..)` / `coin::value<CoinType>(..)` in `CoinProxy`, where rosetta-redo lets Move infer them. The compiler does not infer type arguments (`inferExprType` fails with "Inferring type arguments is currently not supported").
+- **`Move.toml`:** package `Bet`, only `BetAddr = "0xBE7"` and `CoinProxyAddr = "0xC0"` (rosetta-redo: package `rosetta-aptos-redo`, `BetAddr = 0x2`, `CoinProxyAddr = 0x4`, plus the other contracts' addresses).
+
+`test/Bet/` compiles (`aptos move compile`) and proves (`aptos move prove`: 8 verification roots, about a minute). The warnings that the opaque `CoinProxy` calls have an incomplete `modifies` frame are expected: rosetta-redo prints them too. Run both commands from `test/Bet/`.
+
+**Temporary `test/BetNoSpec/`.** The compiler cannot parse `test/Bet/` yet (no `spec` token, see [Parser and AST](#parser-and-ast)). Until step 2, `test/BetNoSpec/` holds the same contract with the `spec` blocks removed, together with the comments about them and the `use` declarations only the specs needed (`aptos_framework::timestamp`, `CoinStore`, and `CoinProxy` / `address_of` in the scripts). It compiles with `aptos move compile`, transpiles in the Move runtime mode, and the generated `aiken_out/` passes `aiken check`. `test/Move/TranspilerSpec.hs` and the manual CLI runs use it; the test on `test/Bet/` is marked pending. When step 2 lands, point them back to `test/Bet/` and delete `test/BetNoSpec/`.
 
 ## Initial analysis
 
@@ -99,16 +103,17 @@ Deviations of this implementation from the PhD notes, each approved by the user.
 
 ## Progress
 
-Each step is discussed with the user before coding.
+Each step is discussed with the user before coding. A major change caused by a problem the user had not anticipated (one not mentioned in the request, these notes or the PhD notes) is reported to the user and needs their explicit approval before it is made.
 
 | Step | Description | State |
 |---|---|---|
 | 0 | Notes: this file, `CLAUDE.md` / `AGENTS.md` pointers, off-chain marked suspended | Done (2026-11-10) |
+| 0.1 | Copy the spec-annotated Bet from rosetta-redo into `test/Bet/` (compiles and proves); temporary spec-less `test/BetNoSpec/` for the tests and the CLI | Done (2026-11-12) |
 | 1 | Agree the first MSL subset with the user, checked against the PhD notes | To do |
-| 2 | Lexer / Token / Parser + AST for spec blocks, schemas, predicates and spec expressions (subset only); Move runtime mode ignores spec blocks | To do |
+| 2 | Lexer / Token / Parser + AST for spec blocks, schemas, predicates and spec expressions (subset only); Move runtime mode ignores spec blocks; `TranspilerSpec` back on `test/Bet/`, delete `test/BetNoSpec/` | To do |
 | 3 | CLI flag for the on-chain mode (default MSL), dispatch in `src/Main.hs` / `lib/Move/Transpiler.hs` | To do |
 | 4 | Design the MSL pipeline: AST and typing changes, reused passes, representation of `S_i` / `S_f` / `old` / ρ | To do |
 | 5 | MSL passes (`mslTranspiler`) with tests | To do |
 | 6 | Validator generation for MSL mode: new branch bodies, `wf` guard, `perm`-based frame check (helpers via rosetta-redo) | To do |
-| 7 | Bet end-to-end: specs from rosetta-redo into `test/Bet/` (divergences recorded), golden `.ak` fixtures, `aiken check` of `aiken_out/` | To do |
+| 7 | Bet end-to-end: golden `.ak` fixtures from `test/Bet/`, `aiken check` of `aiken_out/` | To do |
 | 8 | Extend the subset gradually (schemas / `include`, quantifiers, ...) | To do |

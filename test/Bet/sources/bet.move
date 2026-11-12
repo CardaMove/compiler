@@ -1,5 +1,6 @@
 module BetAddr::Bet {
-    use aptos_framework::coin::{Coin, Self};
+    use aptos_framework::coin::{Coin, CoinStore};
+    use CoinProxyAddr::CoinProxy;
     use std::signer::{address_of};
     use std::timestamp;
 
@@ -27,6 +28,13 @@ module BetAddr::Bet {
         move_to<Round<CoinType>>(bookmaker, bet);
     }
 
+    // The resources written by each function, so the callers' specs (scripts/*_round.move) can declare
+    // the same `modifies` frame: the prover requires a callee to declare modify targets for every type
+    // its caller restricts.
+    spec init {
+        modifies global<Round<CoinType>>(address_of(bookmaker));
+    }
+
     public fun join<CoinType>(partecipant: &signer, bookmaker: address): () acquires Round {
         let round = borrow_global_mut<Round<CoinType>>(bookmaker);
         assert!(
@@ -34,7 +42,7 @@ module BetAddr::Bet {
                 || address_of(partecipant) == round.player2,
             0
         );
-        let bet = coin::withdraw<CoinType>(partecipant, round.stake);
+        let bet = CoinProxy::withdraw<CoinType>(partecipant, round.stake);
 
         // TODO: NOTE: Decommenting this line causes the aiken compilation error
         // "reckless opaque cast" in the next line
@@ -42,6 +50,11 @@ module BetAddr::Bet {
         // assert!(coin::value<CoinType>(&bet) == round.stake, 0);
         let bet = Bet<CoinType> { value: bet };
         move_to<Bet<CoinType>>(partecipant, bet);
+    }
+
+    spec join {
+        modifies global<Bet<CoinType>>(address_of(partecipant));
+        modifies global<CoinStore<CoinType>>(address_of(partecipant));
     }
 
     public fun win<CoinType>(
@@ -57,8 +70,16 @@ module BetAddr::Bet {
         // TODO: Needed since currently it is not supported to POST a variable introduced by a destructuring
         let bet1 = bet1;
         let Bet<CoinType> { value: bet2 } = move_from<Bet<CoinType>>(player2);
-        coin::merge<CoinType>(&mut bet1, bet2);
-        coin::deposit<CoinType>(winner, bet1);
+        CoinProxy::merge<CoinType>(&mut bet1, bet2);
+        CoinProxy::deposit<CoinType>(winner, bet1);
+    }
+
+    spec win {
+        let round = global<Round<CoinType>>(bookmaker);
+        modifies global<Round<CoinType>>(bookmaker);
+        modifies global<Bet<CoinType>>(round.player1);
+        modifies global<Bet<CoinType>>(round.player2);
+        modifies global<CoinStore<CoinType>>(winner);
     }
 
     public fun timeout<CoinType>(bookmaker: address): () acquires Round, Bet {
@@ -68,7 +89,16 @@ module BetAddr::Bet {
 
         let Bet<CoinType> { value: bet1 } = move_from<Bet<CoinType>>(player1);
         let Bet<CoinType> { value: bet2 } = move_from<Bet<CoinType>>(player2);
-        coin::deposit<CoinType>(player1, bet1);
-        coin::deposit<CoinType>(player2, bet2);
+        CoinProxy::deposit<CoinType>(player1, bet1);
+        CoinProxy::deposit<CoinType>(player2, bet2);
+    }
+
+    spec timeout {
+        let round = global<Round<CoinType>>(bookmaker);
+        modifies global<Round<CoinType>>(bookmaker);
+        modifies global<Bet<CoinType>>(round.player1);
+        modifies global<Bet<CoinType>>(round.player2);
+        modifies global<CoinStore<CoinType>>(round.player1);
+        modifies global<CoinStore<CoinType>>(round.player2);
     }
 }
