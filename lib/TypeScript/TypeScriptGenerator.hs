@@ -80,8 +80,8 @@ generateTopLevelAt location (TopLevelUse Use {useAddress, useIdentifier, useAlia
         packMember UseMember {useMemberIdentifier, useMemberUseAlias = Just alias} = packIdent useMemberIdentifier <> pack " as " <> packIdent alias
 -- Friends have no translations
 generateTopLevelAt _ (TopLevelFriend _) = empty
--- Spec blocks are not handled yet by the off-chain generation
-generateTopLevelAt _ (TopLevelSpecBlock _) = error "Spec blocks are not supported yet in the off-chain generation"
+-- Spec blocks never reach the generator: the shared pipeline drops them first (`stripSpecBlocksInRoot`)
+generateTopLevelAt _ (TopLevelSpecBlock _) = error "Unexpected spec block: the shared pipeline should have dropped it"
 generateTopLevelAt _ (TopLevelNamedStruct NamedStruct {namedStructIdentifier, namedStructFields}) =
   generateStruct namedStructIdentifier [(packIdent fieldIdentifier, fieldType) | NamedField {fieldIdentifier, fieldType} <- namedStructFields]
 generateTopLevelAt _ (TopLevelPositionalStruct PositionalStruct {positionalStructIdentifier, positionalStructFields}) =

@@ -31,6 +31,8 @@ Use `--onchain-only` or `--offchain-only` to generate only one of them. Use `-h`
 $ stack exec cardamove-cli -- --help
 ```
 
+The sources may contain Move Specification Language (MSL) `spec` blocks: the current translation compiles the Move code only, so it ignores them (and the imports only they use). Compiling the specs into the validator is in progress, see [doc/msl.md](doc/msl.md).
+
 ## Off-chain TypeScript project
 Requires Node.js and npm. The generated project and its template share the same commands:
 

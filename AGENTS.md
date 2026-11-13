@@ -35,6 +35,7 @@ Inside `lib/Move/Translations/`, the active Haskell modules have the following r
 - `Loops.hs`: rewrites `loop` into `while(true)` and lifts while loops into recursive helper functions, including break/continue flag handling and free-variable reference threading.
 - `Polymorphism.hs`: removes parametric polymorphism for code generation by inserting upcasts/downcasts and replacing type parameters with an intermediate `Data`-like representation.
 - `PostProcessing.hs`: final AST cleanup before generation; injects required utils imports and resolves named addresses to numerical ones (except the utils address).
+- `SpecBlocks.hs`: first pass of the Move runtime pipeline (`transpiler`); drops the MSL spec blocks and the `use` declarations / members referenced only by them, so that spec-annotated sources compile as plain Move.
 - `Scopes.hs`: rewrites mutation/reference semantics into explicit CPS/local-scope operations, including assignment lowering, borrow/deref rewrites, and local-state insertion.
 - `TraversalUtils.hs`: provides post-order traversals with scope threading for expressions, bindings, sequences, and full roots; used by translation passes to apply scoped rewrites.
 - `TypeWitness.hs`: rewrites generic type parameters into explicit runtime type-witness parameters/arguments and normalizes type-parameter identifiers for Aiken compatibility.
@@ -101,7 +102,7 @@ Notes:
 - Never edit the vendored runtime libraries (`resources/aiken_template/lib/utils/`, `resources/typescript_template/src/lib/`): change them in rosetta-redo, then run `make sync-libs`.
 - Never modify the PhD folder (`C:\Users\rover\Documents\Universita\PhD`) unless the user explicitly allows it. Its decisions bind the MSL compilation; any deviation must be shown to the user, approved, and recorded in `doc/msl.md`.
 - **MSL work: unexpected problems need approval.** If a problem the user has not anticipated (judge by whether the user wrote about it in the request, the docs or the PhD notes) calls for a major change (a workaround, a duplicated fixture, a change to the plan or to the scope of a step), stop, report the problem and the proposed change, and wait for the user's explicit approval before making it. Example: the parser could not load the spec-annotated `test/Bet/`, and the spec-less copy `test/BetNoSpec/` was created without asking first; it should have been proposed.
-- The full spec-annotated Bet contract lives in `../rosetta-redo/move/`; `test/Bet/` is a copy that may diverge slightly, and divergences are listed in `doc/msl.md`. `test/Bet/` parses, but the Move runtime pipeline does not ignore spec blocks yet, so the tests use the temporary spec-less copy `test/BetNoSpec/` (delete it once the Move runtime mode ignores spec blocks).
+- The full spec-annotated Bet contract lives in `../rosetta-redo/move/`; `test/Bet/` is a copy that may diverge slightly, and divergences are listed in `doc/msl.md`. The Move runtime pipeline ignores its spec blocks (`SpecBlocks.hs`), so the tests and the CLI run on `test/Bet/` directly.
 
 - `lib/Move/Parser.hs` is generated and very large; edit `Parser.y` instead.
 - Whitespace-sensitive `<` token behavior is intentional (`TokenOperatorWhiteLt`).

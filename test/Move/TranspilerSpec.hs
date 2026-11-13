@@ -7,22 +7,17 @@ import Move.Transpiler (offchainTranspiler, transpiler)
 import Test.Hspec
 import TypeScript.TypeScriptGenerator qualified as TypeScript
 
--- | The Bet sample project without its spec blocks (`test/BetNoSpec/`).
--- `test/Bet/` holds the spec-annotated contract: it parses, but the Move runtime pipeline does not ignore
--- spec blocks (and the imports only they use) yet (doc/msl.md, step 2); switch back to `test/Bet/Move.toml`
--- then and delete `test/BetNoSpec/`
-betNoSpecToml :: String
-betNoSpecToml = "test/BetNoSpec/Move.toml"
+-- | The spec-annotated Bet sample project. The Move runtime pipeline drops its spec blocks
+-- (and the imports only they use) before translating it
+betToml :: String
+betToml = "test/Bet/Move.toml"
 
 -- | Runs the shared and the off-chain pipelines end to end on the Bet sample project.
 -- `alphaConvert` was otherwise only tested on freshly parsed ASTs, not on the output of `postProcessRoot`
 testOffchainTranspiler :: Spec
 testOffchainTranspiler = describe "Tests the function `offchainTranspiler`" $ do
-  it "Transpiles the spec-annotated Bet project" $
-    pendingWith "the Move runtime mode does not ignore spec blocks yet (doc/msl.md, step 2)"
-
-  it "Transpiles the Bet project and generates TypeScript for every file" $ do
-    (sourceFiles, addrAssoc) <- loadToml betNoSpecToml
+  it "Transpiles the spec-annotated Bet project and generates TypeScript for every file" $ do
+    (sourceFiles, addrAssoc) <- loadToml betToml
     offchain <- transpiler sourceFiles addrAssoc >>= offchainTranspiler
 
     map fst offchain `shouldBe` map fst sourceFiles
@@ -32,7 +27,7 @@ testOffchainTranspiler = describe "Tests the function `offchainTranspiler`" $ do
     sum (map Text.length tsTexts) `shouldSatisfy` (> 0)
 
   it "Leaves no same-scope rebinding in the Bet project (alphaConvert is idempotent on its output)" $ do
-    (sourceFiles, addrAssoc) <- loadToml betNoSpecToml
+    (sourceFiles, addrAssoc) <- loadToml betToml
     onchain <- transpiler sourceFiles addrAssoc
     offchainRoots <- map snd <$> offchainTranspiler onchain
 

@@ -9,14 +9,16 @@ import Move.Translations.Loops (translateWhilesToFunctionsInRoot)
 import Move.Translations.Polymorphism (translatePolymorphismInRoot)
 import Move.Translations.PostProcessing (postProcessRoot)
 import Move.Translations.Scopes (addLocalScopeInRoot, markVariablesForLocalScope)
+import Move.Translations.SpecBlocks (stripSpecBlocksInRoot)
 import Move.Translations.TypeWitness (translateTParamsInRoot)
 import Move.Translations.Utils (annotateBindingsWithUUID, tryIO)
 
 -- |
--- Given the whole parsed ASTs, translates them
+-- Given the whole parsed ASTs, translates them (Move runtime mode).
+-- The MSL spec blocks, and the imports only they use, are dropped first: this mode compiles the Move code only
 transpiler :: [(FilePath, Root)] -> AddrAssociations -> IO [(FilePath, Root)]
 transpiler files addrAssoc = do
-  let allRoots = map snd files
+  allRoots <- tryIO "stripSpecBlocksInRoot" $ evaluate $ map (stripSpecBlocksInRoot . snd) files
   -- FIXME: Also invoke `translateLoopsToWhile`
   step1NoLoops <- tryIO "translateWhilesToFunctionsInRoot" $ evaluate $ translateWhilesToFunctionsInRoot allRoots
 

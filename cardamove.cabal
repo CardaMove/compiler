@@ -34,6 +34,7 @@ library
       Move.Translations.Polymorphism
       Move.Translations.PostProcessing
       Move.Translations.Scopes
+      Move.Translations.SpecBlocks
       Move.Translations.TraversalUtils
       Move.Translations.TypeWitness
       Move.Translations.Utils
@@ -106,6 +107,7 @@ test-suite cardamove-test
       Move.Translations.PolymorphismSpec
       Move.Translations.PostProcessingSpec
       Move.Translations.ScopesSpec
+      Move.Translations.SpecBlocksSpec
       Move.Translations.TraversalUtilsSpec
       Move.Translations.TypeWitnessSpec
       Move.Translations.UtilsSpec

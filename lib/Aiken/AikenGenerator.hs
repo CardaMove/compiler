@@ -57,8 +57,8 @@ generateTopLevel (TopLevelUse Use {useAddress, useIdentifier, useAlias, useMembe
           members' = intercalate (pack ", ") $ map (packIdent . useMemberIdentifier) useMembers
 -- Friends have no translations
 generateTopLevel (TopLevelFriend _) = empty
--- Spec blocks are not handled yet by the Move runtime mode (doc/msl.md, step 2)
-generateTopLevel (TopLevelSpecBlock _) = error "Spec blocks are not supported yet in the Move runtime mode"
+-- Spec blocks never reach the generator: the Move runtime pipeline drops them first (`stripSpecBlocksInRoot`)
+generateTopLevel (TopLevelSpecBlock _) = error "Unexpected spec block: the Move runtime pipeline should have dropped it"
 generateTopLevel (TopLevelNamedStruct NamedStruct {namedStructIdentifier, namedStructTypeParameters, namedStructFields}) =
   [trimming|
     pub type $name$tParams {
