@@ -1,4 +1,4 @@
-module Move.Transpiler (transpiler, offchainTranspiler) where
+module Move.Transpiler (moveTranspiler, mslTranspiler, offchainTranspiler) where
 
 import Control.Exception (evaluate)
 import Control.Monad.State (evalState, runState)
@@ -14,10 +14,10 @@ import Move.Translations.TypeWitness (translateTParamsInRoot)
 import Move.Translations.Utils (annotateBindingsWithUUID, tryIO)
 
 -- |
--- Given the whole parsed ASTs, translates them (Move runtime mode).
--- The MSL spec blocks, and the imports only they use, are dropped first: this mode compiles the Move code only
-transpiler :: [(FilePath, Root)] -> AddrAssociations -> IO [(FilePath, Root)]
-transpiler files addrAssoc = do
+-- Given the whole parsed ASTs, translates them for the Move runtime on-chain mode and for the off-chain target.
+-- The MSL spec blocks, and the imports only they use, are dropped first: this chain compiles the Move code only
+moveTranspiler :: [(FilePath, Root)] -> AddrAssociations -> IO [(FilePath, Root)]
+moveTranspiler files addrAssoc = do
   allRoots <- tryIO "stripSpecBlocksInRoot" $ evaluate $ map (stripSpecBlocksInRoot . snd) files
   -- FIXME: Also invoke `translateLoopsToWhile`
   step1NoLoops <- tryIO "translateWhilesToFunctionsInRoot" $ evaluate $ translateWhilesToFunctionsInRoot allRoots
@@ -37,7 +37,14 @@ transpiler files addrAssoc = do
   tryIO "postProcessing" $ evaluate $ zipWith (\fileName root -> (fileName, postProcessRoot root addrAssoc)) allFileNames step5Polymorphism
 
 -- |
--- Given the output of `transpiler`, applies the passes needed only by the off-chain (TypeScript) target.
+-- Given the whole parsed ASTs, translates them for the MSL on-chain mode (the default `--onchain-mode` is `move`).
+-- Not implemented yet: it always fails. Its passes and its signature are designed in steps 4-5 of doc/msl.md
+mslTranspiler :: [(FilePath, Root)] -> AddrAssociations -> IO [(FilePath, Root)]
+mslTranspiler _files _addrAssoc =
+  ioError $ userError "The MSL on-chain mode is not implemented yet: use `--onchain-mode move`"
+
+-- |
+-- Given the output of `moveTranspiler`, applies the passes needed only by the off-chain (TypeScript) target.
 -- `alphaConvert` must run after `postProcessRoot`, since TypeScript can not rebind a variable in the same scope
 offchainTranspiler :: [(FilePath, Root)] -> IO [(FilePath, Root)]
 offchainTranspiler files = do

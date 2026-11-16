@@ -25,13 +25,13 @@ By default the compiler writes two projects in the current directory:
 - `aiken_out/`: the on-chain Aiken project (template from `resources/aiken_template/`);
 - `ts_out/`: the off-chain TypeScript project (template from `resources/typescript_template/`).
 
-Use `--onchain-only` or `--offchain-only` to generate only one of them. Use `-h` or `--help` to display the available CLI options:
+Use `--onchain-only` or `--offchain-only` to generate only one of them. `--onchain-mode msl|move` selects what the on-chain validator compiles: `move` (default) translates the Move code; `msl`, which will compile the MSL specs, is not implemented yet and fails. The flag is ignored with `--offchain-only`. Use `-h` or `--help` to display the available CLI options:
 
 ```shell
 $ stack exec cardamove-cli -- --help
 ```
 
-The sources may contain Move Specification Language (MSL) `spec` blocks: the current translation compiles the Move code only, so it ignores them (and the imports only they use). Compiling the specs into the validator is in progress, see [doc/msl.md](doc/msl.md).
+The sources may contain Move Specification Language (MSL) `spec` blocks: the `move` mode compiles the Move code only, so it ignores them (and the imports only they use). Compiling the specs into the validator is in progress, see [doc/msl.md](doc/msl.md).
 
 ## Off-chain TypeScript project
 Requires Node.js and npm. The generated project and its template share the same commands:

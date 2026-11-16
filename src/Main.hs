@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Main (main) where
@@ -11,8 +12,8 @@ import Data.List (find)
 import Data.Text (unpack)
 import Move.AST (Address (NamedAddress, NumericalAddress), Identifier (Identifier), Module (Module, moduleAddress, moduleIdentifier), Numerical (LiteralIntDec, LiteralIntHex), Root (RModule, RScript))
 import Move.Loader.Loader (loadToml)
-import Move.Transpiler (offchainTranspiler, transpiler)
-import Options.Applicative (Parser, ParserInfo, argument, execParser, flag', fullDesc, help, helper, info, long, metavar, progDesc, str)
+import Move.Transpiler (moveTranspiler, mslTranspiler, offchainTranspiler)
+import Options.Applicative (Parser, ParserInfo, ReadM, argument, eitherReader, execParser, flag', fullDesc, help, helper, info, long, metavar, option, progDesc, showDefaultWith, str, value)
 import System.Directory (copyFile, createDirectoryIfMissing, doesDirectoryExist, doesPathExist, listDirectory, removePathForcibly)
 import System.FilePath (normalise, takeBaseName, takeDirectory, (<.>), (</>))
 import TypeScript.EntryPointGenerator (generateEntryPoints)
@@ -20,11 +21,17 @@ import TypeScript.TypeScriptGenerator qualified as TypeScript
 
 data CommandLineOptions = CommandLineOptions
   { tomlPathOption :: FilePath,
-    targetOption :: Target
+    targetOption :: Target,
+    onchainModeOption :: OnchainMode
   }
 
 -- | Which code the compiler generates: on-chain (Aiken), off-chain (TypeScript) or both
 data Target = BothTargets | OnchainOnly | OffchainOnly
+  deriving (Eq)
+
+-- | What the on-chain validator compiles: the MSL specs of the entry functions, or their Move code
+-- (see doc/msl.md). Ignored when no on-chain code is generated (`--offchain-only`)
+data OnchainMode = MslMode | MoveMode
   deriving (Eq)
 
 -- | Parses the required path to the Move.toml file and the optional target selection.
@@ -38,6 +45,7 @@ commandLineOptionsParser =
           <> help "Path to the Move.toml file of the Move project to compile"
       )
     <*> targetParser
+    <*> onchainModeParser
 
 -- | Parses the mutually exclusive `--onchain-only` / `--offchain-only` switches.
 -- Without either of them, both the Aiken and the TypeScript projects are generated.
@@ -46,6 +54,33 @@ targetParser =
   flag' OnchainOnly (long "onchain-only" <> help "Only generate the on-chain Aiken project (aiken_out/)")
     <|> flag' OffchainOnly (long "offchain-only" <> help "Only generate the off-chain TypeScript project (ts_out/)")
     <|> pure BothTargets
+
+-- | Parses the optional `--onchain-mode msl|move` option, defaulting to the Move runtime mode.
+-- The MSL mode is accepted but not implemented yet, so selecting it makes the on-chain generation fail
+onchainModeParser :: Parser OnchainMode
+onchainModeParser =
+  option
+    readOnchainMode
+    ( long "onchain-mode"
+        <> metavar "msl|move"
+        <> value MoveMode
+        <> showDefaultWith showOnchainMode
+        <> help "What the on-chain validator compiles: the MSL specs (msl, not implemented yet) or the Move code (move). Ignored with --offchain-only"
+    )
+
+-- | Reads the value of `--onchain-mode`: `msl` or `move`.
+-- Any other value is rejected with an error listing the accepted ones
+readOnchainMode :: ReadM OnchainMode
+readOnchainMode = eitherReader $ \case
+  "msl" -> Right MslMode
+  "move" -> Right MoveMode
+  other -> Left $ "Unknown on-chain mode `" ++ other ++ "`: expected `msl` or `move`"
+
+-- | Prints an on-chain mode as written on the command line (inverse of `readOnchainMode`).
+-- Used to show the default value in the help output
+showOnchainMode :: OnchainMode -> String
+showOnchainMode MslMode = "msl"
+showOnchainMode MoveMode = "move"
 
 -- | Builds the CLI parser metadata for compiler usage and help output.
 -- The helper parser provides the standard -h and --help options.
@@ -71,20 +106,28 @@ main = do
 
   putStrLn $ "Loaded " ++ show nScripts ++ " scripts and " ++ show nModules ++ " modules"
 
-  transpiled <- transpiler sourceFiles addrAssoc
-
-  putStrLn "Transpiled"
-
   let target = targetOption options
-  when (target /= OffchainOnly) $ writeOnchain transpiled
+  let onchainMode = onchainModeOption options
+
+  -- The Move runtime chain feeds both the Move runtime on-chain mode and the off-chain target, and runs at most once
+  let needsMoveChain = target /= OnchainOnly || onchainMode == MoveMode
+  moveTranspiled <-
+    if needsMoveChain
+      then moveTranspiler sourceFiles addrAssoc <* putStrLn "Transpiled (Move runtime chain)"
+      else pure []
+
+  when (target /= OffchainOnly) $ case onchainMode of
+    MoveMode -> writeOnchain moveTranspiled
+    -- TODO (doc/msl.md, step 6): the MSL mode needs its own validator generation instead of `writeOnchain`
+    MslMode -> mslTranspiler sourceFiles addrAssoc >>= writeOnchain
   when (target /= OnchainOnly) $ do
-    offchain <- offchainTranspiler transpiled
+    offchain <- offchainTranspiler moveTranspiled
     putStrLn "Applied off-chain passes"
     writeOffchain offchain
 
 -- |
 -- Generates the Aiken project in `aiken_out/`: the template, one file per module/script and the validator.
--- The roots are the output of the shared `transpiler`
+-- The roots are the output of `moveTranspiler` (Move runtime mode)
 writeOnchain :: [(FilePath, Root)] -> IO ()
 writeOnchain transpiled = do
   -- TODO: force evaluation, throw error with file path that caused it

@@ -65,7 +65,7 @@ The off-chain code is produced by the same transformations as the on-chain code,
 
 ```
 loadToml
-  -> transpiler (shared):  translateWhilesToFunctionsInRoot -> annotateBindingsWithUUID -> translateTParamsInRoot
+  -> moveTranspiler (shared):  stripSpecBlocksInRoot -> translateWhilesToFunctionsInRoot -> annotateBindingsWithUUID -> translateTParamsInRoot
                            -> markVariablesForLocalScope + addLocalScopeInRoot -> translatePolymorphismInRoot -> postProcessRoot
        |-> Aiken.AikenGenerator / Aiken.ValidatorGenerator                         -> aiken_out/
        |-> offchainTranspiler:  alphaConvert
@@ -106,7 +106,7 @@ The on-chain and off-chain parts are kept apart. Each side is named after its ta
 
 ### Output
 
-The CLI generates both targets by default. `--onchain-only` / `--offchain-only` restrict it to one.
+The CLI generates both targets by default. `--onchain-only` / `--offchain-only` restrict it to one. The on-chain mode flag (`--onchain-mode`, see [msl.md](msl.md)) does not affect the off-chain target, which always uses `moveTranspiler`.
 
 - `aiken_out/`: copy of `resources/aiken_template/` plus the generated `.ak` files (unchanged).
 - `ts_out/`: copy of `resources/typescript_template/` (without `node_modules`, `bin`, `.env`, `wallets`) plus:

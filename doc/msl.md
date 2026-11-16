@@ -1,6 +1,6 @@
 # Compiling MSL specs into the validator
 
-Status: **in progress.** The spec-annotated Bet contract is in `test/Bet/`, the parser reads the MSL subset, and the Move runtime mode ignores the spec blocks. See [Progress](#progress).
+Status: **in progress.** The spec-annotated Bet contract is in `test/Bet/`, the parser reads the MSL subset, the Move runtime mode ignores the spec blocks, and `--onchain-mode msl|move` selects the on-chain mode (`msl` is still a stub). See [Progress](#progress).
 
 ## Goal
 
@@ -12,10 +12,12 @@ There will be two on-chain compilation modes:
 
 | Mode | What is compiled | Status |
 |---|---|---|
-| **MSL** (new default) | the `spec` blocks of the script entry functions | to be implemented, gradually |
-| **Move runtime** (legacy) | the Move code, as today | implemented; must keep working |
+| **MSL** (default once implemented) | the `spec` blocks of the script entry functions | to be implemented, gradually; `--onchain-mode msl` fails for now |
+| **Move runtime** (legacy; current default) | the Move code, as today | implemented; must keep working |
 
-A CLI flag will select the mode (planned: `--onchain-mode msl|move`, default `msl`; the name is not final). The off-chain target is not affected by it.
+The CLI flag `--onchain-mode msl|move` selects the mode (step 3, 2026-11-16). **The default is `move` for now** (user, 2026-11-16), so that the CLI keeps producing a working validator while the MSL mode is not implemented; it will switch to `msl` later. The off-chain target is not affected by the flag, which is ignored with `--offchain-only`.
+
+Dispatch (`src/Main.hs`): `moveTranspiler` (the former `transpiler`, renamed to tell it apart from the MSL chain) feeds the Move runtime on-chain mode and the off-chain target, and runs at most once. In MSL mode the on-chain side calls `mslTranspiler` (`lib/Move/Transpiler.hs`), a **stub that fails** with "not implemented yet". Its signature (same as `moveTranspiler`) and the fact that its result goes to `writeOnchain` are placeholders: steps 4-5 design the chain, step 6 its validator generation.
 
 **What stays the same:** the validator prelude (input/output assets, input/output state, timestamp), the `Redeemer` type built from the script entry functions' parameters, and the `when redeemer is` pattern match (`lib/Aiken/ValidatorGenerator.hs`). **What changes** is what each branch does after the match: in MSL mode it evaluates the compiled spec instead of running the transpiled function and comparing states.
 
@@ -82,7 +84,7 @@ Decisions taken with the user while implementing it:
 - The MSL words are **reserved keywords** of the lexer (in the Move compiler only `spec` is; the others are contextual). Simpler, and no Move code in this repository or in rosetta-redo uses them as identifiers.
 - Not parsed: `assume` (dropped from the subset by the user, 2026-11-12), `requires`, quantifiers, `invariant`, spec blocks inside function bodies or loops, condition properties (`aborts_if [abort_code] ...`), `aborts_with`, `emits`, `apply`.
 
-**Move runtime mode ignores specs (done, 2026-11-13).** The first pass of `transpiler` is `stripSpecBlocksInRoot` (`lib/Move/Translations/SpecBlocks.hs`). It drops every spec block and, per root, the `use` declarations and use members referenced by some spec block but by no other top level. Removing the spec blocks alone is not enough: imports such as `aptos_framework::timestamp` (only `timestamp::spec_now_seconds` in the specs) or the `CoinStore` member of `aptos_framework::coin` name modules and structs the compiler's built-in library stubs do not model, and import resolution fails on them. Imports that nothing references, and those the Move code uses, are kept, so spec-less sources are unaffected. On `test/Bet/` the result equals the former spec-less copy, except `use BetAddr::Bet::{Self}` in `win_round.move` where the copy had the equivalent `use BetAddr::Bet;`. The generators still fail with an explicit error on a spec block (now unreachable) or a `==>` (only valid in specs).
+**Move runtime mode ignores specs (done, 2026-11-13).** The first pass of `moveTranspiler` (then named `transpiler`) is `stripSpecBlocksInRoot` (`lib/Move/Translations/SpecBlocks.hs`). It drops every spec block and, per root, the `use` declarations and use members referenced by some spec block but by no other top level. Removing the spec blocks alone is not enough: imports such as `aptos_framework::timestamp` (only `timestamp::spec_now_seconds` in the specs) or the `CoinStore` member of `aptos_framework::coin` name modules and structs the compiler's built-in library stubs do not model, and import resolution fails on them. Imports that nothing references, and those the Move code uses, are kept, so spec-less sources are unaffected. On `test/Bet/` the result equals the former spec-less copy, except `use BetAddr::Bet::{Self}` in `win_round.move` where the copy had the equivalent `use BetAddr::Bet;`. The generators still fail with an explicit error on a spec block (now unreachable) or a `==>` (only valid in specs).
 
 ### Transpilation passes
 
@@ -122,7 +124,7 @@ Each step is discussed with the user before coding. A major change caused by a p
 | 0.1 | Copy the spec-annotated Bet from rosetta-redo into `test/Bet/` (compiles and proves); temporary spec-less `test/BetNoSpec/` for the tests and the CLI (deleted in step 2) | Done (2026-11-12) |
 | 1 | Agree the first MSL subset with the user, checked against the PhD notes | Partly done: the parsed subset is fixed (grammar comment in `lib/Move/AST.hs`, 2026-11-12); its semantics are still open in the PhD notes |
 | 2 | Lexer / Token / Parser + AST for spec blocks, schemas, predicates and spec expressions (subset only); Move runtime mode ignores spec blocks; `TranspilerSpec` back on `test/Bet/`, delete `test/BetNoSpec/` | Done (2026-11-13): lexer, parser and AST, tested on the 7 rosetta scripts and `coin_proxy.move` (`LexerSpec`, `ParserSpec`, 2026-11-12); `stripSpecBlocksInRoot` drops specs and spec-only imports in the Move runtime mode (`SpecBlocksSpec`); `TranspilerSpec` on `test/Bet/`; `test/BetNoSpec/` deleted |
-| 3 | CLI flag for the on-chain mode (default MSL), dispatch in `src/Main.hs` / `lib/Move/Transpiler.hs` | To do |
+| 3 | CLI flag for the on-chain mode, dispatch in `src/Main.hs` / `lib/Move/Transpiler.hs` | Done (2026-11-16): `--onchain-mode msl\|move`, default `move` for now; `transpiler` renamed `moveTranspiler`; `mslTranspiler` stub that fails (tested in `TranspilerSpec`) |
 | 4 | Design the MSL pipeline: AST and typing changes, reused passes, representation of `S_i` / `S_f` / `old` / ρ | To do |
 | 5 | MSL passes (`mslTranspiler`) with tests | To do |
 | 6 | Validator generation for MSL mode: new branch bodies, `wf` guard, `perm`-based frame check (helpers via rosetta-redo) | To do |

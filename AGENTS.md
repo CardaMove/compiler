@@ -7,7 +7,7 @@ This file gives AI coding agents project-specific instructions for working in th
 - CardaMove is a Haskell proof-of-concept transpiler from Move to Aiken (on-chain) and, work in progress, to TypeScript + MeshJS (off-chain).
 - The core flow is: parse Move source -> apply AST translations -> generate Aiken output (and, off-chain, apply `alphaConvert` -> generate TypeScript output).
 - The off-chain design, layout and progress live in `doc/offchain.md`. Off-chain work is currently suspended.
-- In progress: a new default on-chain mode that compiles MSL (Move Specification Language) specs into the validator; the current code translation stays as the "Move runtime" mode behind a flag. Design and progress live in `doc/msl.md`. The semantics and compilation choices are decided in the PhD folder (`C:\Users\rover\Documents\Universita\PhD`), which is the authority; deviations need the user's approval.
+- In progress: a new on-chain mode that compiles MSL (Move Specification Language) specs into the validator, meant to become the default; the current code translation stays as the "Move runtime" mode. The flag `--onchain-mode msl|move` selects it (default `move` for now; `msl` is a stub that fails). Design and progress live in `doc/msl.md`. The semantics and compilation choices are decided in the PhD folder (`C:\Users\rover\Documents\Universita\PhD`), which is the authority; deviations need the user's approval.
 
 ## Repository Map
 
@@ -15,14 +15,14 @@ This file gives AI coding agents project-specific instructions for working in th
 - `lib/Move/Lexer.x`: Alex lexer source.
 - `lib/Move/Parser.y`: Happy parser grammar source.
 - `lib/Move/Lexer.hs` and `lib/Move/Parser.hs`: generated files.
-- `lib/Move/Transpiler.hs`: ordered translation pipeline: the shared `transpiler` and the off-chain-only tail `offchainTranspiler` (`alphaConvert`).
+- `lib/Move/Transpiler.hs`: ordered translation pipelines: `moveTranspiler` (Move runtime chain, shared by the Move runtime on-chain mode and the off-chain target), the off-chain-only tail `offchainTranspiler` (`alphaConvert`), and `mslTranspiler` (MSL on-chain mode, a stub that fails until implemented).
 - `lib/Move/Translations/`: AST-to-AST transformation passes and shared traversal/type helpers.
 - `lib/Aiken/`: on-chain code generation (`AikenGenerator.hs`, `ValidatorGenerator.hs`).
 - `lib/TypeScript/`: off-chain code generation (`TypeScriptGenerator.hs`, `EntryPointGenerator.hs`), currently a skeleton (see `doc/offchain.md`).
 - `resources/aiken_template/`: Aiken project template copied into `aiken_out/`; `lib/utils/` is the vendored Aiken runtime library.
 - `resources/typescript_template/`: npm project template copied into `ts_out/`; `src/lib/` is the vendored TypeScript port of the runtime library (with its Vitest tests and parity fixtures).
 - `resources/runtime-libs.lock.json` and `scripts/sync-runtime-libs.js`: provenance and sync/drift check of the vendored libraries (source of truth: the rosetta-redo repository).
-- `src/Main.hs`: CLI entrypoint (`--onchain-only` / `--offchain-only`, default both).
+- `src/Main.hs`: CLI entrypoint (`--onchain-only` / `--offchain-only`, default both; `--onchain-mode msl|move`, default `move`, ignored with `--offchain-only`).
 - `test/`: Hspec test suite and fixture files.
 - `doc/offchain.md`: off-chain design, layout and progress.
 - `doc/msl.md`: MSL compilation design, Bet divergences from rosetta-redo, approved deviations from the PhD notes, and progress.
@@ -31,11 +31,11 @@ This file gives AI coding agents project-specific instructions for working in th
 
 Inside `lib/Move/Translations/`, the active Haskell modules have the following responsibilities:
 
-- `AlphaConversion.hs`: renames colliding local bindings within the same scope (appending `_i` with a traversal-wide counter) and updates their references; bindings shadowed in nested scopes and local-scope entries are left untouched. Not part of the shared `transpiler` pipeline: it is the off-chain-only final pass (TypeScript cannot rebind variables in the same scope) and must run after `postProcessRoot`.
+- `AlphaConversion.hs`: renames colliding local bindings within the same scope (appending `_i` with a traversal-wide counter) and updates their references; bindings shadowed in nested scopes and local-scope entries are left untouched. Not part of the shared `moveTranspiler` pipeline: it is the off-chain-only final pass (TypeScript cannot rebind variables in the same scope) and must run after `postProcessRoot`.
 - `Loops.hs`: rewrites `loop` into `while(true)` and lifts while loops into recursive helper functions, including break/continue flag handling and free-variable reference threading.
 - `Polymorphism.hs`: removes parametric polymorphism for code generation by inserting upcasts/downcasts and replacing type parameters with an intermediate `Data`-like representation.
 - `PostProcessing.hs`: final AST cleanup before generation; injects required utils imports and resolves named addresses to numerical ones (except the utils address).
-- `SpecBlocks.hs`: first pass of the Move runtime pipeline (`transpiler`); drops the MSL spec blocks and the `use` declarations / members referenced only by them, so that spec-annotated sources compile as plain Move.
+- `SpecBlocks.hs`: first pass of the Move runtime pipeline (`moveTranspiler`); drops the MSL spec blocks and the `use` declarations / members referenced only by them, so that spec-annotated sources compile as plain Move.
 - `Scopes.hs`: rewrites mutation/reference semantics into explicit CPS/local-scope operations, including assignment lowering, borrow/deref rewrites, and local-state insertion.
 - `TraversalUtils.hs`: provides post-order traversals with scope threading for expressions, bindings, sequences, and full roots; used by translation passes to apply scoped rewrites.
 - `TypeWitness.hs`: rewrites generic type parameters into explicit runtime type-witness parameters/arguments and normalizes type-parameter identifiers for Aiken compatibility.
@@ -78,7 +78,7 @@ Notes:
 
 - Preserve semantic ordering in `lib/Move/Transpiler.hs` unless a task explicitly requires reordering.
 - The UUID/state threading across translation passes is intentional; avoid resetting or skipping state values.
-- ~~Keep post-processing (`postProcessRoot`) at the end of the pipeline.~~ **Deprecated.** `postProcessRoot` ends the *shared* pipeline (`transpiler`); target-specific passes run after it. In particular, the off-chain `alphaConvert` must run after `postProcessRoot` for transpilation to be correct.
+- ~~Keep post-processing (`postProcessRoot`) at the end of the pipeline.~~ **Deprecated.** `postProcessRoot` ends the *shared* pipeline (`moveTranspiler`); target-specific passes run after it. In particular, the off-chain `alphaConvert` must run after `postProcessRoot` for transpilation to be correct.
 
 ## Test Conventions
 
