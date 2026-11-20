@@ -1,5 +1,6 @@
 module Move.Translations.TraversalUtilsSpec (spec) where
 
+import Control.Exception (evaluate)
 import Data.Map qualified as Map
 import Move.AST
 import Move.Lexer (scan)
@@ -93,19 +94,20 @@ testTraverseSpecBlocks = describe "Tests the traversal of spec blocks in `traver
 
     (traversedModule, finalState) `shouldBe` (toModule, 11 :: Integer)
 
-  it "Passes to the spec member mapper a fresh local scope with the previously declared spec variables and lets" $ do
+  it "Passes to the spec member mapper a fresh local scope with the function parameters and the previously declared spec variables and lets" $ do
     moduleStr <- readFile "test/Move/Translations/files/TraversalUtilsSpec_3.move"
 
     let module' = parse $ scan moduleStr
         u64Type = TypeConstructor (LocalNameAccessChain $ Identifier "u64") []
         local name annotType = (LocalNameAccessChain $ Identifier name, VariableAnnotations Nothing annotType)
+        params = [local "a" u64Type, local "b" u64Type]
         -- The content of the local scope seen by each spec member, in order
         expectedLocalScopes =
-          [ -- spec add
-            [],
-            [local "one" numericType],
-            [local "one" numericType, local "two" numericType],
-            [local "one" numericType, local "two" numericType],
+          [ -- spec add: starts with the parameters of `add`
+            params,
+            params ++ [local "one" numericType],
+            params ++ [local "one" numericType, local "two" numericType],
+            params ++ [local "one" numericType, local "two" numericType],
             -- spec schema AddSchema: the variables of `spec add` are not visible
             [],
             [local "x" u64Type],
@@ -137,6 +139,29 @@ testTraverseSpecBlocks = describe "Tests the traversal of spec blocks in `traver
 
     -- `let z = x + 3;`, `include OtherSchema { v: z };`, `ensures z == x + 3;`
     resolved `shouldBe` [("x", u64Annot), ("z", numericAnnot), ("z", numericAnnot), ("x", u64Annot)]
+
+  it "Resolves the parameters of the target function in the expressions of a function spec block" $ do
+    moduleStr <- readFile "test/Move/Translations/files/TraversalUtilsSpec_3.move"
+
+    let module' = parse $ scan moduleStr
+        -- Collects the annotations of each reference to `a` and `b`; the ones in the body of `add` come first
+        (_, resolved) = traverseRootPostOrder exprMapper traversalIdentity traversalIdentity module' [] []
+          where
+            exprMapper expr@(NameAccessChainExpr nac@(LocalNameAccessChain (Identifier name))) scopes state
+              | name `elem` ["a", "b"] = (expr, state ++ [(name, getNacFromScopes nac scopes)])
+            exprMapper expr _ state = (expr, state)
+        u64Annot = VariableAnnotations Nothing $ TypeConstructor (LocalNameAccessChain $ Identifier "u64") []
+
+    -- `a + b + 1` in the body, then `ensures result == a + b + one;` in `spec add`
+    resolved `shouldBe` [("a", u64Annot), ("b", u64Annot), ("a", u64Annot), ("b", u64Annot)]
+
+  it "Throws an error when the target function of a spec block is not declared in the module" $ do
+    moduleStr <- readFile "test/Move/Translations/files/TraversalUtilsSpec_5.move"
+
+    let module' = parse $ scan moduleStr
+        (traversedModule, ()) = traverseRootPostOrder traversalIdentity traversalIdentity traversalIdentity module' () []
+
+    evaluate (length $ show traversedModule) `shouldThrow` anyErrorCall
 
 spec :: Spec
 spec = do
