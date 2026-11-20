@@ -53,7 +53,7 @@ testRewriteRefs = describe "Tests the function `rewriteRefs`" $ do
     let scopeUUID :: AnnotatedUUID = -1
 
     let firstPass :: Root = rewriteAssignments annotated [] scopeUUID
-    let secondPass :: Root = fst $ traverseRootPostOrder rewriteRefs traversalIdentity firstPass () []
+    let secondPass :: Root = fst $ traverseRootPostOrder rewriteRefs traversalIdentity traversalIdentity firstPass () []
     secondPass `shouldBe` toModule
 
 testRewriteVars :: Spec
@@ -73,8 +73,8 @@ testRewriteVars = describe "Tests the function `rewriteVars`" $ do
     let scopeUUID :: AnnotatedUUID = -1
 
     let firstPass :: Root = rewriteAssignments annotated [] scopeUUID
-    let secondPass :: Root = fst $ traverseRootPostOrder rewriteRefs traversalIdentity firstPass () []
-    let thirdPass :: Root = fst $ traverseRootPostOrder (rewriteVars markedVars) traversalIdentity secondPass () []
+    let secondPass :: Root = fst $ traverseRootPostOrder rewriteRefs traversalIdentity traversalIdentity firstPass () []
+    let thirdPass :: Root = fst $ traverseRootPostOrder (rewriteVars markedVars) traversalIdentity traversalIdentity secondPass () []
 
     thirdPass `shouldBe` toModule
 
@@ -95,9 +95,9 @@ testRewriteLetBinds = describe "Tests the function `rewriteLetBinds`" $ do
     let scopeUUID :: AnnotatedUUID = -1
 
     let firstPass :: Root = rewriteAssignments annotated [] scopeUUID
-    let secondPass :: Root = fst $ traverseRootPostOrder rewriteRefs traversalIdentity firstPass () []
-    let thirdPass :: Root = fst $ traverseRootPostOrder (rewriteVars markedVars) traversalIdentity secondPass () []
-    let fourthPass :: Root = fst $ traverseRootPostOrder traversalIdentity (rewriteLetBinds markedVars scopeUUID) thirdPass () []
+    let secondPass :: Root = fst $ traverseRootPostOrder rewriteRefs traversalIdentity traversalIdentity firstPass () []
+    let thirdPass :: Root = fst $ traverseRootPostOrder (rewriteVars markedVars) traversalIdentity traversalIdentity secondPass () []
+    let fourthPass :: Root = fst $ traverseRootPostOrder traversalIdentity (rewriteLetBinds markedVars scopeUUID) traversalIdentity thirdPass () []
 
     fourthPass `shouldBe` toModule
 

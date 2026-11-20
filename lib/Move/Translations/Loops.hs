@@ -341,7 +341,7 @@ translateWhilesToFunctionsInRoot roots = evalState (iterateWithOthers helperIter
   where
     helperIterator :: Root -> [Root] -> State () Root
     helperIterator root otherRoots =
-      case traverseRootPostOrder traversalHelper traversalIdentity root ([], Set.empty) otherRoots of
+      case traverseRootPostOrder traversalHelper traversalIdentity traversalIdentity root ([], Set.empty) otherRoots of
         (RModule translatedModule@Module {moduleTopLevels}, (functionDecls, _)) ->
           let newTopLevels = map TopLevelFunction functionDecls
            in return $ RModule $ translatedModule {moduleTopLevels = newTopLevels ++ moduleTopLevels}

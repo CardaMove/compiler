@@ -206,6 +206,7 @@ annotateBindingsWithUUID root = do
       constantUUID' <- get
       put $ constantUUID' + 1
       return $ TopLevelConstant c {constantUUID = Just constantUUID'}
+    -- TODO: also annotate SpecLet and SpecVariable found inside TopLevelSpecBlock
     -- Every other top level node is ignored
     topLevelAnnotator otherTL = return otherTL
 

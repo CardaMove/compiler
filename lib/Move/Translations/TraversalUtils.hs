@@ -12,6 +12,7 @@ import Move.Translations.Utils
     aptosFrameworkLibAddress,
     booleanType,
     extractVariablesFromBindings,
+    inferExprType,
     numericType,
     stdLibAddress,
     unitType,
@@ -112,9 +113,14 @@ traverseSequencePostOrder exprMapper bindsMapper (Sequence {sequenceUses, sequen
 --
 -- As its second version, also includes a function to map `let` bindings
 --
+-- As its third version, also includes a function to map the members of spec blocks (function specs and spec schemas).
+-- Each spec block gets its own local scope; for each member, its inner expression (if any) is traversed first,
+-- then the mapper is invoked with the scopes before the member, and finally the variable declared by the mapped member
+-- (SpecVariable or SpecLet) is added to the local scope
+--
 -- Additionally, allow to pass other modules that might be imported by the traversed one
-traverseRootPostOrder :: TraversalMapper Expr state -> TraversalMapper Bindings state -> Root -> state -> [Root] -> (Root, state)
-traverseRootPostOrder exprMapper bindsMapper root state otherRoots = case root of
+traverseRootPostOrder :: forall state. TraversalMapper Expr state -> TraversalMapper Bindings state -> TraversalMapper SpecBlockMember state -> Root -> state -> [Root] -> (Root, state)
+traverseRootPostOrder exprMapper bindsMapper specMemberMapper root state otherRoots = case root of
   RModule rModule@Module {moduleTopLevels} ->
     let (mappedTopLevels, stateAfterTraversal) = traversalHelper moduleTopLevels
      in (RModule $ rModule {moduleTopLevels = mappedTopLevels}, stateAfterTraversal)
@@ -150,9 +156,54 @@ traverseRootPostOrder exprMapper bindsMapper root state otherRoots = case root o
                 let functionParametersScope :: Scope = Map.fromList $ map (\(Parameter {parameterIdentifier, parameterType, parameterUUID}) -> (LocalNameAccessChain parameterIdentifier, VariableAnnotations parameterUUID parameterType)) functionParameters
                     (mappedSequence, state'') = traverseSequencePostOrder exprMapper bindsMapper bodySequence (functionParametersScope : topLevelScope) state'
                  in (state'', TopLevelFunction $ function {functionBody = Just mappedSequence})
+              -- Traverse spec blocks and spec schemas
+              -- Each spec block has its own local scope, where the spec variables and spec lets are added in order
+              topLevelMap state' (TopLevelSpecBlock specBlock@SpecBlock {specBlockMembers}) =
+                -- Recursively traverse the block members, and collect the new scope and state
+                let ((_, stateAfterBlockMembers), specBlockMembers') = mapAccumL fAcc (Map.empty : topLevelScope, state') specBlockMembers
+                      where
+                        fAcc :: ([Scope], state) -> SpecBlockMember -> (([Scope], state), SpecBlockMember)
+                        fAcc ([], _) _ = error "Cannot traverse SpecBlockMember with no scopes"
+                        fAcc (scopesBeforeMember@(localScopeBeforeMember : outerScopesBeforeMember), stateBeforeMember) member =
+                          let -- First, traverse the inner expression of the member, if present
+                              traverseInner expr = traverseExprPostOrder exprMapper bindsMapper expr scopesBeforeMember stateBeforeMember
+                              (traversedMember, stateAfterInnerExpr) = case member of
+                                SpecBlockMemberCondition condition@SpecCondition {specConditionExpr} ->
+                                  let (expr', s) = traverseInner specConditionExpr
+                                   in (SpecBlockMemberCondition condition {specConditionExpr = expr'}, s)
+                                SpecBlockMemberInclude expr ->
+                                  let (expr', s) = traverseInner expr
+                                   in (SpecBlockMemberInclude expr', s)
+                                SpecBlockMemberLet specLet@SpecLet {specLetExpr} ->
+                                  let (expr', s) = traverseInner specLetExpr
+                                   in (SpecBlockMemberLet specLet {specLetExpr = expr'}, s)
+                                SpecBlockMemberVariable _ -> (member, stateBeforeMember)
+                              -- Then, call the mapper on the member with traversed expressions,
+                              -- passing the scopes before this member but the state after traversing its expression
+                              (mappedMember, stateAfterMember) = specMemberMapper traversedMember scopesBeforeMember stateAfterInnerExpr
+                              -- Finally, if the mapped member declares a variable, add it to the local scope
+                              localScopeAfterMember = case extractVariableFromSpecMember mappedMember scopesBeforeMember of
+                                Nothing -> localScopeBeforeMember
+                                Just (ident, annot) -> Map.insert (LocalNameAccessChain ident) annot localScopeBeforeMember
+                           in ((localScopeAfterMember : outerScopesBeforeMember, stateAfterMember), mappedMember)
+                 in (stateAfterBlockMembers, TopLevelSpecBlock specBlock {specBlockMembers = specBlockMembers'})
               -- Otherwise do nothing
               topLevelMap state' topLevel = (state', topLevel)
        in (mappedTopLevels, stateAfterTraversal)
+
+-- |
+-- Returns the variable declared by a spec block member, if any, along with its annotations.
+-- A SpecVariable uses its declared type (wrapped in a TypeArrow when it has type parameters),
+-- while a SpecLet infers the type of its expression with the given scopes
+extractVariableFromSpecMember :: SpecBlockMember -> [Scope] -> Maybe (Identifier, VariableAnnotations)
+extractVariableFromSpecMember (SpecBlockMemberVariable SpecVariable {specVariableIdentifier, specVariableTypeParameters, specVariableType, specVariableUUID}) _ =
+  let varType = case specVariableTypeParameters of
+        [] -> specVariableType
+        tParams -> TypeArrow (map typeIdentifier tParams) [specVariableType]
+   in Just (specVariableIdentifier, VariableAnnotations specVariableUUID varType)
+extractVariableFromSpecMember (SpecBlockMemberLet SpecLet {specLetIdentifier, specLetExpr, specLetUUID}) scopes =
+  Just (specLetIdentifier, VariableAnnotations specLetUUID $ inferExprType specLetExpr scopes)
+extractVariableFromSpecMember _ _ = Nothing
 
 -- |
 -- Contains some functions that Move recognizes as stdlib,
@@ -357,6 +408,7 @@ moveStdLibModules =
 -- returns all the imported symbols
 --
 -- Note that the current module is not present in the imputs, just its imports
+-- TODO: Also add any spec schema in the scope as IntermediateTypeSpecSchema
 buildImportedScope :: [Use] -> [Module] -> [(NameAccessChain, VariableAnnotations)]
 buildImportedScope uses otherModules = concatMap buildImportedScope' uses
   where

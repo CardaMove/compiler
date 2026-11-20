@@ -90,7 +90,8 @@ RScript (
                     pseofcTypeArgs = [],
                     pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "auctioneer"))]
                   }
-                )
+                ),
+                specLetUUID = Nothing
               }
             ),
             SpecBlockMemberLet (
@@ -103,7 +104,8 @@ RScript (
                     pseofcTypeArgs = [TypeConstructor (LocalNameAccessChain (Identifier "Auction")) []],
                     pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "auctioneer_addr"))]
                   }
-                )
+                ),
+                specLetUUID = Nothing
               }
             ),
             SpecBlockMemberLet (
@@ -115,7 +117,8 @@ RScript (
                     dotAccessLeft = NameAccessChainExpr (LocalNameAccessChain (Identifier "auction")),
                     dotAccessRight = Identifier "top_bidder"
                   }
-                )
+                ),
+                specLetUUID = Nothing
               }
             ),
             SpecBlockMemberLet (
@@ -140,7 +143,8 @@ RScript (
                     ),
                     dotAccessRight = Identifier "value"
                   }
-                )
+                ),
+                specLetUUID = Nothing
               }
             ),
             SpecBlockMemberCondition (

@@ -42,7 +42,7 @@ translateTParamsInRoot roots = do
 
     -- Iterator to rewrite function calls
     functionCallsIterator :: Root -> [Root] -> State Int Root
-    functionCallsIterator root otherRoots = return $ fst $ traverseRootPostOrder rewriteFunctionCalls traversalIdentity root () otherRoots
+    functionCallsIterator root otherRoots = return $ fst $ traverseRootPostOrder rewriteFunctionCalls traversalIdentity traversalIdentity root () otherRoots
 
     -- Helper function, used to rewrite a single type argument to a type witness
     mapTArgToFArg :: Type -> Set.Set Identifier -> IntermediateTypeWitnessExpr

@@ -248,7 +248,8 @@ data SpecLet
   = SpecLet
   { specLetIsPost :: Bool,
     specLetIdentifier :: Identifier,
-    specLetExpr :: Expr
+    specLetExpr :: Expr,
+    specLetUUID :: Maybe AnnotatedUUID
   }
   deriving (Eq, Show, Read, Data, Typeable)
 
@@ -259,9 +260,10 @@ data SpecVariable
   = SpecVariable
   { specVariableIdentifier :: Identifier,
     specVariableTypeParameters :: [TypeParameter],
-    specVariableType :: Type
+    specVariableType :: Type,
+    specVariableUUID :: Maybe AnnotatedUUID
   }
-  deriving (Eq, Show, Read, Data, Typeable)
+  deriving (Eq, Show, Read, Data, Typeable, Ord)
 
 -- | Using another module
 data Use
@@ -366,6 +368,11 @@ data Type
     IntermediateTypeNamedStructDeclaration [Identifier] [NamedField]
   | IntermediateTypeWitnessType
   | IntermediateTypeData
+  -- |
+  -- Intermediate type used for spec schema blocks.
+  --
+  -- It includes the name of the type parameters and all the schema variables declared in it
+  | IntermediateTypeSpecSchema [Identifier] [SpecVariable]
   deriving (Eq, Show, Read, Data, Typeable, Ord)
 
 -- | A function declaration

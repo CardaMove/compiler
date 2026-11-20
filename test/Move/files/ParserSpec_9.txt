@@ -85,7 +85,8 @@ RScript (
                     ],
                     pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "bookmaker"))]
                   }
-                )
+                ),
+                specLetUUID = Nothing
               }
             ),
             SpecBlockMemberCondition (

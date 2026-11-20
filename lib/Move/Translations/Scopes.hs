@@ -20,7 +20,7 @@ markVariablesForLocalScope roots = unionSet $ evalState (iterateWithOthers markV
   where
     markVariablesIterator :: Root -> [Root] -> State () (Set.Set AnnotatedUUID)
     markVariablesIterator root otherRoots = do
-      return $ snd $ traverseRootPostOrder variableMarker bindsMapper root Set.empty otherRoots
+      return $ snd $ traverseRootPostOrder variableMarker bindsMapper traversalIdentity root Set.empty otherRoots
 
     insertMaybe :: (Ord a) => Maybe a -> Set.Set a -> Set.Set a
     insertMaybe Nothing set = set
@@ -150,7 +150,7 @@ unconstrDotAccess expr' scopes' =
 -- first, a traversal uses the scope to rewrite the assignments into an `IntermediateScopeBinding` expression, that must be present only in this function
 -- then, a transformBi is performed in order to rewrite a `SequenceItemExpr` corresponding to the assignement into a let bind `SequenceItemBindExpr`
 rewriteAssignments :: Root -> [Root] -> AnnotatedUUID -> Root
-rewriteAssignments root otherRoots scopeUUID = transformBi helperBindRewriter $ fst $ traverseRootPostOrder exprMapper traversalIdentity root () otherRoots
+rewriteAssignments root otherRoots scopeUUID = transformBi helperBindRewriter $ fst $ traverseRootPostOrder exprMapper traversalIdentity traversalIdentity root () otherRoots
   where
     -- Translates assignments into the `IntermediateScopeBinding` expressions
     exprMapper :: TraversalMapper Expr ()
@@ -885,11 +885,11 @@ addLocalScopeInRoot roots markedVars = do
     addLocalScopeIterator :: AnnotatedUUID -> Root -> [Root] -> State AnnotatedUUID Root
     addLocalScopeIterator scopeUUID root otherRoots = do
       let firstPass :: Root = rewriteAssignments root otherRoots scopeUUID
-      let secondPass :: Root = fst $ traverseRootPostOrder rewriteRefs traversalIdentity firstPass () otherRoots
-      let thirdPass :: Root = fst $ traverseRootPostOrder (rewriteVars markedVars) traversalIdentity secondPass () otherRoots
-      let fourthPass :: Root = fst $ traverseRootPostOrder traversalIdentity (rewriteLetBinds markedVars scopeUUID) thirdPass () otherRoots
+      let secondPass :: Root = fst $ traverseRootPostOrder rewriteRefs traversalIdentity traversalIdentity firstPass () otherRoots
+      let thirdPass :: Root = fst $ traverseRootPostOrder (rewriteVars markedVars) traversalIdentity traversalIdentity secondPass () otherRoots
+      let fourthPass :: Root = fst $ traverseRootPostOrder traversalIdentity (rewriteLetBinds markedVars scopeUUID) traversalIdentity thirdPass () otherRoots
       currUUID <- get
-      let (fifthPass, (updatedUUID, bindingsToAdd)) = traverseRootPostOrder (rewriteInlineStateMutation scopeUUID) traversalIdentity fourthPass (currUUID, Map.empty) otherRoots
+      let (fifthPass, (updatedUUID, bindingsToAdd)) = traverseRootPostOrder (rewriteInlineStateMutation scopeUUID) traversalIdentity traversalIdentity fourthPass (currUUID, Map.empty) otherRoots
       put updatedUUID
       let sixthPass = rewriteFunctionDeclaration fifthPass markedVars bindingsToAdd scopeUUID
       return sixthPass

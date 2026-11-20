@@ -104,7 +104,8 @@ RModule (
                     pseofcTypeArgs = [],
                     pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "s"))]
                   }
-                )
+                ),
+                specLetUUID = Nothing
               }
             ),
             SpecBlockMemberLet (
@@ -129,7 +130,8 @@ RModule (
                     ),
                     dotAccessRight = Identifier "value"
                   }
-                )
+                ),
+                specLetUUID = Nothing
               }
             ),
             SpecBlockMemberLet (
@@ -154,7 +156,8 @@ RModule (
                     ),
                     dotAccessRight = Identifier "value"
                   }
-                )
+                ),
+                specLetUUID = Nothing
               }
             ),
             SpecBlockMemberCondition (
@@ -205,14 +208,16 @@ RModule (
               SpecVariable {
                 specVariableIdentifier = Identifier "s",
                 specVariableTypeParameters = [],
-                specVariableType = TypeImmutableRef (TypeConstructor (LocalNameAccessChain (Identifier "signer")) [])
+                specVariableType = TypeImmutableRef (TypeConstructor (LocalNameAccessChain (Identifier "signer")) []),
+                specVariableUUID = Nothing
               }
             ),
             SpecBlockMemberVariable (
               SpecVariable {
                 specVariableIdentifier = Identifier "amount",
                 specVariableTypeParameters = [],
-                specVariableType = TypeConstructor (LocalNameAccessChain (Identifier "u64")) []
+                specVariableType = TypeConstructor (LocalNameAccessChain (Identifier "u64")) [],
+                specVariableUUID = Nothing
               }
             ),
             SpecBlockMemberLet (
@@ -225,7 +230,8 @@ RModule (
                     pseofcTypeArgs = [],
                     pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "s"))]
                   }
-                )
+                ),
+                specLetUUID = Nothing
               }
             ),
             SpecBlockMemberLet (
@@ -250,7 +256,8 @@ RModule (
                     ),
                     dotAccessRight = Identifier "value"
                   }
-                )
+                ),
+                specLetUUID = Nothing
               }
             ),
             SpecBlockMemberLet (
@@ -275,7 +282,8 @@ RModule (
                     ),
                     dotAccessRight = Identifier "value"
                   }
-                )
+                ),
+                specLetUUID = Nothing
               }
             ),
             SpecBlockMemberCondition (
@@ -486,7 +494,8 @@ RModule (
                     ),
                     dotAccessRight = Identifier "value"
                   }
-                )
+                ),
+                specLetUUID = Nothing
               }
             ),
             SpecBlockMemberLet (
@@ -511,7 +520,8 @@ RModule (
                     ),
                     dotAccessRight = Identifier "value"
                   }
-                )
+                ),
+                specLetUUID = Nothing
               }
             ),
             SpecBlockMemberCondition (
@@ -549,14 +559,16 @@ RModule (
               SpecVariable {
                 specVariableIdentifier = Identifier "account_addr",
                 specVariableTypeParameters = [],
-                specVariableType = TypeConstructor (LocalNameAccessChain (Identifier "address")) []
+                specVariableType = TypeConstructor (LocalNameAccessChain (Identifier "address")) [],
+                specVariableUUID = Nothing
               }
             ),
             SpecBlockMemberVariable (
               SpecVariable {
                 specVariableIdentifier = Identifier "coin",
                 specVariableTypeParameters = [],
-                specVariableType = TypeConstructor (LocalNameAccessChain (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []]
+                specVariableType = TypeConstructor (LocalNameAccessChain (Identifier "Coin")) [TypeConstructor (LocalNameAccessChain (Identifier "CoinType")) []],
+                specVariableUUID = Nothing
               }
             ),
             SpecBlockMemberLet (
@@ -581,7 +593,8 @@ RModule (
                     ),
                     dotAccessRight = Identifier "value"
                   }
-                )
+                ),
+                specLetUUID = Nothing
               }
             ),
             SpecBlockMemberLet (
@@ -606,7 +619,8 @@ RModule (
                     ),
                     dotAccessRight = Identifier "value"
                   }
-                )
+                ),
+                specLetUUID = Nothing
               }
             ),
             SpecBlockMemberCondition (

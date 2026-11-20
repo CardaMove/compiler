@@ -3,7 +3,7 @@ module Move.Translations.AlphaConversion (alphaConvert) where
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
 import Move.AST
-import Move.Translations.TraversalUtils (TraversalMapper, traverseRootPostOrder)
+import Move.Translations.TraversalUtils (TraversalMapper, traversalIdentity, traverseRootPostOrder)
 import Move.Translations.Utils (Scope)
 
 data AlphaState = AlphaState
@@ -36,6 +36,7 @@ alphaConvert = convertRoots []
         traverseRootPostOrder
           expressionMapper
           bindingMapper
+          traversalIdentity
           root
           (AlphaState 0 [])
           otherRoots

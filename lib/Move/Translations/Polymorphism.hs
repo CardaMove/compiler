@@ -27,7 +27,7 @@ translatePolymorphismInRoot roots = do
     castingIterator :: Root -> [Root] -> State AnnotatedUUID Root
     castingIterator root otherRoots = do
       currUUID <- get
-      let (root', updatedUUID) = traverseRootPostOrder insertCasting traversalIdentity root currUUID otherRoots
+      let (root', updatedUUID) = traverseRootPostOrder insertCasting traversalIdentity traversalIdentity root currUUID otherRoots
       put updatedUUID
       return root'
 

@@ -98,7 +98,8 @@ RScript (
                     pseofcTypeArgs = [],
                     pseofcFields = [NameAccessChainExpr (LocalNameAccessChain (Identifier "auctioneer"))]
                   }
-                )
+                ),
+                specLetUUID = Nothing
               }
             ),
             SpecBlockMemberInclude (

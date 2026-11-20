@@ -829,10 +829,10 @@ SpecBlockMembers_ :: { [Maybe SpecBlockMember] }
 
 SpecBlockMember :: { Maybe SpecBlockMember }
   : SpecConditionKind Expr ';'                         { Just $ SpecBlockMemberCondition $ SpecCondition { specConditionKind = $1, specConditionExpr = $2 } }
-  | Identifier OptionalTypeParameters ':' Type ';'     { Just $ SpecBlockMemberVariable $ SpecVariable { specVariableIdentifier = $1, specVariableTypeParameters = $2, specVariableType = $4 } }
+  | Identifier OptionalTypeParameters ':' Type ';'     { Just $ SpecBlockMemberVariable $ SpecVariable { specVariableIdentifier = $1, specVariableTypeParameters = $2, specVariableType = $4, specVariableUUID = Nothing } }
   | include Expr ';'                                   { Just $ SpecBlockMemberInclude $2 }
-  | let Identifier '=' Expr ';'                        { Just $ SpecBlockMemberLet $ SpecLet { specLetIsPost = False, specLetIdentifier = $2, specLetExpr = $4 } }
-  | let post Identifier '=' Expr ';'                   { Just $ SpecBlockMemberLet $ SpecLet { specLetIsPost = True, specLetIdentifier = $3, specLetExpr = $5 } }
+  | let Identifier '=' Expr ';'                        { Just $ SpecBlockMemberLet $ SpecLet { specLetIsPost = False, specLetIdentifier = $2, specLetExpr = $4, specLetUUID = Nothing } }
+  | let post Identifier '=' Expr ';'                   { Just $ SpecBlockMemberLet $ SpecLet { specLetIsPost = True, specLetIdentifier = $3, specLetExpr = $5, specLetUUID = Nothing } }
   -- Pragma properties are not relevant for this compiler, so the whole pragma is skipped
   | pragma CommaSpecPragmaProperty ';'                 { Nothing }
 
