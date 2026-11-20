@@ -1,0 +1,175 @@
+RModule (
+  Module {
+    moduleAddress = NamedAddress (Identifier "NamedAddr"),
+    moduleIdentifier = Identifier "UtilsSpecBlocks",
+    moduleTopLevels = [
+      TopLevelFunction (
+        Function {
+          functionHasNativeModifier = False,
+          functionVisibilityModifier = Just VisibilityModifierPublic,
+          functionHasEntryModifier = False,
+          functionName = Identifier "add",
+          functionTypeParameters = [],
+          functionParameters = [
+            Parameter {
+              parameterIdentifier = Identifier "a",
+              parameterType = TypeConstructor (LocalNameAccessChain (Identifier "u64")) [],
+              parameterUUID = Just 1
+            },
+            Parameter {
+              parameterIdentifier = Identifier "b",
+              parameterType = TypeConstructor (LocalNameAccessChain (Identifier "u64")) [],
+              parameterUUID = Just 2
+            }
+          ],
+          functionReturnType = Just (TypeConstructor (LocalNameAccessChain (Identifier "u64")) []),
+          functionAcquires = [],
+          functionBody = Just (
+            Sequence {
+              sequenceUses = [],
+              sequenceItems = [
+                SequenceItemBindExpr (
+                  Bindings {
+                    bindings = BindedSingle (BindIdentifier (Identifier "c") (Just 3)),
+                    bindingsBindType = Nothing,
+                    bindingsBindExpr = Just (
+                      BinaryOpExprExpr (
+                        Add (NameAccessChainExpr (LocalNameAccessChain (Identifier "a"))) (
+                          NameAccessChainExpr (LocalNameAccessChain (Identifier "b"))
+                        )
+                      )
+                    )
+                  }
+                )
+              ],
+              sequenceEndExpr = Just (NameAccessChainExpr (LocalNameAccessChain (Identifier "c")))
+            }
+          ),
+          functionUUID = Just 0
+        }
+      ),
+      TopLevelSpecBlock (
+        SpecBlock {
+          specBlockTarget = SpecBlockTargetFunction (Identifier "add"),
+          specBlockMembers = [
+            SpecBlockMemberLet (
+              SpecLet {
+                specLetIsPost = False,
+                specLetIdentifier = Identifier "one",
+                specLetExpr = ValueLiteral (Numerical (LiteralIntDec 1)),
+                specLetUUID = Just 4
+              }
+            ),
+            SpecBlockMemberLet (
+              SpecLet {
+                specLetIsPost = True,
+                specLetIdentifier = Identifier "two",
+                specLetExpr = BinaryOpExprExpr (
+                  Add (NameAccessChainExpr (LocalNameAccessChain (Identifier "one"))) (
+                    ValueLiteral (Numerical (LiteralIntDec 1))
+                  )
+                ),
+                specLetUUID = Just 5
+              }
+            ),
+            SpecBlockMemberCondition (
+              SpecCondition {
+                specConditionKind = SpecConditionAbortsIf,
+                specConditionExpr = BinaryOpExprExpr (
+                  Gt (NameAccessChainExpr (LocalNameAccessChain (Identifier "one"))) (
+                    ValueLiteral (Numerical (LiteralIntDec 2))
+                  )
+                )
+              }
+            ),
+            SpecBlockMemberCondition (
+              SpecCondition {
+                specConditionKind = SpecConditionEnsures,
+                specConditionExpr = BinaryOpExprExpr (
+                  Eq (NameAccessChainExpr (LocalNameAccessChain (Identifier "result"))) (
+                    BinaryOpExprExpr (
+                      Add (
+                        BinaryOpExprExpr (
+                          Add (NameAccessChainExpr (LocalNameAccessChain (Identifier "a"))) (
+                            NameAccessChainExpr (LocalNameAccessChain (Identifier "b"))
+                          )
+                        )
+                      ) (NameAccessChainExpr (LocalNameAccessChain (Identifier "one")))
+                    )
+                  )
+                )
+              }
+            )
+          ]
+        }
+      ),
+      TopLevelSpecBlock (
+        SpecBlock {
+          specBlockTarget = SpecBlockTargetSchema (Identifier "AddSchema") [
+            TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "T", typeConstraints = []}
+          ],
+          specBlockMembers = [
+            SpecBlockMemberVariable (
+              SpecVariable {
+                specVariableIdentifier = Identifier "x",
+                specVariableTypeParameters = [],
+                specVariableType = TypeConstructor (LocalNameAccessChain (Identifier "u64")) [],
+                specVariableUUID = Just 6
+              }
+            ),
+            SpecBlockMemberVariable (
+              SpecVariable {
+                specVariableIdentifier = Identifier "y",
+                specVariableTypeParameters = [
+                  TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "U", typeConstraints = []}
+                ],
+                specVariableType = TypeConstructor (LocalNameAccessChain (Identifier "U")) [],
+                specVariableUUID = Just 7
+              }
+            ),
+            SpecBlockMemberLet (
+              SpecLet {
+                specLetIsPost = False,
+                specLetIdentifier = Identifier "z",
+                specLetExpr = BinaryOpExprExpr (
+                  Add (NameAccessChainExpr (LocalNameAccessChain (Identifier "x"))) (
+                    ValueLiteral (Numerical (LiteralIntDec 3))
+                  )
+                ),
+                specLetUUID = Just 8
+              }
+            ),
+            SpecBlockMemberInclude (
+              NamedStructExprExpr (
+                NamedStructExpr {
+                  nseNameAccessChain = LocalNameAccessChain (Identifier "OtherSchema"),
+                  nseTypeArgs = [],
+                  nseFields = [
+                    NamedStructExprField {
+                      nsefIdentifier = Identifier "v",
+                      nsefExpr = Just (NameAccessChainExpr (LocalNameAccessChain (Identifier "z")))
+                    }
+                  ]
+                }
+              )
+            ),
+            SpecBlockMemberCondition (
+              SpecCondition {
+                specConditionKind = SpecConditionEnsures,
+                specConditionExpr = BinaryOpExprExpr (
+                  Eq (NameAccessChainExpr (LocalNameAccessChain (Identifier "z"))) (
+                    BinaryOpExprExpr (
+                      Add (NameAccessChainExpr (LocalNameAccessChain (Identifier "x"))) (
+                        ValueLiteral (Numerical (LiteralIntDec 3))
+                      )
+                    )
+                  )
+                )
+              }
+            )
+          ]
+        }
+      )
+    ]
+  }
+)

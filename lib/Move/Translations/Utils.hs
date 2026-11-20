@@ -158,6 +158,7 @@ extractVariablesFromSingleBind bind maybeType maybeExpr scopes =
 
 -- |
 -- Given an AST, adds a unique identifier to all bindings
+-- (including the spec lets and spec variables of spec blocks)
 --
 -- Note that existing UUIDs will be overwritten
 annotateBindingsWithUUID :: Root -> State AnnotatedUUID Root
@@ -206,9 +207,25 @@ annotateBindingsWithUUID root = do
       constantUUID' <- get
       put $ constantUUID' + 1
       return $ TopLevelConstant c {constantUUID = Just constantUUID'}
-    -- TODO: also annotate SpecLet and SpecVariable found inside TopLevelSpecBlock
+    -- Also, annotate the spec lets and spec variables of spec blocks, in order
+    topLevelAnnotator (TopLevelSpecBlock specBlock@SpecBlock {specBlockMembers}) = do
+      annotatedMembers <- mapM specMemberAnnotator specBlockMembers
+      return $ TopLevelSpecBlock specBlock {specBlockMembers = annotatedMembers}
     -- Every other top level node is ignored
     topLevelAnnotator otherTL = return otherTL
+
+    -- Annotates a spec block member if it declares a variable (SpecLet or SpecVariable).
+    -- Conditions and includes declare no variable, so they are left untouched
+    specMemberAnnotator :: SpecBlockMember -> State AnnotatedUUID SpecBlockMember
+    specMemberAnnotator (SpecBlockMemberLet specLet) = do
+      curr <- get
+      put $ curr + 1
+      return $ SpecBlockMemberLet specLet {specLetUUID = Just curr}
+    specMemberAnnotator (SpecBlockMemberVariable specVariable) = do
+      curr <- get
+      put $ curr + 1
+      return $ SpecBlockMemberVariable specVariable {specVariableUUID = Just curr}
+    specMemberAnnotator otherMember = return otherMember
 
     -- Annotates all the bindings in the function body
     functionBodyAnnotator :: Bind -> State AnnotatedUUID Bind
@@ -423,6 +440,8 @@ resolveParametricType t@(TypeArrow _ _) _ = error $ "Unexpected (possibly parame
 resolveParametricType t@(IntermediateTypeNamedStructDeclaration _ _) _ = error $ "Unexpected (possibly parametric) type: " ++ show t
 resolveParametricType IntermediateTypeWitnessType _ = IntermediateTypeWitnessType
 resolveParametricType IntermediateTypeData _ = IntermediateTypeData
+resolveParametricType t@(IntermediateTypeSpecSchema _ _) _ = error $ "Unexpected (possibly parametric) type: " ++ show t
+
 
 -- |
 -- Tries to execute an IO operation, intercepting any error if thrown and providing additional informations
@@ -450,6 +469,8 @@ isTypeParametric (TypeArrow _ _) _ = False
 isTypeParametric t@(IntermediateTypeNamedStructDeclaration _ _) _ = error $ "Unexpected type: " ++ show t
 isTypeParametric IntermediateTypeWitnessType _ = False
 isTypeParametric IntermediateTypeData _ = False
+isTypeParametric t@(IntermediateTypeSpecSchema _ _) _ = error $ "Unexpected type: " ++ show t
+
 
 -- |
 -- Used mainly to perform traversal over multiple ASTs

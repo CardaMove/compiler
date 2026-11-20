@@ -61,6 +61,18 @@ testAnnotateBindingsWithUUID = describe "Tests the function `annotateBindingsWit
 
     annotated `shouldBe` toModule
 
+  it "Also assigns UUIDs to the spec lets and spec variables of spec blocks, in order" $ do
+    fromModuleStr <- readFile "test/Move/Translations/files/UtilsSpec_2.move"
+    toModuleStr <- readFile "test/Move/Translations/files/UtilsSpec_3.txt"
+
+    let fromModule = parse $ scan fromModuleStr
+    let toModule = read toModuleStr :: Root
+
+    -- The function and its bindings take UUIDs 0 to 3, then `one`, `two`, `x`, `y` and `z` take 4 to 8
+    let annotated = evalState (annotateBindingsWithUUID fromModule) 0
+
+    annotated `shouldBe` toModule
+
 testIterateWithOthers :: Spec
 testIterateWithOthers = describe "Tests the function `iterateWithOthers`" $ do
   it "Should correctly loop over each element and provide all the others along" $ do
