@@ -71,7 +71,7 @@ RScript (
       ),
       TopLevelSpecBlock (
         SpecBlock {
-          specBlockTarget = SpecBlockTargetFunction (Identifier "timeout_round"),
+          specBlockTarget = SpecBlockTargetFunction (Identifier "timeout_round") Nothing,
           specBlockMembers = [
             SpecBlockMemberLet (
               SpecLet {

@@ -86,7 +86,7 @@ RScript (
       ),
       TopLevelSpecBlock (
         SpecBlock {
-          specBlockTarget = SpecBlockTargetFunction (Identifier "auction_start"),
+          specBlockTarget = SpecBlockTargetFunction (Identifier "auction_start") Nothing,
           specBlockMembers = [
             SpecBlockMemberLet (
               SpecLet {

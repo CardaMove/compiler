@@ -211,8 +211,18 @@ data SpecBlock
 --
 -- Examples: `spec my_func {...}`, `spec schema MySchema<T> {...}`
 data SpecBlockTarget
-  = SpecBlockTargetFunction Identifier
+  = SpecBlockTargetFunction Identifier (Maybe SpecBTFAnnotations)
   | SpecBlockTargetSchema Identifier [TypeParameter]
+  deriving (Eq, Show, Read, Data, Typeable)
+
+-- |
+-- Contains informations regarding the function whose specification refers
+-- specifically its type parameters and parameters
+data SpecBTFAnnotations
+  = SpecBTFAnnotations{
+    sbtpFunctionTypeParameters :: [TypeParameter],
+    sbtfFunctionParameters :: [Parameter]
+  }
   deriving (Eq, Show, Read, Data, Typeable)
 
 -- | A member of a spec block. Pragmas are skipped by the parser, so they have no constructor

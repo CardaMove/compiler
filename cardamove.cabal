@@ -38,6 +38,7 @@ library
       Move.Translations.TraversalUtils
       Move.Translations.TypeWitness
       Move.Translations.Utils
+      Move.TranslationsMSL.PreProcessingMSL
       Move.Transpiler
       TypeScript.EntryPointGenerator
       TypeScript.TypeScriptGenerator
@@ -111,6 +112,7 @@ test-suite cardamove-test
       Move.Translations.TraversalUtilsSpec
       Move.Translations.TypeWitnessSpec
       Move.Translations.UtilsSpec
+      Move.TranslationsMSL.PreProcessingMSLSpec
       Move.TranspilerSpec
       TypeScript.TypeScriptGeneratorSpec
       Paths_cardamove

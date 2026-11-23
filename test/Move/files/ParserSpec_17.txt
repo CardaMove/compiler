@@ -70,7 +70,7 @@ RModule (
       ),
       TopLevelSpecBlock (
         SpecBlock {
-          specBlockTarget = SpecBlockTargetFunction (Identifier "withdraw"),
+          specBlockTarget = SpecBlockTargetFunction (Identifier "withdraw") Nothing,
           specBlockMembers = [
             SpecBlockMemberCondition (
               SpecCondition {
@@ -361,7 +361,7 @@ RModule (
       ),
       TopLevelSpecBlock (
         SpecBlock {
-          specBlockTarget = SpecBlockTargetFunction (Identifier "merge"),
+          specBlockTarget = SpecBlockTargetFunction (Identifier "merge") Nothing,
           specBlockMembers = [
             SpecBlockMemberCondition (
               SpecCondition {specConditionKind = SpecConditionAbortsIf, specConditionExpr = ValueLiteral (Boolean False)}
@@ -459,7 +459,7 @@ RModule (
       ),
       TopLevelSpecBlock (
         SpecBlock {
-          specBlockTarget = SpecBlockTargetFunction (Identifier "deposit"),
+          specBlockTarget = SpecBlockTargetFunction (Identifier "deposit") Nothing,
           specBlockMembers = [
             SpecBlockMemberCondition (
               SpecCondition {
@@ -690,7 +690,7 @@ RModule (
       ),
       TopLevelSpecBlock (
         SpecBlock {
-          specBlockTarget = SpecBlockTargetFunction (Identifier "value"),
+          specBlockTarget = SpecBlockTargetFunction (Identifier "value") Nothing,
           specBlockMembers = [
             SpecBlockMemberCondition (
               SpecCondition {specConditionKind = SpecConditionAbortsIf, specConditionExpr = ValueLiteral (Boolean False)}

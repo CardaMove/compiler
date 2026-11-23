@@ -91,7 +91,7 @@ RScript (
       ),
       TopLevelSpecBlock (
         SpecBlock {
-          specBlockTarget = SpecBlockTargetFunction (Identifier "win_round"),
+          specBlockTarget = SpecBlockTargetFunction (Identifier "win_round") Nothing,
           specBlockMembers = [
             SpecBlockMemberCondition (
               SpecCondition {

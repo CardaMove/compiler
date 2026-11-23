@@ -82,7 +82,7 @@ RScript (
       ),
       TopLevelSpecBlock (
         SpecBlock {
-          specBlockTarget = SpecBlockTargetFunction (Identifier "join_round"),
+          specBlockTarget = SpecBlockTargetFunction (Identifier "join_round") Nothing,
           specBlockMembers = [
             SpecBlockMemberLet (
               SpecLet {

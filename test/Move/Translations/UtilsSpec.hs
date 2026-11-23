@@ -6,6 +6,7 @@ import Move.AST
 import Move.Lexer (scan)
 import Move.Parser (parse)
 import Move.Translations.Utils (Scope, VariableAnnotations (VariableAnnotations), annotateBindingsWithUUID, extractVariablesFromSingleBind, iterateWithOthers)
+import Move.TranslationsMSL.PreProcessingMSL (annotateSpecBlocks)
 import Test.Hspec
 
 testExtractVariablesFromSingleBind :: Spec
@@ -61,15 +62,15 @@ testAnnotateBindingsWithUUID = describe "Tests the function `annotateBindingsWit
 
     annotated `shouldBe` toModule
 
-  it "Also assigns UUIDs to spec blocks, then to their spec lets and spec variables, in order" $ do
+  it "Also assigns UUIDs to spec blocks, then to their annotated target function parameters (fresh ones), spec lets and spec variables, in order" $ do
     fromModuleStr <- readFile "test/Move/Translations/files/UtilsSpec_2.move"
     toModuleStr <- readFile "test/Move/Translations/files/UtilsSpec_3.txt"
 
-    let fromModule = parse $ scan fromModuleStr
+    let fromModule = annotateSpecBlocks $ parse $ scan fromModuleStr
     let toModule = read toModuleStr :: Root
 
-    -- The function and its bindings take UUIDs 0 to 3, then `spec add` 4, `one` 5, `two` 6,
-    -- `spec schema AddSchema` 7, `x` 8, `y` 9 and `z` 10
+    -- The function and its bindings take UUIDs 0 to 3, then `spec add` 4, the copies of `a` and `b` in its annotations 5 and 6,
+    -- `one` 7, `two` 8, `spec schema AddSchema` 9, `x` 10, `y` 11 and `z` 12
     let annotated = evalState (annotateBindingsWithUUID fromModule) 0
 
     annotated `shouldBe` toModule

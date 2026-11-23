@@ -813,7 +813,7 @@ SpecBlock :: { SpecBlock }
 
 
 SpecBlockTarget :: { SpecBlockTarget }
-  : Identifier                                         { SpecBlockTargetFunction $1 }
+  : Identifier                                         { SpecBlockTargetFunction $1 Nothing }
   | schema Identifier OptionalTypeParameters           { SpecBlockTargetSchema $2 $3 }
 
 

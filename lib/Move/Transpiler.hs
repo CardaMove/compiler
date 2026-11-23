@@ -12,6 +12,7 @@ import Move.Translations.Scopes (addLocalScopeInRoot, markVariablesForLocalScope
 import Move.Translations.SpecBlocks (stripSpecBlocksInRoot)
 import Move.Translations.TypeWitness (translateTParamsInRoot)
 import Move.Translations.Utils (annotateBindingsWithUUID, tryIO)
+import Move.TranslationsMSL.PreProcessingMSL (annotateSpecBlocks)
 
 -- |
 -- Given the whole parsed ASTs, translates them for the Move runtime on-chain mode and for the off-chain target.
@@ -38,10 +39,22 @@ moveTranspiler files addrAssoc = do
 
 -- |
 -- Given the whole parsed ASTs, translates them for the MSL on-chain mode (the default `--onchain-mode` is `move`).
--- Not implemented yet: it always fails. Its passes and its signature are designed in steps 4-5 of doc/msl.md
+-- Not implemented yet: it runs the passes written so far, then always fails, since the MSL validator generation
+-- does not exist yet. Its passes and its signature are designed in steps 4-5 of doc/msl.md
 mslTranspiler :: [(FilePath, Root)] -> AddrAssociations -> IO [(FilePath, Root)]
-mslTranspiler _files _addrAssoc =
+mslTranspiler files _addrAssoc = do
+  -- Each step is fully evaluated (via `show`) so that its errors surface before the final failure
+  step1Annotated <- tryIO "annotateSpecBlocks" $ forceRoots $ map (annotateSpecBlocks . snd) files
+
+  -- TODO: `stripMoveFunctions`, yet to be implemented
+
+  _step2UUIDs <- tryIO "annotateBindingsWithUUID" $ forceRoots $ evalState (mapM annotateBindingsWithUUID step1Annotated) 0
+
   ioError $ userError "The MSL on-chain mode is not implemented yet: use `--onchain-mode move`"
+  where
+    -- Fully evaluates the given roots (by printing them) and returns them
+    forceRoots :: [Root] -> IO [Root]
+    forceRoots roots = evaluate (length (show roots)) >> return roots
 
 -- |
 -- Given the output of `moveTranspiler`, applies the passes needed only by the off-chain (TypeScript) target.

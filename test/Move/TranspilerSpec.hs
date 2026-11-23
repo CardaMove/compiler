@@ -36,10 +36,11 @@ testOffchainTranspiler = describe "Tests the function `offchainTranspiler`" $ do
     alphaConvert offchainRoots `shouldBe` offchainRoots
 
 -- | The MSL on-chain mode is selectable from the CLI but not implemented yet:
--- its pass chain must fail explicitly instead of producing a validator
+-- its passes written so far must succeed on Bet (a failing pass raises an ErrorCall, not an IOException),
+-- then it must fail explicitly instead of producing a validator
 testMslTranspiler :: Spec
 testMslTranspiler = describe "Tests the function `mslTranspiler`" $ do
-  it "Fails explicitly, since the MSL mode is not implemented yet" $ do
+  it "Runs its passes on Bet, then fails explicitly, since the MSL mode is not implemented yet" $ do
     (sourceFiles, addrAssoc) <- loadToml betToml
     mslTranspiler sourceFiles addrAssoc `shouldThrow` anyIOException
 

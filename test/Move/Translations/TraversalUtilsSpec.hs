@@ -8,6 +8,7 @@ import Move.Lexer (scan)
 import Move.Parser (parse)
 import Move.Translations.TraversalUtils
 import Move.Translations.Utils (VariableAnnotations (VariableAnnotations), annotateBindingsWithUUID, getNacFromScopes, numericType)
+import Move.TranslationsMSL.PreProcessingMSL (annotateSpecBlocks)
 import Test.Hspec
 
 testTraverseRootPostOrder :: Spec
@@ -76,8 +77,8 @@ testTraverseSpecBlocks = describe "Tests the traversal of spec blocks in `traver
     fromModuleStr <- readFile "test/Move/Translations/files/TraversalUtilsSpec_3.move"
     toModuleStr <- readFile "test/Move/Translations/files/TraversalUtilsSpec_4.move"
 
-    let fromModule = parse $ scan fromModuleStr
-    let toModule = parse $ scan toModuleStr
+    let fromModule = annotateSpecBlocks $ parse $ scan fromModuleStr
+    let toModule = annotateSpecBlocks $ parse $ scan toModuleStr
 
     -- The expression mapper increments by 1 each literal decimal value (also inside spec members),
     -- while the spec member mapper appends a _2 to each spec variable and spec let identifier.
@@ -98,7 +99,7 @@ testTraverseSpecBlocks = describe "Tests the traversal of spec blocks in `traver
   it "Passes to the spec member mapper a fresh local scope with the function parameters and the previously declared spec variables and lets" $ do
     moduleStr <- readFile "test/Move/Translations/files/TraversalUtilsSpec_3.move"
 
-    let module' = parse $ scan moduleStr
+    let module' = annotateSpecBlocks $ parse $ scan moduleStr
         u64Type = TypeConstructor (LocalNameAccessChain $ Identifier "u64") []
         local name annotType = (LocalNameAccessChain $ Identifier name, VariableAnnotations Nothing annotType)
         params = [local "a" u64Type, local "b" u64Type]
@@ -128,7 +129,7 @@ testTraverseSpecBlocks = describe "Tests the traversal of spec blocks in `traver
   it "Resolves the spec variables in the expressions of the following spec members" $ do
     moduleStr <- readFile "test/Move/Translations/files/TraversalUtilsSpec_3.move"
 
-    let module' = parse $ scan moduleStr
+    let module' = annotateSpecBlocks $ parse $ scan moduleStr
         -- Collects the annotations of each reference to `x` and `z`, in order
         (_, resolved) = traverseRootPostOrder exprMapper traversalIdentity traversalIdentity module' [] []
           where
@@ -144,7 +145,7 @@ testTraverseSpecBlocks = describe "Tests the traversal of spec blocks in `traver
   it "Resolves the parameters of the target function in the expressions of a function spec block" $ do
     moduleStr <- readFile "test/Move/Translations/files/TraversalUtilsSpec_3.move"
 
-    let module' = parse $ scan moduleStr
+    let module' = annotateSpecBlocks $ parse $ scan moduleStr
         -- Collects the annotations of each reference to `a` and `b`; the ones in the body of `add` come first
         (_, resolved) = traverseRootPostOrder exprMapper traversalIdentity traversalIdentity module' [] []
           where
@@ -156,8 +157,8 @@ testTraverseSpecBlocks = describe "Tests the traversal of spec blocks in `traver
     -- `a + b + 1` in the body, then `ensures result == a + b + one;` in `spec add`
     resolved `shouldBe` [("a", u64Annot), ("b", u64Annot), ("a", u64Annot), ("b", u64Annot)]
 
-  it "Throws an error when the target function of a spec block is not declared in the module" $ do
-    moduleStr <- readFile "test/Move/Translations/files/TraversalUtilsSpec_5.move"
+  it "Throws an error when a function spec block has no target function annotations (`annotateSpecBlocks` not run)" $ do
+    moduleStr <- readFile "test/Move/Translations/files/TraversalUtilsSpec_3.move"
 
     let module' = parse $ scan moduleStr
         (traversedModule, ()) = traverseRootPostOrder traversalIdentity traversalIdentity traversalIdentity module' () []
@@ -169,7 +170,7 @@ testSpecSchemasInScope = describe "Tests that spec schemas are added to the scop
   it "Adds the spec schemas declared in the module to its scope, with their type parameters and spec variables" $ do
     moduleStr <- readFile "test/Move/Translations/files/TraversalUtilsSpec_3.move"
 
-    let module' = parse $ scan moduleStr
+    let module' = annotateSpecBlocks $ parse $ scan moduleStr
         -- Collects, for each spec member, the annotations of `AddSchema` found in the scopes
         (_, resolved) = traverseRootPostOrder traversalIdentity traversalIdentity specMemberMapper module' [] []
           where
@@ -181,8 +182,8 @@ testSpecSchemasInScope = describe "Tests that spec schemas are added to the scop
     importedModuleStr <- readFile "test/Move/Translations/files/TraversalUtilsSpec_3.move"
     importingModuleStr <- readFile "test/Move/Translations/files/TraversalUtilsSpec_6.move"
 
-    let importedModule = parse $ scan importedModuleStr
-        importingModule = parse $ scan importingModuleStr
+    let importedModule = annotateSpecBlocks $ parse $ scan importedModuleStr
+        importingModule = annotateSpecBlocks $ parse $ scan importingModuleStr
         importedAddress = case importedModule of
           RModule Module {moduleAddress} -> moduleAddress
           RScript _ -> error "Expected a module"
@@ -204,15 +205,16 @@ testSpecSchemasInScope = describe "Tests that spec schemas are added to the scop
   it "Annotates a spec schema in the scope with the UUID of its spec block" $ do
     moduleStr <- readFile "test/Move/Translations/files/TraversalUtilsSpec_3.move"
 
-    let module' = evalState (annotateBindingsWithUUID $ parse $ scan moduleStr) 0
+    let module' = evalState (annotateBindingsWithUUID $ annotateSpecBlocks $ parse $ scan moduleStr) 0
         -- Collects the UUID of `AddSchema` as seen by the first spec member
         (_, resolved) = traverseRootPostOrder traversalIdentity traversalIdentity specMemberMapper module' [] []
           where
             specMemberMapper member scopes state = case getNacFromScopes (LocalNameAccessChain $ Identifier "AddSchema") scopes of
               VariableAnnotations uuid _ -> (member, state ++ [uuid])
 
-    -- `add` and its parameters take UUIDs 0 to 2, then `spec add` 3, `one` 4, `two` 5, and `spec schema AddSchema` 6
-    take 1 resolved `shouldBe` [Just 6]
+    -- `add` and its parameters take UUIDs 0 to 2, then `spec add` 3, the copies of `a` and `b` in its annotations 4 and 5,
+    -- `one` 6, `two` 7, and `spec schema AddSchema` 8
+    take 1 resolved `shouldBe` [Just 8]
 
   it "Throws an error when a spec schema has the same name as a struct of the module" $ do
     moduleStr <- readFile "test/Move/Translations/files/TraversalUtilsSpec_7.move"

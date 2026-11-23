@@ -50,14 +50,32 @@ RModule (
       ),
       TopLevelSpecBlock (
         SpecBlock {
-          specBlockTarget = SpecBlockTargetFunction (Identifier "add"),
+          specBlockTarget = SpecBlockTargetFunction (Identifier "add") (
+            Just (
+              SpecBTFAnnotations {
+                sbtpFunctionTypeParameters = [],
+                sbtfFunctionParameters = [
+                  Parameter {
+                    parameterIdentifier = Identifier "a",
+                    parameterType = TypeConstructor (LocalNameAccessChain (Identifier "u64")) [],
+                    parameterUUID = Just 5
+                  },
+                  Parameter {
+                    parameterIdentifier = Identifier "b",
+                    parameterType = TypeConstructor (LocalNameAccessChain (Identifier "u64")) [],
+                    parameterUUID = Just 6
+                  }
+                ]
+              }
+            )
+          ),
           specBlockMembers = [
             SpecBlockMemberLet (
               SpecLet {
                 specLetIsPost = False,
                 specLetIdentifier = Identifier "one",
                 specLetExpr = ValueLiteral (Numerical (LiteralIntDec 1)),
-                specLetUUID = Just 5
+                specLetUUID = Just 7
               }
             ),
             SpecBlockMemberLet (
@@ -69,7 +87,7 @@ RModule (
                     ValueLiteral (Numerical (LiteralIntDec 1))
                   )
                 ),
-                specLetUUID = Just 6
+                specLetUUID = Just 8
               }
             ),
             SpecBlockMemberCondition (
@@ -115,7 +133,7 @@ RModule (
                 specVariableIdentifier = Identifier "x",
                 specVariableTypeParameters = [],
                 specVariableType = TypeConstructor (LocalNameAccessChain (Identifier "u64")) [],
-                specVariableUUID = Just 8
+                specVariableUUID = Just 10
               }
             ),
             SpecBlockMemberVariable (
@@ -125,7 +143,7 @@ RModule (
                   TypeParameter {typeParameterIsPhantom = False, typeIdentifier = Identifier "U", typeConstraints = []}
                 ],
                 specVariableType = TypeConstructor (LocalNameAccessChain (Identifier "U")) [],
-                specVariableUUID = Just 9
+                specVariableUUID = Just 11
               }
             ),
             SpecBlockMemberLet (
@@ -137,7 +155,7 @@ RModule (
                     ValueLiteral (Numerical (LiteralIntDec 3))
                   )
                 ),
-                specLetUUID = Just 10
+                specLetUUID = Just 12
               }
             ),
             SpecBlockMemberInclude (
@@ -169,7 +187,7 @@ RModule (
               }
             )
           ],
-          specBlockUUID = Just 7
+          specBlockUUID = Just 9
         }
       )
     ]

@@ -115,7 +115,7 @@ traverseSequencePostOrder exprMapper bindsMapper (Sequence {sequenceUses, sequen
 --
 -- As its third version, also includes a function to map the members of spec blocks (function specs and spec schemas).
 -- Each spec block gets its own local scope, which for a function spec starts with the parameters of the target function
--- (declared in the same module); for each member, its inner expression (if any) is traversed first,
+-- (from its `SpecBTFAnnotations`, filled by `annotateSpecBlocks`; an error if missing); for each member, its inner expression (if any) is traversed first,
 -- then the mapper is invoked with the scopes before the member, and finally the variable declared by the mapped member
 -- (SpecVariable or SpecLet) is added to the local scope
 --
@@ -161,15 +161,15 @@ traverseRootPostOrder exprMapper bindsMapper specMemberMapper root state otherRo
               -- Each spec block has its own local scope, where the spec variables and spec lets are added in order
               topLevelMap state' (TopLevelSpecBlock specBlock@SpecBlock {specBlockTarget, specBlockMembers}) =
                 -- The local scope of a function spec block starts with the parameters of the target function,
-                -- that must be declared in this same module. A spec schema starts with an empty local scope.
+                -- taken from its `SpecBTFAnnotations` (filled by `annotateSpecBlocks`, an error if missing).
+                -- A spec schema starts with an empty local scope.
                 -- NOTE: The `result` variable of function specs is ignored for now, since it is not needed yet
                 let initialLocalScope :: Scope = case specBlockTarget of
                       SpecBlockTargetSchema _ _ -> Map.empty
-                      SpecBlockTargetFunction targetIdent ->
-                        case [f | TopLevelFunction f@Function {functionName} <- topLevels, functionName == targetIdent] of
-                          Function {functionParameters} : _ ->
-                            Map.fromList $ map (\(Parameter {parameterIdentifier, parameterType, parameterUUID}) -> (LocalNameAccessChain parameterIdentifier, VariableAnnotations parameterUUID parameterType)) functionParameters
-                          [] -> error $ "Spec block target function not found in the module: " ++ show targetIdent
+                      SpecBlockTargetFunction _ (Just SpecBTFAnnotations {sbtfFunctionParameters}) ->
+                        Map.fromList $ map (\(Parameter {parameterIdentifier, parameterType, parameterUUID}) -> (LocalNameAccessChain parameterIdentifier, VariableAnnotations parameterUUID parameterType)) sbtfFunctionParameters
+                      SpecBlockTargetFunction targetIdent Nothing ->
+                        error $ "Spec block target function not annotated (run `annotateSpecBlocks` first): " ++ show targetIdent
                     -- Recursively traverse the block members, and collect the new scope and state
                     ((_, stateAfterBlockMembers), specBlockMembers') = mapAccumL fAcc (initialLocalScope : topLevelScope, state') specBlockMembers
                       where
@@ -197,8 +197,8 @@ traverseRootPostOrder exprMapper bindsMapper specMemberMapper root state otherRo
                                 Nothing -> localScopeBeforeMember
                                 Just (ident, annot) -> Map.insert (LocalNameAccessChain ident) annot localScopeBeforeMember
                            in ((localScopeAfterMember : outerScopesBeforeMember, stateAfterMember), mappedMember)
-                 in -- The initial scope is forced with the resulting top level, so that a missing target function
-                    -- raises its error even when no mapper inspects the scopes
+                 in -- The initial scope is forced with the resulting top level, so that missing target function annotations
+                    -- raise their error even when no mapper inspects the scopes
                     (stateAfterBlockMembers, initialLocalScope `seq` TopLevelSpecBlock specBlock {specBlockMembers = specBlockMembers'})
               -- Otherwise do nothing
               topLevelMap state' topLevel = (state', topLevel)
@@ -533,7 +533,7 @@ getRootIdentifiers root =
     -- Function spec blocks declare no names
     topLevelMap (TopLevelSpecBlock (SpecBlock {specBlockTarget = SpecBlockTargetSchema schemaIdentifier schemaTypeParameters, specBlockMembers, specBlockUUID})) =
       [(schemaIdentifier, VariableAnnotations specBlockUUID $ IntermediateTypeSpecSchema (map typeIdentifier schemaTypeParameters) [v | SpecBlockMemberVariable v <- specBlockMembers])]
-    topLevelMap (TopLevelSpecBlock (SpecBlock {specBlockTarget = SpecBlockTargetFunction _})) = []
+    topLevelMap (TopLevelSpecBlock (SpecBlock {specBlockTarget = SpecBlockTargetFunction _ _})) = []
     topLevelMap (TopLevelNamedStruct (NamedStruct {namedStructIdentifier, namedStructTypeParameters, namedStructFields})) = [(namedStructIdentifier, VariableAnnotations Nothing $ IntermediateTypeNamedStructDeclaration (map typeIdentifier namedStructTypeParameters) namedStructFields)]
     topLevelMap (TopLevelPositionalStruct (PositionalStruct {positionalStructIdentifier})) = [(positionalStructIdentifier, VariableAnnotations Nothing $ TypeConstructor (LocalNameAccessChain positionalStructIdentifier) [])]
     -- Functions have a type, which is the arrow type of all its parameter types and return type (or unit if not specified)

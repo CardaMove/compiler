@@ -7,7 +7,7 @@ This file gives AI coding agents project-specific instructions for working in th
 - CardaMove is a Haskell proof-of-concept transpiler from Move to Aiken (on-chain) and, work in progress, to TypeScript + MeshJS (off-chain).
 - The core flow is: parse Move source -> apply AST translations -> generate Aiken output (and, off-chain, apply `alphaConvert` -> generate TypeScript output).
 - The off-chain design, layout and progress live in `doc/offchain.md`. Off-chain work is currently suspended.
-- In progress: a new on-chain mode that compiles MSL (Move Specification Language) specs into the validator, meant to become the default; the current code translation stays as the "Move runtime" mode. The flag `--onchain-mode msl|move` selects it (default `move` for now; `msl` is a stub that fails). Design and progress live in `doc/msl.md`. The semantics and compilation choices are decided in the PhD folder (`C:\Users\rover\Documents\Universita\PhD`), which is the authority; deviations need the user's approval.
+- In progress: a new on-chain mode that compiles MSL (Move Specification Language) specs into the validator, meant to become the default; the current code translation stays as the "Move runtime" mode. The flag `--onchain-mode msl|move` selects it (default `move` for now; `msl` runs the MSL passes written so far, then fails). Design and progress live in `doc/msl.md`. The semantics and compilation choices are decided in the PhD folder (`C:\Users\rover\Documents\Universita\PhD`), which is the authority; deviations need the user's approval.
 
 ## Repository Map
 
@@ -15,7 +15,8 @@ This file gives AI coding agents project-specific instructions for working in th
 - `lib/Move/Lexer.x`: Alex lexer source.
 - `lib/Move/Parser.y`: Happy parser grammar source.
 - `lib/Move/Lexer.hs` and `lib/Move/Parser.hs`: generated files.
-- `lib/Move/Transpiler.hs`: ordered translation pipelines: `moveTranspiler` (Move runtime chain, shared by the Move runtime on-chain mode and the off-chain target), the off-chain-only tail `offchainTranspiler` (`alphaConvert`), and `mslTranspiler` (MSL on-chain mode, a stub that fails until implemented).
+- `lib/Move/Transpiler.hs`: ordered translation pipelines: `moveTranspiler` (Move runtime chain, shared by the Move runtime on-chain mode and the off-chain target), the off-chain-only tail `offchainTranspiler` (`alphaConvert`), and `mslTranspiler` (MSL on-chain mode: `annotateSpecBlocks`, then `annotateBindingsWithUUID`, then it fails until implemented).
+- `lib/Move/TranslationsMSL/`: AST passes used only by the MSL on-chain mode (`PreProcessingMSL.hs`: `annotateSpecBlocks`, which fills the `SpecBTFAnnotations` of function spec blocks with their target function's type parameters and parameters; it must run before any traversal).
 - `lib/Move/Translations/`: AST-to-AST transformation passes and shared traversal/type helpers.
 - `lib/Aiken/`: on-chain code generation (`AikenGenerator.hs`, `ValidatorGenerator.hs`).
 - `lib/TypeScript/`: off-chain code generation (`TypeScriptGenerator.hs`, `EntryPointGenerator.hs`), currently a skeleton (see `doc/offchain.md`).

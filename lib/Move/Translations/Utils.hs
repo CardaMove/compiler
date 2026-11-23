@@ -158,7 +158,8 @@ extractVariablesFromSingleBind bind maybeType maybeExpr scopes =
 
 -- |
 -- Given an AST, adds a unique identifier to all bindings
--- (including spec blocks themselves, then their spec lets and spec variables)
+-- (including spec blocks themselves, then the target function parameters in their `SpecBTFAnnotations`,
+-- with fresh UUIDs, then their spec lets and spec variables)
 --
 -- Note that existing UUIDs will be overwritten
 annotateBindingsWithUUID :: Root -> State AnnotatedUUID Root
@@ -208,12 +209,25 @@ annotateBindingsWithUUID root = do
       put $ constantUUID' + 1
       return $ TopLevelConstant c {constantUUID = Just constantUUID'}
     -- Also, annotate spec blocks: first the spec block itself (as for function definitions),
-    -- then its spec lets and spec variables, in order
-    topLevelAnnotator (TopLevelSpecBlock specBlock@SpecBlock {specBlockMembers}) = do
+    -- then the parameters copied in its `SpecBTFAnnotations` (if any, with fresh UUIDs, distinct from the ones
+    -- of the target function's parameters), then its spec lets and spec variables, in order
+    topLevelAnnotator (TopLevelSpecBlock specBlock@SpecBlock {specBlockTarget, specBlockMembers}) = do
       specBlockUUID <- get
       put $ specBlockUUID + 1
+      annotatedTarget <- case specBlockTarget of
+        SpecBlockTargetFunction targetIdent (Just annotations@SpecBTFAnnotations {sbtfFunctionParameters}) -> do
+          annotatedParameters <-
+            mapM
+              ( \param -> do
+                  curr <- get
+                  put $ curr + 1
+                  return $ param {parameterUUID = Just curr}
+              )
+              sbtfFunctionParameters
+          return $ SpecBlockTargetFunction targetIdent (Just annotations {sbtfFunctionParameters = annotatedParameters})
+        otherTarget -> return otherTarget
       annotatedMembers <- mapM specMemberAnnotator specBlockMembers
-      return $ TopLevelSpecBlock specBlock {specBlockMembers = annotatedMembers, specBlockUUID = Just specBlockUUID}
+      return $ TopLevelSpecBlock specBlock {specBlockTarget = annotatedTarget, specBlockMembers = annotatedMembers, specBlockUUID = Just specBlockUUID}
     -- Every other top level node is ignored
     topLevelAnnotator otherTL = return otherTL
 
