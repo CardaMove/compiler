@@ -487,7 +487,8 @@ RScript (
                 )
               }
             )
-          ]
+          ],
+          specBlockUUID = Nothing
         }
       )
     ]

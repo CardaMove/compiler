@@ -146,7 +146,8 @@ RScript (
                 )
               }
             )
-          ]
+          ],
+          specBlockUUID = Nothing
         }
       )
     ]

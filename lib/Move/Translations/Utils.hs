@@ -158,7 +158,7 @@ extractVariablesFromSingleBind bind maybeType maybeExpr scopes =
 
 -- |
 -- Given an AST, adds a unique identifier to all bindings
--- (including the spec lets and spec variables of spec blocks)
+-- (including spec blocks themselves, then their spec lets and spec variables)
 --
 -- Note that existing UUIDs will be overwritten
 annotateBindingsWithUUID :: Root -> State AnnotatedUUID Root
@@ -207,10 +207,13 @@ annotateBindingsWithUUID root = do
       constantUUID' <- get
       put $ constantUUID' + 1
       return $ TopLevelConstant c {constantUUID = Just constantUUID'}
-    -- Also, annotate the spec lets and spec variables of spec blocks, in order
+    -- Also, annotate spec blocks: first the spec block itself (as for function definitions),
+    -- then its spec lets and spec variables, in order
     topLevelAnnotator (TopLevelSpecBlock specBlock@SpecBlock {specBlockMembers}) = do
+      specBlockUUID <- get
+      put $ specBlockUUID + 1
       annotatedMembers <- mapM specMemberAnnotator specBlockMembers
-      return $ TopLevelSpecBlock specBlock {specBlockMembers = annotatedMembers}
+      return $ TopLevelSpecBlock specBlock {specBlockMembers = annotatedMembers, specBlockUUID = Just specBlockUUID}
     -- Every other top level node is ignored
     topLevelAnnotator otherTL = return otherTL
 

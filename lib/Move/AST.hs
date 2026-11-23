@@ -202,7 +202,8 @@ data SpecBlock
   = SpecBlock
   { specBlockTarget :: SpecBlockTarget,
     -- Members are ordered from top to bottom. Pragmas are not kept
-    specBlockMembers :: [SpecBlockMember]
+    specBlockMembers :: [SpecBlockMember],
+    specBlockUUID :: Maybe AnnotatedUUID
   }
   deriving (Eq, Show, Read, Data, Typeable)
 

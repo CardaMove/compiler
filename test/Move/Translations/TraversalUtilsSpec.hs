@@ -1,12 +1,13 @@
 module Move.Translations.TraversalUtilsSpec (spec) where
 
-import Control.Exception (evaluate)
+import Control.Exception (ErrorCall (ErrorCall), evaluate)
+import Control.Monad.State (evalState)
 import Data.Map qualified as Map
 import Move.AST
 import Move.Lexer (scan)
 import Move.Parser (parse)
 import Move.Translations.TraversalUtils
-import Move.Translations.Utils (VariableAnnotations (VariableAnnotations), getNacFromScopes, numericType)
+import Move.Translations.Utils (VariableAnnotations (VariableAnnotations), annotateBindingsWithUUID, getNacFromScopes, numericType)
 import Test.Hspec
 
 testTraverseRootPostOrder :: Spec
@@ -163,8 +164,89 @@ testTraverseSpecBlocks = describe "Tests the traversal of spec blocks in `traver
 
     evaluate (length $ show traversedModule) `shouldThrow` anyErrorCall
 
+testSpecSchemasInScope :: Spec
+testSpecSchemasInScope = describe "Tests that spec schemas are added to the scope by `traverseRootPostOrder`" $ do
+  it "Adds the spec schemas declared in the module to its scope, with their type parameters and spec variables" $ do
+    moduleStr <- readFile "test/Move/Translations/files/TraversalUtilsSpec_3.move"
+
+    let module' = parse $ scan moduleStr
+        -- Collects, for each spec member, the annotations of `AddSchema` found in the scopes
+        (_, resolved) = traverseRootPostOrder traversalIdentity traversalIdentity specMemberMapper module' [] []
+          where
+            specMemberMapper member scopes state = (member, state ++ [getNacFromScopes (LocalNameAccessChain $ Identifier "AddSchema") scopes])
+
+    resolved `shouldBe` replicate 9 addSchemaAnnot
+
+  it "Adds the imported spec schemas to the scope, by module and by (aliased) member" $ do
+    importedModuleStr <- readFile "test/Move/Translations/files/TraversalUtilsSpec_3.move"
+    importingModuleStr <- readFile "test/Move/Translations/files/TraversalUtilsSpec_6.move"
+
+    let importedModule = parse $ scan importedModuleStr
+        importingModule = parse $ scan importingModuleStr
+        importedAddress = case importedModule of
+          RModule Module {moduleAddress} -> moduleAddress
+          RScript _ -> error "Expected a module"
+        moduleIdent = Identifier "TraversalUtilsSpecBlocks"
+        schemaIdent = Identifier "AddSchema"
+        nacs =
+          [ UnaliasedNameAccessChain importedAddress moduleIdent schemaIdent,
+            AliasedNameAccessChain moduleIdent schemaIdent,
+            LocalNameAccessChain $ Identifier "Renamed",
+            LocalNameAccessChain schemaIdent
+          ]
+        -- Collects the annotations of each name access chain above, as seen by the only spec member
+        (_, resolved) = traverseRootPostOrder traversalIdentity traversalIdentity specMemberMapper importingModule [] [importedModule]
+          where
+            specMemberMapper member scopes state = (member, state ++ map (`getNacFromScopes` scopes) nacs)
+
+    resolved `shouldBe` replicate 4 addSchemaAnnot
+
+  it "Annotates a spec schema in the scope with the UUID of its spec block" $ do
+    moduleStr <- readFile "test/Move/Translations/files/TraversalUtilsSpec_3.move"
+
+    let module' = evalState (annotateBindingsWithUUID $ parse $ scan moduleStr) 0
+        -- Collects the UUID of `AddSchema` as seen by the first spec member
+        (_, resolved) = traverseRootPostOrder traversalIdentity traversalIdentity specMemberMapper module' [] []
+          where
+            specMemberMapper member scopes state = case getNacFromScopes (LocalNameAccessChain $ Identifier "AddSchema") scopes of
+              VariableAnnotations uuid _ -> (member, state ++ [uuid])
+
+    -- `add` and its parameters take UUIDs 0 to 2, then `spec add` 3, `one` 4, `two` 5, and `spec schema AddSchema` 6
+    take 1 resolved `shouldBe` [Just 6]
+
+  it "Throws an error when a spec schema has the same name as a struct of the module" $ do
+    moduleStr <- readFile "test/Move/Translations/files/TraversalUtilsSpec_7.move"
+
+    let module' = parse $ scan moduleStr
+        (traversedModule, ()) = traverseRootPostOrder traversalIdentity traversalIdentity traversalIdentity module' () []
+
+    evaluate (length $ show traversedModule) `shouldThrow` errorCall' "spec schema name clash"
+
+  it "Throws an error when a spec schema has the same name as a function of the module" $ do
+    moduleStr <- readFile "test/Move/Translations/files/TraversalUtilsSpec_8.move"
+
+    let module' = parse $ scan moduleStr
+        (traversedModule, ()) = traverseRootPostOrder traversalIdentity traversalIdentity traversalIdentity module' () []
+
+    evaluate (length $ show traversedModule) `shouldThrow` errorCall' "spec schema name clash"
+
+  where
+    -- Matches an `ErrorCall` whose message starts with the given prefix
+    errorCall' :: String -> Selector ErrorCall
+    errorCall' prefix (ErrorCall msg) = take (length prefix) msg == prefix
+
+    -- The expected annotations of `spec schema AddSchema<T> { x: u64; y<U>: U; ... }` in TraversalUtilsSpec_3.move
+    addSchemaAnnot =
+      VariableAnnotations Nothing $
+        IntermediateTypeSpecSchema
+          [Identifier "T"]
+          [ SpecVariable (Identifier "x") [] (TypeConstructor (LocalNameAccessChain $ Identifier "u64") []) Nothing,
+            SpecVariable (Identifier "y") [TypeParameter False (Identifier "U") []] (TypeConstructor (LocalNameAccessChain $ Identifier "U") []) Nothing
+          ]
+
 spec :: Spec
 spec = do
   testTraverseRootPostOrder
   testTimestampStdLibImport
   testTraverseSpecBlocks
+  testSpecSchemasInScope

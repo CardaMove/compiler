@@ -37,7 +37,7 @@ Inside `lib/Move/Translations/`, the active Haskell modules have the following r
 - `PostProcessing.hs`: final AST cleanup before generation; injects required utils imports and resolves named addresses to numerical ones (except the utils address).
 - `SpecBlocks.hs`: first pass of the Move runtime pipeline (`moveTranspiler`); drops the MSL spec blocks and the `use` declarations / members referenced only by them, so that spec-annotated sources compile as plain Move.
 - `Scopes.hs`: rewrites mutation/reference semantics into explicit CPS/local-scope operations, including assignment lowering, borrow/deref rewrites, and local-state insertion.
-- `TraversalUtils.hs`: provides post-order traversals with scope threading for expressions, bindings, sequences, spec block members (MSL), and full roots; used by translation passes to apply scoped rewrites.
+- `TraversalUtils.hs`: provides post-order traversals with scope threading for expressions, bindings, sequences, spec block members (MSL), and full roots (spec schemas are added to the module and imported scopes as `IntermediateTypeSpecSchema`); used by translation passes to apply scoped rewrites.
 - `TypeWitness.hs`: rewrites generic type parameters into explicit runtime type-witness parameters/arguments and normalizes type-parameter identifiers for Aiken compatibility.
 - `Utils.hs`: shared translation utilities for scopes, UUID annotation, type inference, helper iterators across roots, and common primitive/intermediate types.
 

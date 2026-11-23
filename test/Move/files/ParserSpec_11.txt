@@ -263,7 +263,8 @@ RScript (
                 )
               }
             )
-          ]
+          ],
+          specBlockUUID = Nothing
         }
       )
     ]

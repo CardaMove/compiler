@@ -202,7 +202,9 @@ traverseRootPostOrder exprMapper bindsMapper specMemberMapper root state otherRo
                     (stateAfterBlockMembers, initialLocalScope `seq` TopLevelSpecBlock specBlock {specBlockMembers = specBlockMembers'})
               -- Otherwise do nothing
               topLevelMap state' topLevel = (state', topLevel)
-       in (mappedTopLevels, stateAfterTraversal)
+       in -- The identifiers declared by this root are forced with the resulting top levels, so that a spec schema name clash
+          -- raises its error even when no mapper inspects the scopes (the imported scope is instead left lazy)
+          (length localScope `seq` mappedTopLevels, stateAfterTraversal)
 
 -- |
 -- Returns the variable declared by a spec block member, if any, along with its annotations.
@@ -420,8 +422,8 @@ moveStdLibModules =
 -- Given multiple imports via Uses and the list of all the other available modules,
 -- returns all the imported symbols
 --
--- Note that the current module is not present in the imputs, just its imports
--- TODO: Also add any spec schema in the scope as IntermediateTypeSpecSchema
+-- Note that the current module is not present in the imputs, just its imports.
+-- Imported spec schemas are included, with type `IntermediateTypeSpecSchema` (see `getRootIdentifiers`)
 buildImportedScope :: [Use] -> [Module] -> [(NameAccessChain, VariableAnnotations)]
 buildImportedScope uses otherModules = concatMap buildImportedScope' uses
   where
@@ -476,22 +478,62 @@ buildImportedScope uses otherModules = concatMap buildImportedScope' uses
 -- |
 -- Given an AST (either script or module) returns all the identifiers defined as top levels of that AST,
 --
--- This means declarations for named and positional structs, as well as function definitions and constant expressions,
--- while uses are instead not considered
+-- This means declarations for named and positional structs, as well as function definitions, constant expressions
+-- and spec schemas (as `IntermediateTypeSpecSchema`), while uses and function spec blocks are instead not considered
+--
+-- A spec schema whose name is also declared by another top level (struct, function, constant or another schema)
+-- is an error ("spec schema name clash")
 getRootIdentifiers :: Root -> [(Identifier, VariableAnnotations)]
 getRootIdentifiers root =
   let topLevels = case root of
         (RScript Script {scriptTopLevels}) -> scriptTopLevels
         (RModule Module {moduleTopLevels}) -> moduleTopLevels
-   in concatMap topLevelMap topLevels
+      identifiers = map (\tl -> (isSpecSchema tl, topLevelMap tl)) topLevels
+   in checkSchemaClashes identifiers `seq` concatMap snd identifiers
   where
+    -- Whether a top level is a spec schema declaration
+    isSpecSchema :: TopLevel -> Bool
+    isSpecSchema (TopLevelSpecBlock (SpecBlock {specBlockTarget = SpecBlockTargetSchema _ _})) = True
+    isSpecSchema _ = False
+
+    -- Given the identifiers declared by each top level (flagged if it is a spec schema),
+    -- throws an error if a spec schema shares its name with an identifier declared by any other top level
+    checkSchemaClashes :: [(Bool, [(Identifier, VariableAnnotations)])] -> ()
+    checkSchemaClashes identifiers =
+      let indexed = zip [0 :: Int ..] identifiers
+          clashes =
+            [ (schema, other)
+              | (i, (True, schemas)) <- indexed,
+                schema@(schemaIdent, _) <- schemas,
+                (j, (_, others)) <- indexed,
+                i /= j,
+                other@(otherIdent, _) <- others,
+                schemaIdent == otherIdent
+            ]
+       in case clashes of
+            [] -> ()
+            ((schemaIdent, VariableAnnotations _ schemaType), (otherIdent, VariableAnnotations _ otherType)) : _ ->
+              error $
+                "spec schema name clash: spec schema "
+                  ++ show schemaIdent
+                  ++ " of type "
+                  ++ show schemaType
+                  ++ " clashes with "
+                  ++ show otherIdent
+                  ++ " of type "
+                  ++ show otherType
+
     -- TODO: Positional structs should be handled similarly to named structs
     topLevelMap :: TopLevel -> [(Identifier, VariableAnnotations)]
     -- Uses are ignored in this function since they do not contribute the the local scope of the module
     topLevelMap (TopLevelUse _) = []
     topLevelMap (TopLevelFriend _) = []
-    -- Spec blocks declare no names usable by the Move code
-    topLevelMap (TopLevelSpecBlock _) = []
+    -- A spec schema declares its name, with the identifiers of the type parameters accepted by the schema
+    -- and a copy of each spec variable declared among its members (in order).
+    -- Function spec blocks declare no names
+    topLevelMap (TopLevelSpecBlock (SpecBlock {specBlockTarget = SpecBlockTargetSchema schemaIdentifier schemaTypeParameters, specBlockMembers, specBlockUUID})) =
+      [(schemaIdentifier, VariableAnnotations specBlockUUID $ IntermediateTypeSpecSchema (map typeIdentifier schemaTypeParameters) [v | SpecBlockMemberVariable v <- specBlockMembers])]
+    topLevelMap (TopLevelSpecBlock (SpecBlock {specBlockTarget = SpecBlockTargetFunction _})) = []
     topLevelMap (TopLevelNamedStruct (NamedStruct {namedStructIdentifier, namedStructTypeParameters, namedStructFields})) = [(namedStructIdentifier, VariableAnnotations Nothing $ IntermediateTypeNamedStructDeclaration (map typeIdentifier namedStructTypeParameters) namedStructFields)]
     topLevelMap (TopLevelPositionalStruct (PositionalStruct {positionalStructIdentifier})) = [(positionalStructIdentifier, VariableAnnotations Nothing $ TypeConstructor (LocalNameAccessChain positionalStructIdentifier) [])]
     -- Functions have a type, which is the arrow type of all its parameter types and return type (or unit if not specified)

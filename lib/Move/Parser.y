@@ -809,7 +809,7 @@ BindedField ::  { Maybe BindedField }
 
 -- Spec block of the Move Specification Language (MSL). See the MSL grammar comment on `AST.hs`
 SpecBlock :: { SpecBlock }
-  : spec SpecBlockTarget '{' SpecBlockMembers '}'      { SpecBlock { specBlockTarget = $2, specBlockMembers = $4 } }
+  : spec SpecBlockTarget '{' SpecBlockMembers '}'      { SpecBlock { specBlockTarget = $2, specBlockMembers = $4, specBlockUUID = Nothing } }
 
 
 SpecBlockTarget :: { SpecBlockTarget }
