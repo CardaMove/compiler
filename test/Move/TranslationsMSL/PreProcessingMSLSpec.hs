@@ -4,7 +4,7 @@ import Control.Exception (evaluate)
 import Move.AST
 import Move.Lexer (scan)
 import Move.Parser (parse)
-import Move.TranslationsMSL.PreProcessingMSL (annotateSpecBlocks)
+import Move.TranslationsMSL.PreProcessingMSL (annotateSpecBlocks, stripMoveFunctions)
 import Test.Hspec
 
 -- |
@@ -82,6 +82,33 @@ testAnnotateSpecBlocks = describe "Tests the function `annotateSpecBlocks`" $ do
 
     evaluate (length $ show annotated) `shouldThrow` errorCall "Spec block target function not found in the module: Identifier \"sub\""
 
+testStripMoveFunctions :: Spec
+testStripMoveFunctions = describe "Tests the function `stripMoveFunctions`" $ do
+  it "Removes the functions of modules and scripts, and the use members importing user-defined functions" $ do
+    moduleStr <- readFile "test/Move/TranslationsMSL/files/PreProcessingMSLSpec_3.move"
+    scriptStr <- readFile "test/Move/TranslationsMSL/files/PreProcessingMSLSpec_4.move"
+    expectedModuleStr <- readFile "test/Move/TranslationsMSL/files/PreProcessingMSLSpec_5.move"
+    expectedScriptStr <- readFile "test/Move/TranslationsMSL/files/PreProcessingMSLSpec_6.move"
+
+    let roots = map (parse . scan) [moduleStr, scriptStr]
+        expectedRoots = map (parse . scan) [expectedModuleStr, expectedScriptStr]
+
+    -- In the script: `increment` is dropped from the first use, the second use (only functions) is removed,
+    -- while the module import, the schema import and `std::signer::{address_of}` (not a user module) are kept
+    stripMoveFunctions roots `shouldBe` expectedRoots
+
+  it "Keeps the spec block annotations computed before stripping the functions" $ do
+    moduleStr <- readFile "test/Move/TranslationsMSL/files/PreProcessingMSLSpec_3.move"
+
+    let stripped = stripMoveFunctions [annotateSpecBlocks $ parse $ scan moduleStr]
+        signerRef = TypeImmutableRef $ TypeConstructor (LocalNameAccessChain $ Identifier "signer") []
+
+    concatMap specBlockTargets stripped
+      `shouldBe` [ SpecBlockTargetFunction (Identifier "increment") (Just $ SpecBTFAnnotations [] [Parameter (Identifier "s") signerRef Nothing]),
+                   SpecBlockTargetSchema (Identifier "CounterSchema") []
+                 ]
+
 spec :: Spec
 spec = do
   testAnnotateSpecBlocks
+  testStripMoveFunctions

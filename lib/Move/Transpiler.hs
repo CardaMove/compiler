@@ -12,7 +12,7 @@ import Move.Translations.Scopes (addLocalScopeInRoot, markVariablesForLocalScope
 import Move.Translations.SpecBlocks (stripSpecBlocksInRoot)
 import Move.Translations.TypeWitness (translateTParamsInRoot)
 import Move.Translations.Utils (annotateBindingsWithUUID, tryIO)
-import Move.TranslationsMSL.PreProcessingMSL (annotateSpecBlocks)
+import Move.TranslationsMSL.PreProcessingMSL (annotateSpecBlocks, stripMoveFunctions)
 
 -- |
 -- Given the whole parsed ASTs, translates them for the Move runtime on-chain mode and for the off-chain target.
@@ -46,9 +46,9 @@ mslTranspiler files _addrAssoc = do
   -- Each step is fully evaluated (via `show`) so that its errors surface before the final failure
   step1Annotated <- tryIO "annotateSpecBlocks" $ forceRoots $ map (annotateSpecBlocks . snd) files
 
-  -- TODO: `stripMoveFunctions`, yet to be implemented
+  step2NoFunctions <- tryIO "stripMoveFunctions" $ forceRoots $ stripMoveFunctions step1Annotated
 
-  _step2UUIDs <- tryIO "annotateBindingsWithUUID" $ forceRoots $ evalState (mapM annotateBindingsWithUUID step1Annotated) 0
+  _step3UUIDs <- tryIO "annotateBindingsWithUUID" $ forceRoots $ evalState (mapM annotateBindingsWithUUID step2NoFunctions) 0
 
   ioError $ userError "The MSL on-chain mode is not implemented yet: use `--onchain-mode move`"
   where
