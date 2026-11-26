@@ -15,8 +15,8 @@ This file gives AI coding agents project-specific instructions for working in th
 - `lib/Move/Lexer.x`: Alex lexer source.
 - `lib/Move/Parser.y`: Happy parser grammar source.
 - `lib/Move/Lexer.hs` and `lib/Move/Parser.hs`: generated files.
-- `lib/Move/Transpiler.hs`: ordered translation pipelines: `moveTranspiler` (Move runtime chain, shared by the Move runtime on-chain mode and the off-chain target), the off-chain-only tail `offchainTranspiler` (`alphaConvert`), and `mslTranspiler` (MSL on-chain mode: `annotateSpecBlocks`, `stripMoveFunctions`, then `annotateBindingsWithUUID`, then it fails until implemented).
-- `lib/Move/TranslationsMSL/`: AST passes used only by the MSL on-chain mode (`PreProcessingMSL.hs`: `annotateSpecBlocks`, which fills the `SpecBTFAnnotations` of function spec blocks with their target function's type parameters and parameters; it must run before any traversal; `stripMoveFunctions`, which then removes every function declaration and the use members importing functions of the project's modules).
+- `lib/Move/Transpiler.hs`: ordered translation pipelines: `moveTranspiler` (Move runtime chain, shared by the Move runtime on-chain mode and the off-chain target), the off-chain-only tail `offchainTranspiler` (`alphaConvert`), and `mslTranspiler` (MSL on-chain mode: `annotateSpecBlocks`, `stripMoveFunctions`, `inlineSpecSchemas`, then `annotateBindingsWithUUID`, then it fails until implemented).
+- `lib/Move/TranslationsMSL/`: AST passes used only by the MSL on-chain mode (`PreProcessingMSL.hs`: `annotateSpecBlocks`, which fills the `SpecBTFAnnotations` of function spec blocks with their target function's type parameters and parameters; it must run before any traversal; `stripMoveFunctions`, which then removes every function declaration and the use members importing functions of the project's modules; `SpecInlining.hs`: `inlineSpecSchemas`, which replaces each `include` with the members of the included schema and then removes the schemas, design in `doc/schema_inlining.md`).
 - `lib/Move/Translations/`: AST-to-AST transformation passes and shared traversal/type helpers.
 - `lib/Aiken/`: on-chain code generation (`AikenGenerator.hs`, `ValidatorGenerator.hs`).
 - `lib/TypeScript/`: off-chain code generation (`TypeScriptGenerator.hs`, `EntryPointGenerator.hs`), currently a skeleton (see `doc/offchain.md`).
@@ -27,6 +27,8 @@ This file gives AI coding agents project-specific instructions for working in th
 - `test/`: Hspec test suite and fixture files.
 - `doc/offchain.md`: off-chain design, layout and progress.
 - `doc/msl.md`: MSL compilation design, Bet divergences from rosetta-redo, approved deviations from the PhD notes, and progress.
+- `doc/schema_inlining.md`: design of the spec schema inlining pass (MSL mode).
+- `doc/known-bugs.md`: confirmed bugs not fixed yet.
 
 ## Translation Modules Purpose
 

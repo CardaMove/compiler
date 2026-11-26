@@ -1,4 +1,4 @@
-module Move.TranslationsMSL.PreProcessingMSL (annotateSpecBlocks, stripMoveFunctions) where
+module Move.TranslationsMSL.PreProcessingMSL (annotateSpecBlocks, stripMoveFunctions, stripUseMembers) where
 
 import Data.List (find)
 import Data.Maybe (mapMaybe)
@@ -50,18 +50,25 @@ stripMoveFunctions roots = map stripRoot roots
     stripTopLevels = mapMaybe stripTopLevel
       where
         stripTopLevel (TopLevelFunction _) = Nothing
-        stripTopLevel (TopLevelUse use) = TopLevelUse <$> stripUse use
+        stripTopLevel (TopLevelUse use) = TopLevelUse <$> stripUseMembers userModules functionNames use
         stripTopLevel otherTopLevel = Just otherTopLevel
 
-    -- Removes from a use the members that name a function of the imported user module.
-    -- Returns Nothing if no member is left (an empty member list would instead mean `use M;`)
-    stripUse :: Use -> Maybe Use
-    stripUse use@Use {useAddress, useIdentifier, useMembers} =
-      case find (\m -> moduleAddress m == useAddress && moduleIdentifier m == useIdentifier) userModules of
-        -- Not a user module, or a module import without members: keep it
-        Nothing -> Just use
-        Just _ | null useMembers -> Just use
-        Just Module {moduleTopLevels} ->
-          let functionNames = [functionName | TopLevelFunction Function {functionName} <- moduleTopLevels]
-              members' = filter (\UseMember {useMemberIdentifier} -> useMemberIdentifier `notElem` functionNames) useMembers
-           in if null members' then Nothing else Just use {useMembers = members'}
+    -- The names of the functions declared by a module
+    functionNames :: Module -> [Identifier]
+    functionNames Module {moduleTopLevels} = [functionName | TopLevelFunction Function {functionName} <- moduleTopLevels]
+
+-- |
+-- Given the modules of the project and a function returning some names declared by a module,
+-- removes from a use the members that import one of those names from a project module.
+-- Returns Nothing if no member is left (an empty member list would instead mean `use M;`).
+-- Module imports without members and imports of modules that are not in the project are kept unchanged
+stripUseMembers :: [Module] -> (Module -> [Identifier]) -> Use -> Maybe Use
+stripUseMembers userModules namesToStrip use@Use {useAddress, useIdentifier, useMembers} =
+  case find (\m -> moduleAddress m == useAddress && moduleIdentifier m == useIdentifier) userModules of
+    -- Not a user module, or a module import without members: keep it
+    Nothing -> Just use
+    Just _ | null useMembers -> Just use
+    Just importedModule ->
+      let names = namesToStrip importedModule
+          members' = filter (\UseMember {useMemberIdentifier} -> useMemberIdentifier `notElem` names) useMembers
+       in if null members' then Nothing else Just use {useMembers = members'}

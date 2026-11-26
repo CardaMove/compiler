@@ -13,6 +13,7 @@ import Move.Translations.SpecBlocks (stripSpecBlocksInRoot)
 import Move.Translations.TypeWitness (translateTParamsInRoot)
 import Move.Translations.Utils (annotateBindingsWithUUID, tryIO)
 import Move.TranslationsMSL.PreProcessingMSL (annotateSpecBlocks, stripMoveFunctions)
+import Move.TranslationsMSL.SpecInlining (inlineSpecSchemas)
 
 -- |
 -- Given the whole parsed ASTs, translates them for the Move runtime on-chain mode and for the off-chain target.
@@ -39,8 +40,9 @@ moveTranspiler files addrAssoc = do
 
 -- |
 -- Given the whole parsed ASTs, translates them for the MSL on-chain mode (the default `--onchain-mode` is `move`).
--- Not implemented yet: it runs the passes written so far, then always fails, since the MSL validator generation
--- does not exist yet. Its passes and its signature are designed in steps 4-5 of doc/msl.md
+-- Not implemented yet: it runs the passes written so far (`annotateSpecBlocks`, `stripMoveFunctions`,
+-- `inlineSpecSchemas`, `annotateBindingsWithUUID`), then always fails, since the MSL validator generation
+-- does not exist yet (step 6 of doc/msl.md); its signature is a placeholder until then
 mslTranspiler :: [(FilePath, Root)] -> AddrAssociations -> IO [(FilePath, Root)]
 mslTranspiler files _addrAssoc = do
   -- Each step is fully evaluated (via `show`) so that its errors surface before the final failure
@@ -48,7 +50,9 @@ mslTranspiler files _addrAssoc = do
 
   step2NoFunctions <- tryIO "stripMoveFunctions" $ forceRoots $ stripMoveFunctions step1Annotated
 
-  _step3UUIDs <- tryIO "annotateBindingsWithUUID" $ forceRoots $ evalState (mapM annotateBindingsWithUUID step2NoFunctions) 0
+  step3Inlined <- tryIO "inlineSpecSchemas" $ forceRoots $ inlineSpecSchemas step2NoFunctions
+
+  _step4UUIDs <- tryIO "annotateBindingsWithUUID" $ forceRoots $ evalState (mapM annotateBindingsWithUUID step3Inlined) 0
 
   ioError $ userError "The MSL on-chain mode is not implemented yet: use `--onchain-mode move`"
   where
